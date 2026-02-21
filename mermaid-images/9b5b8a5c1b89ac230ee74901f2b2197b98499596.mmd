@@ -1,0 +1,15 @@
+classDiagram
+    class VendorProfile {
+        +id: UUID
+        +user_id: FK --> User
+        +company_name: str
+        +verified_status: str // PENDING, APPROVED, SUSPENDED
+        +fulfillment_rate: Float // % of completed orders
+        +cancellation_rate: Float // % of cancelled orders
+        +delivery_timeliness: Float // % on-time deliveries
+        +average_rating: Float // Average buyer rating (1-5)
+        +total_reviews: Integer
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    User "1" -- "1" VendorProfile : has_profile

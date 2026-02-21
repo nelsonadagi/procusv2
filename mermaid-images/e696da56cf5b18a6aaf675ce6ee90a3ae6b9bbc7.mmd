@@ -1,0 +1,11 @@
+classDiagram
+    class DevelopmentMetadata {
+        +id: UUID
+        +property_id: FK --> PropertyListing
+        +zoning_info: TextField?
+        +build_ready: boolean
+        +utilities_available: boolean
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    PropertyListing "1" -- "0..1" DevelopmentMetadata : has

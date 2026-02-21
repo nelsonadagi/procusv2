@@ -1,0 +1,12 @@
+classDiagram
+    class Order {
+        +id: UUID
+        +buyer_id: FK --> User
+        +vendor_id: FK --> VendorProfile
+        +status: str // PLACED, CONFIRMED, PACKING, SHIPPED, DELIVERED, COMPLETED, CANCELLED
+        +total_amount: Decimal
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    User "1" -- "0..*" Order : places
+    VendorProfile "1" -- "0..*" Order : fulfills

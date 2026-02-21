@@ -1,0 +1,8 @@
+classDiagram
+    class ProjectContractLink {
+        id
+        project_id: FK
+        contract_id: FK
+    }
+    Project "1" -- "0..*" ProjectContractLink : links_to
+    Contract "1" -- "0..*" ProjectContractLink : linked_by

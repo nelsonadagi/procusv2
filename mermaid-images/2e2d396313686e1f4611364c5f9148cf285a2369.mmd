@@ -1,0 +1,14 @@
+classDiagram
+    class Contract {
+        +id: UUID
+        +owner_id: FK --> User // Project Owner
+        +title: str
+        +description_scope: TextField
+        +location: str
+        +budget_min: Decimal
+        +budget_max: Decimal
+        +status: str // POSTED, BIDDING, AWARDED, IN_PROGRESS, COMPLETED, CANCELLED
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    User "1" -- "0..*" Contract : posts

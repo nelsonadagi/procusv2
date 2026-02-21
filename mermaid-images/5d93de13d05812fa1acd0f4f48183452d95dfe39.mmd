@@ -1,0 +1,35 @@
+sequenceDiagram
+    participant Owner as Project Owner
+    participant Platform
+    participant Contractor
+    participant Escrow Service
+
+    Owner->>+Platform: Funds Contract
+    Platform->>+Escrow Service: Deposit Funds into Escrow Account
+    Escrow Service-->>-Platform: Confirm Deposit
+    Platform->>+Contractor: Notify: Contract is Funded
+
+    loop For Each Milestone
+        Contractor->>+Platform: Mark Milestone as Complete
+        Platform->>+Owner: Notify: Milestone Ready for Review
+
+        Owner->>+Platform: Approve Milestone
+        Platform-->>-Owner: Milestone Approved
+        Platform->>+Escrow Service: Request Milestone Payment Release
+        Escrow Service->>+Contractor: Release Funds for Milestone
+        Escrow Service-->>-Platform: Confirm Payment Release
+        Platform->>+Contractor: Notify: Payment Sent
+    end
+
+    alt In case of Dispute
+        Owner->>+Platform: Raise Dispute for a Milestone
+        Platform->>+Escrow Service: Freeze Funds for Disputed Milestone
+        Escrow Service-->>-Platform: Funds Frozen
+        participant Admin as Arbitration Admin
+        Admin->>+Platform: Review Evidence and Arbitrate
+        alt Admin rules in favor of Contractor
+            Platform->>+Escrow Service: Release Funds to Contractor
+        else Admin rules in favor of Owner
+            Platform->>+Escrow Service: Refund Funds to Owner
+        end
+    end

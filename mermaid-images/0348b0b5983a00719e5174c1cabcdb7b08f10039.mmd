@@ -1,0 +1,12 @@
+classDiagram
+    class InvestmentTransaction {
+        +id: UUID
+        +agreement_id: FK --> InvestmentAgreement
+        +escrow_account_id: FK --> EscrowAccount // Linked to specific escrow for funding
+        +type: str // FUNDING, RELEASE, RETURN
+        +amount: Decimal
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    InvestmentAgreement "1" -- "0..*" InvestmentTransaction : results_in
+    EscrowAccount "1" -- "0..*" InvestmentTransaction : involves

@@ -1,0 +1,12 @@
+classDiagram
+    class PropertyListing {
+        id
+        owner_id: FK --> accounts_user
+        title
+        description
+        location
+        asset_type: str
+        price_estimate
+        status: str
+        created_at
+    }

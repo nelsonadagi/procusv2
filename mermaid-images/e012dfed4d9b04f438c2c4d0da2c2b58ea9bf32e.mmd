@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant Buyer
+    participant Platform
+    participant Vendor
+    participant Admin
+
+    Buyer->>+Platform: Browse Materials
+    Platform-->>-Buyer: Display Products
+
+    Buyer->>+Platform: Request Quote for Product(s)
+    Platform->>+Vendor: Notify: New Quote Request
+    Vendor-->>-Platform: Review Quote Request
+    Vendor->>+Platform: Submit Quote (Price, Delivery Info)
+    Platform-->>-Vendor: Quote Submitted
+    Platform->>+Buyer: Notify: Quote Received
+
+    Buyer->>+Platform: Accept Quote & Checkout
+    Platform->>+Platform: Create Order (Status: PLACED)
+    Platform->>+Platform: Create Payment Intent (Status: UNPAID)
+    Platform->>+Buyer: Redirect to Payment (Placeholder)
+
+    Note over Buyer,Admin: Buyer "pays" offline, notifies Admin
+
+    Admin->>+Platform: Manually Verify Payment
+    Platform->>+Platform: Update Payment Status to PAID
+    Platform->>+Vendor: Notify: New Order to Fulfill
+
+    Vendor->>+Platform: Update Order Status (Confirmed, Shipped, Delivered)
+    Platform->>+Buyer: Notify: Order Status Updated
+
+    Buyer->>+Platform: Confirm Delivery
+    Platform->>+Platform: Update Order Status to COMPLETED
+    Platform->>+Vendor: Notify: Order Completed
+    Platform->>+Platform: Trigger Vendor Performance Update
+
+    Buyer->>+Platform: Rate & Review Vendor
+    Platform->>+Platform: Update Vendor's Average Rating

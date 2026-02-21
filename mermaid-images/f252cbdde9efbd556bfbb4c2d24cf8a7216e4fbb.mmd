@@ -1,0 +1,9 @@
+classDiagram
+    class Payment {
+        order: ForeignKey
+        provider: str
+        amount: Decimal
+        status: str
+        transaction_reference: str
+        paid_at: DateTime
+    }

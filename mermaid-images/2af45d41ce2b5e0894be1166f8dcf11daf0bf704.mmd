@@ -1,0 +1,11 @@
+classDiagram
+    class ProjectRequirement {
+        +id: UUID
+        +project_id: FK --> Project
+        +type: str // MATERIAL, CONTRACTOR, SERVICE
+        +description: TextField
+        +quantity: Decimal // Relevant for materials
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Project "1" -- "0..*" ProjectRequirement : defines

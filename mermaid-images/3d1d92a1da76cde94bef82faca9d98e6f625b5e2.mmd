@@ -1,0 +1,13 @@
+classDiagram
+    class EscrowTransaction {
+        +id: UUID
+        +escrow_account_id: FK --> EscrowAccount
+        +type: str // DEPOSIT, RELEASE, REFUND, ADJUSTMENT
+        +amount: Decimal
+        +milestone_id: FK? --> Milestone // Nullable, if transaction not tied to a specific milestone
+        +payment_reference: str?
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    EscrowAccount "1" -- "0..*" EscrowTransaction : has
+    Milestone "1" -- "0..1" EscrowTransaction : relates_to

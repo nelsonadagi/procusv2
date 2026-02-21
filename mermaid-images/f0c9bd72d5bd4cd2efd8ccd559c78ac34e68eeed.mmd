@@ -1,0 +1,12 @@
+classDiagram
+    class InvestmentAgreement {
+        id
+        project_id: FK
+        investor_id: FK
+        amount
+        agreement_terms_url
+        status: str
+        signed_at
+    }
+    InvestorProfile "1" -- "0..*" InvestmentAgreement : enters
+    Project "1" -- "0..*" InvestmentAgreement : for

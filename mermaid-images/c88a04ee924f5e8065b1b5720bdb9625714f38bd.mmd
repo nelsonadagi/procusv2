@@ -1,0 +1,9 @@
+classDiagram
+    class DevelopmentMetadata {
+        id
+        property_id: FK
+        zoning_info
+        build_ready: boolean
+        utilities_available
+    }
+    PropertyListing "1" -- "0..1" DevelopmentMetadata : has

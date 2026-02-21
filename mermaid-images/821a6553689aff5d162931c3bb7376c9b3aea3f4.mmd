@@ -1,0 +1,8 @@
+classDiagram
+    class MilestonePayment {
+        id
+        milestone_id: FK
+        payment_id: FK --> payments_payment
+        release_status
+    }
+    Milestone "1" -- "0..*" MilestonePayment : triggers

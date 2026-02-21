@@ -1,0 +1,14 @@
+classDiagram
+    class Bid {
+        +id: UUID
+        +contract_id: FK --> Contract
+        +contractor_id: FK --> ContractorProfile
+        +proposed_cost: Decimal
+        +proposed_timeline_days: Integer
+        +message: TextField?
+        +status: str // SUBMITTED, SHORTLISTED, REJECTED, AWARDED
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Contract "1" -- "0..*" Bid : receives
+    ContractorProfile "1" -- "0..*" Bid : submits

@@ -1,0 +1,13 @@
+classDiagram
+    class Payment {
+        +id: UUID
+        +order_id: FK --> Order
+        +provider: str // 'MODERN_CHECKOUT', 'MPESA', 'STRIPE'
+        +amount: Decimal
+        +status: str // UNPAID, PENDING, PAID, FAILED
+        +transaction_reference: str
+        +paid_at: DateTime?
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Order "1" -- "0..1" Payment : has

@@ -1,0 +1,14 @@
+classDiagram
+    class Project {
+        +id: UUID
+        +owner_id: FK --> User // The project owner/developer
+        +title: str
+        +description: TextField
+        +location: str
+        +estimated_budget: Decimal
+        +funding_required: boolean
+        +status: str // LISTED, FUNDING_OPEN, EXECUTION_STARTED, COMPLETED, CANCELLED
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    User "1" -- "0..*" Project : owns

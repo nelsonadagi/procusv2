@@ -1,0 +1,10 @@
+classDiagram
+    class InvestmentCommitment {
+        id
+        project_id: FK
+        investor_id: FK --> accounts_user
+        amount_committed
+        status: str
+        created_at
+    }
+    Project "1" -- "0..*" InvestmentCommitment : receives

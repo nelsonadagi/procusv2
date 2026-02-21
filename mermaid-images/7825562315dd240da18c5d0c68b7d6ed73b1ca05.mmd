@@ -1,0 +1,14 @@
+classDiagram
+    class SecondaryMarketTrade {
+        +id: UUID
+        +investment_agreement_id: FK --> InvestmentAgreement
+        +seller_investor_id: FK --> InvestorProfile
+        +buyer_investor_id: FK --> InvestorProfile
+        +trade_amount: Decimal
+        +status: str // REQUESTED, APPROVED, SETTLED, CANCELLED
+        +settlement_transaction_id: FK? --> EscrowTransaction
+        +created_at: DateTime
+    }
+    InvestmentAgreement "1" -- "0..*" SecondaryMarketTrade : enables_trading
+    InvestorProfile "1" -- "0..*" SecondaryMarketTrade : participates_in
+    EscrowTransaction "1" -- "0..1" SecondaryMarketTrade : for_settlement

@@ -1,0 +1,10 @@
+classDiagram
+    class ProjectContractLink {
+        +id: UUID
+        +project_id: FK --> Project
+        +contract_id: FK --> Contract
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Project "1" -- "0..*" ProjectContractLink : manages
+    Contract "1" -- "1" ProjectContractLink : belongs_to

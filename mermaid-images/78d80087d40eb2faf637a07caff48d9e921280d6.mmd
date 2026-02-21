@@ -1,0 +1,11 @@
+classDiagram
+    class MilestonePayment {
+        +id: UUID
+        +milestone_id: FK --> Milestone
+        +payment_id: FK --> Payment // Links to the generic Payment model
+        +release_status: str // PENDING, RELEASED, FAILED
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Milestone "1" -- "0..*" MilestonePayment : triggers
+    Payment "1" -- "0..*" MilestonePayment : linked_to

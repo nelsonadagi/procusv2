@@ -1,0 +1,11 @@
+classDiagram
+    class EscrowAccount {
+        id
+        contract_id: FK
+        buyer_id: FK
+        total_amount_held
+        currency
+        status: str
+        created_at
+    }
+    Contract "1" -- "1" EscrowAccount : manages_funds_for

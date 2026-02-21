@@ -1,0 +1,7 @@
+property:
+  - Land:
+      - Raw Land
+      - Commercial Land
+  - Residential Units:
+      - Finished Home
+      - Off-plan Unit

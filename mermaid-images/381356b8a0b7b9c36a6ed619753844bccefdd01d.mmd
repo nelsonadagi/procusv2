@@ -1,0 +1,12 @@
+classDiagram
+    class EscrowTransaction {
+        id
+        escrow_account_id: FK
+        type: str
+        amount
+        milestone_id: FK?
+        payment_reference
+        created_at
+    }
+    EscrowAccount "1" -- "0..*" EscrowTransaction : has
+    Milestone "1" -- "0..1" EscrowTransaction : via

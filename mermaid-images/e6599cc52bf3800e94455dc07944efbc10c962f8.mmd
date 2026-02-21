@@ -1,0 +1,12 @@
+classDiagram
+    class EscrowDisputeHold {
+        +id: UUID
+        +escrow_account_id: FK --> EscrowAccount
+        +dispute_id: FK --> Dispute
+        +reason: TextField
+        +status: str // ACTIVE, RESOLVED
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    EscrowAccount "1" -- "0..*" EscrowDisputeHold : subject_to
+    Dispute "1" -- "0..1" EscrowDisputeHold : initiates

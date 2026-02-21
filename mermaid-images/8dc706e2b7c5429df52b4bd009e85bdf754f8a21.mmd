@@ -1,0 +1,14 @@
+classDiagram
+    class ComplianceReport {
+        +id: UUID
+        +report_type: str // TAX, AML_SAR, FINANCIAL_AUDIT
+        +generated_period: str // e.g., "Q1-2026"
+        +status: str // GENERATED, SUBMITTED, APPROVED
+        +report_data: JSON // Aggregated data for the report
+        +submitted_at: DateTime?
+        +created_at: DateTime
+    }
+    EscrowTransaction "0..*" -- "0..*" ComplianceReport : feeds_data
+    Payment "0..*" -- "0..*" ComplianceReport : feeds_data
+    InvestmentTransaction "0..*" -- "0..*" ComplianceReport : feeds_data
+    Order "0..*" -- "0..*" ComplianceReport : feeds_data

@@ -1,0 +1,12 @@
+classDiagram
+    class Contract {
+        id
+        owner_id: FK --> accounts_user
+        title
+        description_scope
+        location
+        budget_min
+        budget_max
+        status: str
+        created_at
+    }

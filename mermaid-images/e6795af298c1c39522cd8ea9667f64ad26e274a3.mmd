@@ -1,0 +1,13 @@
+classDiagram
+    class ContractorProfile {
+        +id: UUID
+        +user_id: FK --> User
+        +company_name: str
+        +service_categories: List[str]
+        +operating_region: str
+        +verified_status: str // PENDING, APPROVED, SUSPENDED
+        +rating_avg: Float // Average review score
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    User "1" -- "1" ContractorProfile : has_profile

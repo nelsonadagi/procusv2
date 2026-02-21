@@ -1,0 +1,8 @@
+classDiagram
+    class PropertyProjectLink {
+        id
+        property_id: FK
+        project_id: FK
+    }
+    PropertyListing "1" -- "0..*" PropertyProjectLink : associated_with
+    Project "1" -- "0..*" PropertyProjectLink : associated_with

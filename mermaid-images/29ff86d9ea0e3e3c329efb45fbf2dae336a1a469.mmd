@@ -1,0 +1,12 @@
+classDiagram
+    class ContractorReview {
+        id
+        contract_id: FK
+        owner_id: FK
+        contractor_id: FK
+        score
+        comment
+        created_at
+    }
+    Contract "1" -- "0..*" ContractorReview : reviewed_in
+    ContractorProfile "1" -- "0..*" ContractorReview : gets_reviewed

@@ -1,0 +1,33 @@
+graph TD
+    subgraph Global Construction OS
+        A[Core Platform: Projects, Contracts, Escrow]
+    end
+
+    subgraph External Systems
+        B[Licensed Banks & Escrow Partners]
+        C[Regulatory Authorities]
+        D["Enterprise ERPs (SAP, Oracle)"]
+        E[Government Procurement Portals]
+        F[Secondary Market Participants]
+    end
+
+    subgraph Intelligence Layer
+        G[Advanced AI Engine]
+    end
+
+    A -- Deep Integration --> B
+    A -- Automated Reporting --> C
+    A -- Two-Way Sync --> D
+    A -- API Integration --> E
+    A -- Regulated Trading --> F
+
+    G -- Predictive Underwriting --> A
+    A -- Feeds Data --> G
+
+    B -- Settlement & Custody --> A
+    C -- Oversight --> A
+    D -- POs & Invoices --> A
+    E -- Tenders --> A
+    F -- Liquidity --> A
+
+    style A fill:#bbf,stroke:#333,stroke-width:4px

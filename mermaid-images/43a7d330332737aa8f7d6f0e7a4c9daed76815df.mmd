@@ -1,0 +1,12 @@
+classDiagram
+    class InvestmentCommitment {
+        +id: UUID
+        +project_id: FK --> Project
+        +investor_id: FK --> User // The user making the commitment
+        +amount_committed: Decimal
+        +status: str // PLEDGED, CONFIRMED, CANCELLED
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Project "1" -- "0..*" InvestmentCommitment : attracts
+    User "1" -- "0..*" InvestmentCommitment : makes

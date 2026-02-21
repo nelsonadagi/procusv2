@@ -1,0 +1,24 @@
+classDiagram
+    class Product {
+        +id: UUID
+        +vendor_id: FK --> VendorProfile
+        +name: str
+        +description: TextField
+        +category_id: FK --> ProductCategory
+        +base_price: Decimal
+        +unit_of_measure: str
+        +min_order_quantity: Integer
+        +stock_level: Integer // Critical for inventory management
+        +delivery_regions: List[str]
+        +status: str // ACTIVE, INACTIVE, OUT_OF_STOCK
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    class ProductCategory {
+        +id: UUID
+        +name: str
+        +slug: str
+        +parent_id: FK --> ProductCategory
+    }
+    VendorProfile "1" -- "0..*" Product : lists
+    ProductCategory "1" -- "0..*" Product : belongs_to

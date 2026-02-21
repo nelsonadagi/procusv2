@@ -1,0 +1,11 @@
+classDiagram
+    class ProjectUpdate {
+        +id: UUID
+        +project_id: FK --> Project
+        +update_text: TextField
+        +posted_by: FK --> User
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Project "1" -- "0..*" ProjectUpdate : has
+    User "1" -- "0..*" ProjectUpdate : posts

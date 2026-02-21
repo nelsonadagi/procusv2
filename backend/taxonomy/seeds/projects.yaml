@@ -1,0 +1,10 @@
+projects:
+  - Residential:
+      - Appartment Building
+      - Luxury Villa
+  - Commercial:
+      - Shopping Mall
+      - Office Complex
+  - Public Works:
+      - Hospital
+      - School

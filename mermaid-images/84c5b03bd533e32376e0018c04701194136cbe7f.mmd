@@ -1,0 +1,13 @@
+classDiagram
+    class EscrowAccount {
+        +id: UUID
+        +contract_id: FK --> Contract
+        +buyer_id: FK --> User // The buyer/owner who funded the escrow
+        +total_amount_held: Decimal
+        +currency: str
+        +status: str // ACTIVE, RELEASED, CLOSED, DISPUTED
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Contract "1" -- "1" EscrowAccount : manages_funds_for
+    User "1" -- "0..*" EscrowAccount : funds

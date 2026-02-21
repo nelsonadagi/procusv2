@@ -1,0 +1,13 @@
+classDiagram
+    class Bid {
+        id
+        contract_id: FK
+        contractor_id: FK
+        proposed_cost
+        proposed_timeline_days
+        message
+        status: str
+        created_at
+    }
+    Contract "1" -- "0..*" Bid : has
+    ContractorProfile "1" -- "0..*" Bid : submits

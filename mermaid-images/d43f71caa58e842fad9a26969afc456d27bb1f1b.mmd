@@ -1,0 +1,11 @@
+classDiagram
+    class Dispute {
+        +id: UUID
+        +opened_by: FK --> User
+        +order_id: FK --> Order
+        +status: str // OPENED, UNDER_REVIEW, RESOLVED_RELEASE, RESOLVED_REFUND, CLOSED
+        +reason: TextField
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Order "1" -- "0..1" Dispute : can_have

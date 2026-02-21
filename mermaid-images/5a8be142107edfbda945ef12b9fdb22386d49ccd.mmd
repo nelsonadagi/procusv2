@@ -1,0 +1,30 @@
+graph TD
+    subgraph Core Platform
+        P[Project & Contract Ecosystem]
+    end
+
+    subgraph Phase 5 Enhancements
+        subgraph Regulated Investment
+            A[Investor KYC/AML Verification] --> B{Verified Investor Pool};
+            B --> C[Sign Binding Investment Agreements];
+            C --> D[Deploy Capital via Escrow];
+        end
+
+        subgraph Enterprise Suite
+            E[Enterprise Creates Org Account] --> F{Define Users & Roles};
+            F --> G[Internal Procurement Approval Workflow];
+            G --> H[Execute high-volume contracts];
+        end
+
+        subgraph Government Layer
+            I[Government Agency Publishes Tender] --> J{Transparent Bidding Process};
+            J --> K[Award Contract with Full Audit Trail];
+            K --> L[Compliant Execution & Reporting];
+        end
+    end
+
+    D -- Funds --> P;
+    H -- Executes On --> P;
+    L -- Executes On --> P;
+
+    style P fill:#cde,stroke:#333,stroke-width:2px

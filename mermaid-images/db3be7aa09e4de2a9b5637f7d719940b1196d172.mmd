@@ -1,0 +1,9 @@
+classDiagram
+    class ProjectRequirement {
+        id
+        project_id: FK
+        type: str
+        description
+        quantity
+    }
+    Project "1" -- "0..*" ProjectRequirement : has

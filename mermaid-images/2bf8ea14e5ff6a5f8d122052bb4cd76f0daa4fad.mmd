@@ -1,0 +1,16 @@
+classDiagram
+    class Address {
+        +id: UUID
+        +user_id: FK --> User
+        +address_line1: str
+        +address_line2: str?
+        +city: str
+        +state: str
+        +zip_code: str
+        +country: str
+        +is_default: boolean
+        +label: str? // e.g., "Main Office", "Site A"
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    User "1" -- "0..*" Address : owns

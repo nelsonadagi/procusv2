@@ -1,0 +1,14 @@
+classDiagram
+    class ContractorReview {
+        +id: UUID
+        +contract_id: FK --> Contract
+        +owner_id: FK --> User // The project owner who submitted the review
+        +contractor_id: FK --> ContractorProfile // The contractor being reviewed
+        +score: Integer // 1-5 stars
+        +comment: TextField?
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Contract "1" -- "0..*" ContractorReview : related_to
+    User "1" -- "0..*" ContractorReview : submitted_by
+    ContractorProfile "1" -- "0..*" ContractorReview : reviewed_for

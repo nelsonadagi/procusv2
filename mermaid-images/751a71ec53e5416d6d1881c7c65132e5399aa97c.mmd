@@ -1,0 +1,9 @@
+classDiagram
+    class User {
+        +id: UUID
+        +email: str
+        +password_hash: str
+        +role: str  // PROJECT_OWNER, CONTRACTOR, VENDOR, ADMIN, etc.
+        +created_at: DateTime
+        +updated_at: DateTime
+    }

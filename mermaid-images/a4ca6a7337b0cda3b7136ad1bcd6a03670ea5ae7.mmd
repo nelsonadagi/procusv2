@@ -1,0 +1,11 @@
+classDiagram
+    class InvestorReport {
+        id
+        project_id: FK
+        investor_id: FK
+        report_period
+        performance_summary
+        created_at
+    }
+    InvestorProfile "1" -- "0..*" InvestorReport : receives
+    Project "1" -- "0..*" InvestorReport : reports_on

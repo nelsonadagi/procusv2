@@ -1,0 +1,12 @@
+classDiagram
+    class InvestorReport {
+        +id: UUID
+        +project_id: FK --> Project
+        +investor_id: FK --> InvestorProfile
+        +report_period: str // e.g., "Q1-2026"
+        +performance_summary: TextField
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    InvestorProfile "1" -- "0..*" InvestorReport : receives
+    Project "1" -- "0..*" InvestorReport : reports_on

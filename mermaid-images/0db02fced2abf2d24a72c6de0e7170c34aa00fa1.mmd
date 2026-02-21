@@ -1,0 +1,14 @@
+classDiagram
+    class PropertyListing {
+        +id: UUID
+        +owner_id: FK --> User // The owner of the property listing
+        +title: str
+        +description: TextField
+        +location: str
+        +asset_type: str // LAND, RESIDENTIAL, COMMERCIAL, RENOVATION
+        +price_estimate: Decimal?
+        +status: str // ACTIVE, SOLD, INACTIVE
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    User "1" -- "0..*" PropertyListing : lists

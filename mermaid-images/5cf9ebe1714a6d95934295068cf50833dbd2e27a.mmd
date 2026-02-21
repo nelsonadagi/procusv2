@@ -1,0 +1,40 @@
+sequenceDiagram
+    participant Owner as Project Owner
+    participant Platform
+    participant Contractor
+
+    Owner->>+Platform: Post Contract (Tender)
+    Platform-->>-Owner: Contract Listed
+
+    loop Bidding Period
+        Contractor->>+Platform: Browse & Discover Contracts
+        Platform-->>-Contractor: Display Open Contracts
+        Contractor->>+Platform: Submit Bid on a Contract
+        Platform-->>-Contractor: Bid Submitted
+    end
+
+    Owner->>+Platform: Review Bids
+    Platform-->>-Owner: Display Bids for Contract
+
+    Owner->>+Platform: Award Contract to a Contractor
+    Platform->>+Contractor: Notify: You Won the Contract
+    Platform->>+Platform: Update Contract Status to AWARDED
+
+    Owner->>+Platform: Define Project Milestones
+    Platform-->>-Owner: Milestones Saved
+
+    loop For Each Milestone
+        Contractor->>+Platform: Mark Milestone as Complete
+        Platform->>+Owner: Notify: Milestone Ready for Review
+
+        Owner->>+Platform: Approve Milestone
+        Platform-->>-Owner: Milestone Approved
+        Platform->>+Contractor: Notify: Milestone Approved
+        Note over Platform, Owner: Payment is triggered (placeholder in Phase 2)
+    end
+
+    Owner->>+Platform: Mark Contract as Complete
+    Platform->>+Platform: Update Contract Status to COMPLETED
+
+    Owner->>+Platform: Rate and Review Contractor
+    Platform->>+Platform: Update Contractor's Reputation Score

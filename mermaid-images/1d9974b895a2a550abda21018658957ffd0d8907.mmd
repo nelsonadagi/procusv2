@@ -1,0 +1,10 @@
+classDiagram
+    class EscrowRelease {
+        id
+        milestone_id: FK
+        approved_by: str
+        released_amount
+        release_status: str
+        released_at
+    }
+    Milestone "1" -- "0..1" EscrowRelease : approved_by

@@ -1,0 +1,12 @@
+services:
+  - General Contracting:
+      - Foundation Work
+      - Framing
+      - Roofing
+  - Electrical Services:
+      - Wiring
+      - Panel Installation
+      - Lighting Fixes
+  - Plumbing Services:
+      - Pipe Leak Repair
+      - Full System Install

@@ -1,0 +1,35 @@
+graph TD
+    subgraph Property Marketplace
+        A[Property Owner Lists Land for Sale]
+    end
+
+    subgraph Project Creation
+        B[Developer Buys Land]
+        B --> C{Creates New Project on Platform}
+        C --> D[Defines Project Scope, Budget, & Funding Needs]
+    end
+
+    subgraph Capital Formation
+        E[Investor Browses Projects]
+        E --> F{Pledges Funds to Project}
+        D --> E
+    end
+
+    subgraph Execution
+        C --> G[Posts Contracts for Services]
+        H[Contractors Bid on Contracts]
+        G --> H
+        I[Developer Awards Contracts]
+        H --> I
+        I --> J{Execution via Milestones}
+        J --> K[Platform Tracks Progress]
+    end
+
+    subgraph Project Lifecycle
+        A --> B
+        F -- Signals Interest --> I
+        J -- Updates --> C
+    end
+
+    style B fill:#f9f,stroke:#333,stroke-width:2px
+    style C fill:#f9f,stroke:#333,stroke-width:2px

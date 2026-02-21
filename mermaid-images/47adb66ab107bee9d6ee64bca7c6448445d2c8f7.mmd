@@ -1,0 +1,11 @@
+classDiagram
+    class Milestone {
+        id
+        contract_id: FK
+        title
+        description
+        amount
+        due_date
+        status: str
+    }
+    Contract "1" -- "0..*" Milestone : has

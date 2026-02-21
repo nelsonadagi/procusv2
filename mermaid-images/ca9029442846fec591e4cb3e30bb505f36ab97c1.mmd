@@ -1,0 +1,14 @@
+classDiagram
+    class AI_Engine_Risk_Scores {
+        +id: UUID
+        +entity_id: UUID // FK to VendorProfile, ContractorProfile, Project, InvestorProfile
+        +entity_type: str // VENDOR, CONTRACTOR, PROJECT, INVESTOR
+        +risk_score: Float // e.g., 0.0 - 1.0
+        +credit_limit_recommendation: Decimal?
+        +fraud_likelihood: Float?
+        +last_updated: DateTime
+    }
+    VendorProfile "1" -- "0..1" AI_Engine_Risk_Scores : influences
+    ContractorProfile "1" -- "0..1" AI_Engine_Risk_Scores : influences
+    Project "1" -- "0..1" AI_Engine_Risk_Scores : influences
+    InvestorProfile "1" -- "0..1" AI_Engine_Risk_Scores : influences

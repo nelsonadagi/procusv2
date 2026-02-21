@@ -1,0 +1,11 @@
+classDiagram
+    class InvestorProfile {
+        +id: UUID
+        +user_id: FK --> User
+        +kyc_status: str // PENDING, VERIFIED, REJECTED
+        +accreditation_status: str // e.g., ACCREDITED, NON_ACCREDITED
+        +jurisdiction: str
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    User "1" -- "1" InvestorProfile : has_profile

@@ -1,0 +1,133 @@
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 31, 2026 - 23:53:39
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 31, 2026 - 23:54:47
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/threading.py", line 1016, in _bootstrap_inner
+    self.run()
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/threading.py", line 953, in run
+    self._target(*self._args, **self._kwargs)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/utils/autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/core/management/commands/runserver.py", line 133, in inner_run
+    self.check(display_num_errors=True)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/core/management/base.py", line 485, in check
+    all_issues = checks.run_checks(
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/core/checks/registry.py", line 88, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/core/checks/urls.py", line 14, in check_url_config
+    return check_resolver(resolver)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/core/checks/urls.py", line 24, in check_resolver
+    return check_method()
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/urls/resolvers.py", line 494, in check
+    for pattern in self.url_patterns:
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/utils/functional.py", line 57, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/urls/resolvers.py", line 715, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/utils/functional.py", line 57, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/urls/resolvers.py", line 708, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/Users/mac/ujenzi_market_place/construction-marketplace/backend/config/urls.py", line 12, in <module>
+    path('api/accounts/', include('accounts.urls')),
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/site-packages/django/urls/conf.py", line 38, in include
+    urlconf_module = import_module(urlconf_module)
+  File "/Users/mac/.pyenv/versions/3.10.13/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/Users/mac/ujenzi_market_place/construction-marketplace/backend/accounts/urls.py", line 3, in <module>
+    from .views import RegisterView, LoginView, UserManagementViewSet, ProfileView, AddressViewSet
+  File "/Users/mac/ujenzi_market_place/construction-marketplace/backend/accounts/views.py", line 5, in <module>
+    from .serializers import UserRegistrationSerializer, UserSerializer, UserManagementSerializer, AddressSerializer, BuyerProfileSerializer
+  File "/Users/mac/ujenzi_market_place/construction-marketplace/backend/accounts/serializers.py", line 6, in <module>
+    class UserRegistrationSerializer(serializers.ModelSerializer):
+  File "/Users/mac/ujenzi_market_place/construction-marketplace/backend/accounts/serializers.py", line 31, in UserRegistrationSerializer
+    class Meta:
+  File "/Users/mac/ujenzi_market_place/construction-marketplace/backend/accounts/serializers.py", line 32, in Meta
+    model = Address
+NameError: name 'Address' is not defined
+Performing system checks...
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 31, 2026 - 23:55:25
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 01, 2026 - 00:07:39
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 01, 2026 - 00:08:31
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 01, 2026 - 00:13:56
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 01, 2026 - 00:14:06
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 01, 2026 - 00:20:12
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 01, 2026 - 00:24:50
+Django version 4.2.16, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8001/
+Quit the server with CONTROL-C.
+

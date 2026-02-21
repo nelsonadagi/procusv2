@@ -1,0 +1,14 @@
+classDiagram
+    class InvestmentAgreement {
+        +id: UUID
+        +project_id: FK --> Project
+        +investor_id: FK --> InvestorProfile
+        +amount: Decimal
+        +agreement_terms_url: str // Link to legal document
+        +status: str // SIGNED, FUNDED, CANCELLED, COMPLETED
+        +signed_at: DateTime
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    InvestorProfile "1" -- "0..*" InvestmentAgreement : enters
+    Project "1" -- "0..*" InvestmentAgreement : for

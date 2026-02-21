@@ -1,0 +1,9 @@
+classDiagram
+    class ContractorCertification {
+        id
+        contractor_id: FK
+        document_type
+        document_url
+        verified
+    }
+    ContractorProfile "1" -- "0..*" ContractorCertification : has

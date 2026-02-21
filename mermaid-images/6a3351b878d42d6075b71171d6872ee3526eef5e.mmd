@@ -1,0 +1,10 @@
+classDiagram
+    class EscrowDisputeHold {
+        id
+        escrow_account_id: FK
+        dispute_id: FK
+        reason
+        status
+    }
+    EscrowAccount "1" -- "0..*" EscrowDisputeHold : has
+    Dispute "1" -- "0..1" EscrowDisputeHold : triggers

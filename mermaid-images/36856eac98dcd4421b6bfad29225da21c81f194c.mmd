@@ -1,0 +1,13 @@
+classDiagram
+    class Milestone {
+        +id: UUID
+        +contract_id: FK --> Contract
+        +title: str
+        +description: TextField
+        +amount: Decimal
+        +due_date: Date
+        +status: str // PENDING, COMPLETED, APPROVED, PAID
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Contract "1" -- "0..*" Milestone : comprises

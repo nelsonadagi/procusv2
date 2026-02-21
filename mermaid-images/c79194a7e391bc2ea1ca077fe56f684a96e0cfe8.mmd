@@ -1,0 +1,9 @@
+classDiagram
+    class ProjectUpdate {
+        id
+        project_id: FK
+        update_text
+        posted_by
+        created_at
+    }
+    Project "1" -- "0..*" ProjectUpdate : has

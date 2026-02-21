@@ -1,0 +1,15 @@
+classDiagram
+    class EscrowRelease {
+        +id: UUID
+        +milestone_id: FK --> Milestone
+        +escrow_account_id: FK --> EscrowAccount
+        +approved_by: FK --> User // The user (e.g., Project Owner) who approved the release
+        +released_amount: Decimal
+        +release_status: str // PENDING, COMPLETED, FAILED
+        +released_at: DateTime
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    Milestone "1" -- "0..1" EscrowRelease : triggers
+    EscrowAccount "1" -- "0..*" EscrowRelease : handles
+    User "1" -- "0..*" EscrowRelease : approved_by

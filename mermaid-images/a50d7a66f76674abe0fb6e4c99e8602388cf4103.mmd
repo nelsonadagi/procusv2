@@ -1,0 +1,12 @@
+classDiagram
+    class Project {
+        id
+        owner_id: FK --> accounts_user
+        title
+        description
+        location
+        estimated_budget
+        funding_required: boolean
+        status: str
+        created_at
+    }

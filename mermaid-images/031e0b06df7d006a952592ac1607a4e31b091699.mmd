@@ -1,0 +1,11 @@
+classDiagram
+    class InvestmentTransaction {
+        id
+        agreement_id: FK
+        escrow_account_id: FK
+        type: str
+        amount
+        created_at
+    }
+    InvestmentAgreement "1" -- "0..*" InvestmentTransaction : results_in
+    EscrowAccount "1" -- "0..*" InvestmentTransaction : involves

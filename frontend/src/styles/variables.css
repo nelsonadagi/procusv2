@@ -1,0 +1,117 @@
+:root {
+  /* Primary Colors */
+  --pz-color-foundation-black: #0A0A0F;
+  --pz-color-structural-steel: #2D3748;
+  --pz-color-concrete-grey: #718096;
+  --pz-color-limestone-white: #FAFAF8;
+  
+  /* Accent Colors - Vibrant & Premium */
+  --pz-color-earth-orange: #FF6B2B;
+  --pz-color-copper-circuit: #D48C45;
+  --pz-color-steel-blue: #3B82F6;
+  --pz-color-savanna-green: #10B981;
+  --pz-color-african-violet: #8B5CF6;
+  --pz-color-gold-standard: #F59E0B;
+  
+  /* Gradients */
+  --pz-gradient-premium: linear-gradient(135deg, #FF6B2B 0%, #D4652A 100%);
+  --pz-gradient-dark: linear-gradient(180deg, #0A0A0F 0%, #1A1A24 100%);
+  --pz-gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  
+  /* Semantic Mappings */
+  --pz-color-text-primary: var(--pz-color-foundation-black);
+  --pz-color-text-secondary: var(--pz-color-structural-steel);
+  --pz-color-text-tertiary: var(--pz-color-concrete-grey);
+  --pz-color-background-primary: var(--pz-color-limestone-white);
+  --pz-color-background-dark: var(--pz-color-foundation-black);
+  --pz-color-accent-primary: var(--pz-color-earth-orange);
+  --pz-color-accent-finance: var(--pz-color-copper-circuit);
+  --pz-color-accent-tech: var(--pz-color-steel-blue);
+  --pz-color-accent-success: var(--pz-color-savanna-green);
+  --pz-color-accent-innovation: var(--pz-color-african-violet);
+  
+  /* Typography */
+  --pz-font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --pz-font-display: 'Space Grotesk', sans-serif;
+  --pz-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  
+  /* Type Scale */
+  --pz-text-display: 4rem;
+  --pz-text-h1: 3rem;
+  --pz-text-h2: 2rem;
+  --pz-text-h3: 1.5rem;
+  --pz-text-h4: 1.25rem;
+  --pz-text-body-lg: 1.125rem;
+  --pz-text-body: 1rem;
+  --pz-text-small: 0.875rem;
+  --pz-text-caption: 0.75rem;
+  
+  /* Font Weights */
+  --pz-weight-regular: 400;
+  --pz-weight-medium: 500;
+  --pz-weight-semibold: 600;
+  --pz-weight-bold: 700;
+  
+  /* Line Heights */
+  --pz-leading-tight: 1.1;
+  --pz-leading-snug: 1.2;
+  --pz-leading-normal: 1.3;
+  --pz-leading-relaxed: 1.4;
+  --pz-leading-loose: 1.5;
+  --pz-leading-body: 1.6;
+  
+  /* Spacing Scale (8px base) */
+  --pz-space-1: 0.5rem;
+  --pz-space-2: 1rem;
+  --pz-space-3: 1.5rem;
+  --pz-space-4: 2rem;
+  --pz-space-6: 3rem;
+  --pz-space-8: 4rem;
+  --pz-space-12: 6rem;
+  
+  /* Borders */
+  --pz-border-width: 1px;
+  --pz-border-width-thick: 2px;
+  --pz-border-radius: 12px;
+  --pz-border-radius-sm: 8px;
+  --pz-border-radius-lg: 24px;
+  --pz-border-radius-full: 9999px;
+  
+  /* Shadows - Modern & Soft */
+  --pz-shadow-none: none;
+  --pz-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --pz-shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --pz-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --pz-shadow-xl: 0 35px 60px -15px rgba(0, 0, 0, 0.2);
+  --pz-shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  --pz-shadow-focal: 0 0 40px rgba(255, 107, 43, 0.15);
+  
+  /* Transitions - Smoother */
+  --pz-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --pz-transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --pz-transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  --pz-transition-spring: 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  
+  /* Effects */
+  --pz-blur-sm: blur(4px);
+  --pz-blur-md: blur(12px);
+  --pz-blur-lg: blur(24px);
+  
+  /* Glassmorphism */
+  --pz-glass-bg: rgba(255, 255, 255, 0.7);
+  --pz-glass-dark-bg: rgba(10, 10, 15, 0.8);
+  --pz-glass-border: rgba(255, 255, 255, 0.3);
+  --pz-glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  
+  /* Industrial Accents */
+  --pz-metallic-silver: linear-gradient(180deg, #E2E8F0 0%, #CBD5E0 100%);
+  --pz-metallic-dark: linear-gradient(180deg, #2D3748 0%, #1A202C 100%);
+
+  /* Z-index Scale */
+  --pz-z-base: 0;
+  --pz-z-dropdown: 100;
+  --pz-z-sticky: 200;
+  --pz-z-modal: 300;
+  --pz-z-popover: 400;
+  --pz-z-tooltip: 500;
+}

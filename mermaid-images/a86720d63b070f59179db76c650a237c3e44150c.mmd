@@ -1,0 +1,16 @@
+classDiagram
+    class IntegrationConfig {
+        +id: UUID
+        +system_name: str // e.g., "SAP ERP", "Gov Tender Portal"
+        +config_details: JSON // API keys, endpoints, data mappings
+        +status: str // ACTIVE, INACTIVE
+        +last_updated: DateTime
+    }
+    class IntegrationLog {
+        +id: UUID
+        +integration_id: FK --> IntegrationConfig
+        +event_type: str // INBOUND, OUTBOUND, ERROR
+        +payload: JSON // Data exchanged
+        +created_at: DateTime
+    }
+    IntegrationConfig "1" -- "0..*" IntegrationLog : logs

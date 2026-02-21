@@ -1,0 +1,11 @@
+classDiagram
+    class ContractorCertification {
+        +id: UUID
+        +contractor_id: FK --> ContractorProfile
+        +document_type: str // e.g., "License", "ISO 9001"
+        +document_url: str // Link to stored document
+        +verified: boolean
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    ContractorProfile "1" -- "0..*" ContractorCertification : has

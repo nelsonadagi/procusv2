@@ -1,0 +1,10 @@
+classDiagram
+    class PropertyProjectLink {
+        +id: UUID
+        +property_id: FK --> PropertyListing
+        +project_id: FK --> Project
+        +created_at: DateTime
+        +updated_at: DateTime
+    }
+    PropertyListing "1" -- "0..*" PropertyProjectLink : associated_with
+    Project "1" -- "0..*" PropertyProjectLink : associated_with

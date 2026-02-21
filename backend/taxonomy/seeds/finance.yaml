@@ -1,0 +1,7 @@
+finance:
+  - Loans:
+      - Equipment Loan
+      - Material Purchase Credit
+  - Equity:
+      - Project Equity
+      - Mezzanine Finance
