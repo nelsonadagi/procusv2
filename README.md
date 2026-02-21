@@ -54,6 +54,23 @@
 
 ---
 
+## 🗺️ Development Phases
+
+The platform is built across **6 delivered phases**, each building upon the last. See the full breakdown in [`docs/PHASES.md`](./docs/PHASES.md).
+
+| Phase | Name | Key Additions | Status |
+|---|---|---|---|
+| **1** | Materials Liquidity Engine | User accounts, vendor profiles, product catalogue, orders, payments, disputes | ✅ Done |
+| **2** | Contracts & Execution Layer | Contractor registry, competitive bidding, contract lifecycle, milestone tracking | ✅ Done |
+| **3** | Financial Infrastructure | Escrow fund holding, milestone-triggered releases, dispute arbitration, credit products | ✅ Done |
+| **4** | Projects, Property & Capital | Top-level project entity, investor pledges, property listings, capital pipeline | ✅ Done |
+| **5** | Regulated Investment & Government | KYC/AML compliance, binding agreements, public tenders, enterprise workflows | ✅ Done |
+| **6** | Full Regulatory Integration & AI | Banking settlement, regulatory reporting, AI risk prediction, secondary market, ERP connectors | ✅ Done |
+
+> 📖 **Full details** — goals, modules, data models, API endpoints, and frontend views for each phase: [`docs/PHASES.md`](./docs/PHASES.md)
+
+---
+
 ## 🏛️ Architecture
 
 ```
