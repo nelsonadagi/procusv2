@@ -29,3 +29,13 @@ wcwidth==0.5.3
 PyYAML
 cryptography
 Pillow
+
+# Testing & Quality
+pytest==8.3.4
+pytest-django==4.9.0
+pytest-mock==3.14.0
+pytest-cov==6.0.0
+factory-boy==3.3.1
+coverage==7.6.9
+flake8==7.1.1
+black==24.10.0
