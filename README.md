@@ -52,6 +52,25 @@
 | 📊 **Reporting** | Regulatory and compliance reporting dashboards |
 | ⚙️ **Admin Console** | Full platform administration: users, config, roles, countries, master data |
 
+### Structure
+*   `frontend/`: Vue 3 + Vite app.
+*   `backend/`: Django + DRF API.
+*   `infra/`: Infrastructure configs.
+*   `docs/`: Project documentation.
+
+## 📚 Documentation
+
+Detailed documentation for the entire platform is available in the [`docs/`](./docs) folder:
+
+| Document | Description |
+|---|---|
+| 🏗️ [**Roadmap & Phases**](./docs/PHASES.md) | Six-phase development journey and module map |
+| 📋 [**SRS**](./docs/SRS.md) | Software Requirements Specification |
+| 🏛️ [**SDD**](./docs/SDD.md) | Software Design Document (Architecture) |
+| 📖 [**User Guide**](./docs/USER_GUIDE.md) | Role-based workflows for all users |
+| 🤝 [**Contributing**](./CONTRIBUTING.md) | Standards, commit conventions, and PR process |
+| 🎨 [**Style Guide**](./frontend/FRONTEND_STYLE_GUIDE.md) | Frontend design system and UI tokens |
+
 ---
 
 ## 🗺️ Development Phases
