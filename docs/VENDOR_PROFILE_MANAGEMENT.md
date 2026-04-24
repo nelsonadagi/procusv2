@@ -6,7 +6,9 @@
 
 **Access Path:**
 ```
-Login as Vendor → Vendor Dashboard → 👤 My Profile Tab
+Register account as VENDOR → Login → Vendor Dashboard
+If no vendor profile exists: Vendor Dashboard → Complete onboarding → /vendors/register
+If vendor profile exists: Vendor Dashboard → 👤 My Profile Tab
 ```
 
 ---
@@ -15,7 +17,7 @@ Login as Vendor → Vendor Dashboard → 👤 My Profile Tab
 
 ### **1. Tabbed Dashboard Interface**
 
-The Vendor Dashboard now has **3 main tabs**:
+The Vendor Dashboard now has **3 main tabs** once onboarding is complete:
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -187,7 +189,7 @@ Shows vendor performance statistics in a beautiful grid:
            ↓
 4. Vendor clicks "Save Changes"
            ↓
-5. API Call: PATCH /vendors/profiles/{id}/
+5. API Call: PATCH /vendors/{id}/
            ↓
 6. Success message displayed
            ↓
@@ -221,6 +223,17 @@ Shows vendor performance statistics in a beautiful grid:
                serializer.validated_data.pop('verified_status')
        serializer.save()
    ```
+
+---
+
+## 🧭 **Onboarding State**
+
+If a user has selected the `VENDOR` role but has not yet created a vendor profile:
+
+1. The Vendor Dashboard shows an onboarding-required state.
+2. The primary action routes to `/vendors/register`.
+3. The registration form submits `POST /api/vendors/`.
+4. The created profile starts in `PENDING` status until admin approval.
 
 ---
 
@@ -292,8 +305,8 @@ Loading profile...
 
 ### **Fetch Vendor Profile**
 ```http
-GET /api/vendors/profiles/me/
-Authorization: Bearer <vendor_token>
+GET /api/vendors/me/
+Authorization: Token <vendor_token>
 ```
 
 **Response:**
@@ -318,8 +331,8 @@ Authorization: Bearer <vendor_token>
 
 ### **Update Vendor Profile**
 ```http
-PATCH /api/vendors/profiles/5/
-Authorization: Bearer <vendor_token>
+PATCH /api/vendors/5/
+Authorization: Token <vendor_token>
 Content-Type: application/json
 
 {
@@ -434,4 +447,3 @@ The profile section is fully responsive:
 - ✅ Secure backend protection
 
 The vendor profile management system is now **fully functional** and provides a professional, user-friendly experience! 🚀
-

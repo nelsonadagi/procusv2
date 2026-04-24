@@ -1,8 +1,18 @@
 <template>
     <div v-if="isOpen" class="pz-modal-overlay" @click.self="close">
-        <div :class="computedClasses" role="dialog" aria-modal="true">
+        <div
+            ref="modalRef"
+            :class="computedClasses"
+            role="dialog"
+            aria-modal="true"
+            :aria-label="title"
+            tabindex="-1"
+        >
             <div class="pz-modal__header">
-                <h3 class="pz-modal__title">{{ title }}</h3>
+                <div class="pz-modal__heading">
+                    <span class="pz-modal__eyebrow">Workspace Panel</span>
+                    <h3 class="pz-modal__title">{{ title }}</h3>
+                </div>
                 <button class="pz-modal__close" @click="close" aria-label="Close">&times;</button>
             </div>
 
@@ -18,7 +28,7 @@
 </template>
 
 <script setup>
-    import { computed } from 'vue'
+    import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
     const props = defineProps({
         isOpen: {
@@ -37,10 +47,44 @@
     })
 
     const emit = defineEmits(['close'])
+    const modalRef = ref(null)
 
     const close = () => {
         emit('close')
     }
+
+    const handleKeydown = (event) => {
+        if (event.key === 'Escape' && props.isOpen) {
+            close()
+        }
+    }
+
+    watch(
+        () => props.isOpen,
+        async (isOpen) => {
+            if (typeof document === 'undefined') {
+                return
+            }
+
+            document.body.style.overflow = isOpen ? 'hidden' : ''
+
+            if (isOpen) {
+                window.addEventListener('keydown', handleKeydown)
+                await nextTick()
+                modalRef.value?.focus()
+            } else {
+                window.removeEventListener('keydown', handleKeydown)
+            }
+        },
+        { immediate: true }
+    )
+
+    onBeforeUnmount(() => {
+        if (typeof document !== 'undefined') {
+            document.body.style.overflow = ''
+        }
+        window.removeEventListener('keydown', handleKeydown)
+    })
 
     const computedClasses = computed(() => {
         let s = props.size;
@@ -59,8 +103,10 @@
     .pz-modal-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(10, 10, 15, 0.6);
-        backdrop-filter: blur(4px);
+        background:
+            radial-gradient(circle at top, rgba(212, 101, 42, 0.16), transparent 32%),
+            rgba(10, 10, 15, 0.72);
+        backdrop-filter: blur(10px);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -69,13 +115,16 @@
     }
 
     .pz-modal {
-        background: var(--pz-color-limestone-white);
-        border: var(--pz-border-width) solid var(--pz-color-foundation-black);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 242, 0.94));
+        border: 1px solid rgba(10, 10, 15, 0.12);
         width: 100%;
         max-height: 90vh;
         display: flex;
         flex-direction: column;
-        box-shadow: 10px 10px 0px rgba(10, 10, 15, 0.1);
+        border-radius: var(--pz-border-radius-lg);
+        box-shadow: 0 28px 64px rgba(10, 10, 15, 0.24);
+        overflow: hidden;
     }
 
     .pz-modal--small {
@@ -95,48 +144,80 @@
     }
 
     .pz-modal__header {
-        padding: var(--pz-space-4) var(--pz-space-6);
-        border-bottom: var(--pz-border-width) solid rgba(113, 128, 150, 0.2);
+        padding: 1.1rem 1.25rem;
+        border-bottom: var(--pz-border-width) solid rgba(10, 10, 15, 0.08);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background-color: var(--pz-color-foundation-black);
+        background:
+            linear-gradient(135deg, rgba(10, 10, 15, 0.98), rgba(45, 55, 72, 0.96));
         color: var(--pz-color-limestone-white);
+    }
+
+    .pz-modal__heading {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .pz-modal__eyebrow {
+        font-family: var(--pz-font-mono);
+        font-size: 0.64rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.64);
     }
 
     .pz-modal__title {
         font-family: var(--pz-font-display);
-        font-size: var(--pz-text-h4);
+        font-size: 1.1rem;
+        letter-spacing: -0.03em;
         margin: 0;
         color: inherit;
     }
 
     .pz-modal__close {
-        background: none;
-        border: none;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
         font-size: 1.5rem;
         color: inherit;
         cursor: pointer;
-        opacity: 0.7;
-        transition: opacity var(--pz-transition-fast);
+        opacity: 0.82;
+        transition: all var(--pz-transition-fast);
     }
 
     .pz-modal__close:hover {
         opacity: 1;
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.14);
+    }
+
+    .pz-modal__close:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
     }
 
     .pz-modal__body {
-        padding: var(--pz-space-6);
+        padding: 1.35rem 1.25rem 1.25rem;
         overflow-y: auto;
         flex: 1;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.92));
     }
 
     .pz-modal__footer {
-        padding: var(--pz-space-4) var(--pz-space-6);
-        border-top: var(--pz-border-width) solid rgba(113, 128, 150, 0.1);
+        padding: 1rem 1.25rem;
+        border-top: var(--pz-border-width) solid rgba(10, 10, 15, 0.08);
         display: flex;
         justify-content: flex-end;
         gap: var(--pz-space-2);
-        background-color: rgba(113, 128, 150, 0.05);
+        background:
+            linear-gradient(180deg, rgba(241, 240, 235, 0.5), rgba(255, 255, 255, 0.9));
     }
 </style>

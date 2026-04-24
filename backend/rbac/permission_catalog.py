@@ -1,0 +1,754 @@
+from collections import defaultdict
+
+
+PERMISSION_CATALOG = [
+    {
+        "namespace": "catalog",
+        "action": "view",
+        "name": "View catalog",
+        "description": "Browse product listings, product details, and catalog search results.",
+    },
+    {
+        "namespace": "catalog",
+        "action": "create",
+        "name": "Create catalog items",
+        "description": "Add new products or service listings to the marketplace catalog.",
+    },
+    {
+        "namespace": "catalog",
+        "action": "update",
+        "name": "Update catalog items",
+        "description": "Edit existing catalog listings, pricing, media, and product metadata.",
+    },
+    {
+        "namespace": "catalog",
+        "action": "delete",
+        "name": "Delete catalog items",
+        "description": "Remove catalog items from active marketplace availability.",
+    },
+    {
+        "namespace": "catalog",
+        "action": "manage_stock",
+        "name": "Manage stock",
+        "description": "Update inventory levels, availability, and fulfillment readiness.",
+    },
+    {
+        "namespace": "orders",
+        "action": "view",
+        "name": "View orders",
+        "description": "See order records, order statuses, and related order summaries.",
+    },
+    {
+        "namespace": "orders",
+        "action": "create",
+        "name": "Create orders",
+        "description": "Place new orders and start buyer-side procurement flows.",
+    },
+    {
+        "namespace": "orders",
+        "action": "update",
+        "name": "Update orders",
+        "description": "Edit permitted order fields during active order processing.",
+    },
+    {
+        "namespace": "orders",
+        "action": "cancel",
+        "name": "Cancel orders",
+        "description": "Cancel eligible orders before fulfillment reaches locked states.",
+    },
+    {
+        "namespace": "orders",
+        "action": "process",
+        "name": "Process orders",
+        "description": "Advance order fulfillment, packing, shipping, and vendor-side processing.",
+    },
+    {
+        "namespace": "contracts",
+        "action": "view",
+        "name": "View contracts",
+        "description": "Browse contracts, tenders, and contract lifecycle details.",
+    },
+    {
+        "namespace": "contracts",
+        "action": "post_contract",
+        "name": "Post contracts",
+        "description": "Create new contracts or tenders for bidding and execution.",
+    },
+    {
+        "namespace": "contracts",
+        "action": "award_contract",
+        "name": "Award contracts",
+        "description": "Select winners and move contracts into execution.",
+    },
+    {
+        "namespace": "contracts",
+        "action": "manage_milestones",
+        "name": "Manage contract milestones",
+        "description": "Create, update, and maintain milestone schedules for contract execution.",
+    },
+    {
+        "namespace": "bids",
+        "action": "view",
+        "name": "View bids",
+        "description": "See bid submissions, bid summaries, and bid history.",
+    },
+    {
+        "namespace": "bids",
+        "action": "submit_bid",
+        "name": "Submit bids",
+        "description": "Respond to tenders or contracts with a formal bid submission.",
+    },
+    {
+        "namespace": "bids",
+        "action": "withdraw_bid",
+        "name": "Withdraw bids",
+        "description": "Withdraw an active bid before award or closure.",
+    },
+    {
+        "namespace": "bids",
+        "action": "award_bid",
+        "name": "Award bids",
+        "description": "Choose a winning bid from available bidder submissions.",
+    },
+    {
+        "namespace": "escrow",
+        "action": "view",
+        "name": "View escrow",
+        "description": "Inspect escrow balances, escrow accounts, and escrow transaction history.",
+    },
+    {
+        "namespace": "escrow",
+        "action": "deposit_funds",
+        "name": "Deposit escrow funds",
+        "description": "Fund escrow for a contract or milestone-backed workflow.",
+    },
+    {
+        "namespace": "escrow",
+        "action": "release_funds",
+        "name": "Release escrow funds",
+        "description": "Release escrowed funds after milestone or settlement approval.",
+    },
+    {
+        "namespace": "escrow",
+        "action": "refund_funds",
+        "name": "Refund escrow funds",
+        "description": "Return escrowed funds during refunds or dispute outcomes.",
+    },
+    {
+        "namespace": "escrow",
+        "action": "dispute_funds",
+        "name": "Dispute escrow funds",
+        "description": "Flag escrowed funds for review during active disputes.",
+    },
+    {
+        "namespace": "finance",
+        "action": "view",
+        "name": "View finance products",
+        "description": "See financing products, finance workflows, and finance records.",
+    },
+    {
+        "namespace": "finance",
+        "action": "apply",
+        "name": "Apply for finance",
+        "description": "Submit financing requests or loan applications.",
+    },
+    {
+        "namespace": "finance",
+        "action": "approve_loan",
+        "name": "Approve finance",
+        "description": "Review and approve qualifying financing or loan requests.",
+    },
+    {
+        "namespace": "finance",
+        "action": "disburse",
+        "name": "Disburse funds",
+        "description": "Trigger financing disbursement after approval and checks.",
+    },
+    {
+        "namespace": "disputes",
+        "action": "view",
+        "name": "View disputes",
+        "description": "See dispute cases, statuses, and evidence summaries.",
+    },
+    {
+        "namespace": "disputes",
+        "action": "raise_dispute",
+        "name": "Raise disputes",
+        "description": "Open a new dispute against an order, project, or contract issue.",
+    },
+    {
+        "namespace": "disputes",
+        "action": "arbitrate_dispute",
+        "name": "Arbitrate disputes",
+        "description": "Review, adjudicate, and resolve disputes as an operator.",
+    },
+    {
+        "namespace": "disputes",
+        "action": "close_dispute",
+        "name": "Close disputes",
+        "description": "Close disputes after settlement, release, refund, or final decision.",
+    },
+    {
+        "namespace": "projects",
+        "action": "view",
+        "name": "View projects",
+        "description": "Browse project records, project details, and project progress.",
+    },
+    {
+        "namespace": "projects",
+        "action": "create_project",
+        "name": "Create projects",
+        "description": "Start new project records and initiate owner-side project workflows.",
+    },
+    {
+        "namespace": "projects",
+        "action": "update_project",
+        "name": "Update projects",
+        "description": "Edit project details, scope, and project progress updates.",
+    },
+    {
+        "namespace": "projects",
+        "action": "delete_project",
+        "name": "Delete projects",
+        "description": "Remove project records when deletion is permitted.",
+    },
+    {
+        "namespace": "property",
+        "action": "view",
+        "name": "View properties",
+        "description": "Browse property records and property registry details.",
+    },
+    {
+        "namespace": "property",
+        "action": "list_property",
+        "name": "Create property listings",
+        "description": "Add new property or development records into the platform registry.",
+    },
+    {
+        "namespace": "property",
+        "action": "update_property",
+        "name": "Update property listings",
+        "description": "Edit property records, metadata, and listing information.",
+    },
+    {
+        "namespace": "investments",
+        "action": "onboard",
+        "name": "Submit investor onboarding",
+        "description": "Create or update investor onboarding and profile submissions.",
+    },
+    {
+        "namespace": "investments",
+        "action": "view",
+        "name": "View investment opportunities",
+        "description": "See investment offerings, project funding needs, and capital activity.",
+    },
+    {
+        "namespace": "investments",
+        "action": "pledge",
+        "name": "Pledge investments",
+        "description": "Commit funds to investment opportunities or project capital rounds.",
+    },
+    {
+        "namespace": "investments",
+        "action": "sign_agreement",
+        "name": "Sign investment agreements",
+        "description": "Execute required agreements for a qualified investment commitment.",
+    },
+    {
+        "namespace": "investments",
+        "action": "transfer_stake",
+        "name": "Transfer investment stakes",
+        "description": "Transfer or trade investment stakes in supported secondary flows.",
+    },
+    {
+        "namespace": "enterprise",
+        "action": "view",
+        "name": "View enterprise workflows",
+        "description": "Inspect enterprise procurement requests and approval chains.",
+    },
+    {
+        "namespace": "enterprise",
+        "action": "request_approval",
+        "name": "Request enterprise approval",
+        "description": "Submit enterprise procurement or budget requests for approval.",
+    },
+    {
+        "namespace": "enterprise",
+        "action": "approve_request",
+        "name": "Approve enterprise requests",
+        "description": "Review and approve enterprise procurement requests.",
+    },
+    {
+        "namespace": "enterprise",
+        "action": "manage_org",
+        "name": "Manage enterprise organization",
+        "description": "Manage enterprise structure, access, and organizational settings.",
+    },
+    {
+        "namespace": "government",
+        "action": "view",
+        "name": "View public tenders",
+        "description": "Browse public tenders, procurement records, and public notices.",
+    },
+    {
+        "namespace": "government",
+        "action": "publish_tender",
+        "name": "Publish tenders",
+        "description": "Create and manage public tenders or government procurement notices.",
+    },
+    {
+        "namespace": "government",
+        "action": "audit_tender",
+        "name": "Audit tenders",
+        "description": "Audit public tender records for transparency and oversight.",
+    },
+    {
+        "namespace": "milestones",
+        "action": "view",
+        "name": "View milestones",
+        "description": "See milestone records, statuses, and completion checkpoints.",
+    },
+    {
+        "namespace": "milestones",
+        "action": "manage_milestones",
+        "name": "Manage milestones",
+        "description": "Create, update, and administer milestone plans and progress.",
+    },
+    {
+        "namespace": "compliance",
+        "action": "view",
+        "name": "View compliance records",
+        "description": "Inspect compliance cases, KYC records, and verification queues.",
+    },
+    {
+        "namespace": "compliance",
+        "action": "verify_kyc",
+        "name": "Verify KYC",
+        "description": "Approve or reject KYC submissions and investor identity records.",
+    },
+    {
+        "namespace": "compliance",
+        "action": "report_aml",
+        "name": "Report AML issues",
+        "description": "Record or escalate AML-related review findings and reports.",
+    },
+    {
+        "namespace": "risk",
+        "action": "view",
+        "name": "View risk data",
+        "description": "Access risk analysis outputs, anomalies, and monitoring records.",
+    },
+    {
+        "namespace": "risk",
+        "action": "manage_ai_rules",
+        "name": "Manage AI risk rules",
+        "description": "Configure AI or rules-based risk detection thresholds and settings.",
+    },
+    {
+        "namespace": "risk",
+        "action": "view_anomaly",
+        "name": "View anomalies",
+        "description": "Inspect anomaly alerts, suspicious patterns, and exception cases.",
+    },
+    {
+        "namespace": "banking",
+        "action": "view",
+        "name": "View banking operations",
+        "description": "See settlement, reconciliation, and banking operation records.",
+    },
+    {
+        "namespace": "banking",
+        "action": "manage_accounts",
+        "name": "Manage banking accounts",
+        "description": "Create and manage payout or settlement bank account details.",
+    },
+    {
+        "namespace": "banking",
+        "action": "reconcile",
+        "name": "Reconcile banking records",
+        "description": "Perform reconciliation across payment, settlement, and wallet records.",
+    },
+    {
+        "namespace": "banking",
+        "action": "settle",
+        "name": "Settle banking payouts",
+        "description": "Trigger or finalize settlements to beneficiaries and payout rails.",
+    },
+    {
+        "namespace": "integrations",
+        "action": "view",
+        "name": "View integrations",
+        "description": "See external integration records, partner connections, and sync status.",
+    },
+    {
+        "namespace": "integrations",
+        "action": "manage_api_keys",
+        "name": "Manage API keys",
+        "description": "Create, rotate, and revoke credentials for external integrations.",
+    },
+    {
+        "namespace": "integrations",
+        "action": "sync_erp",
+        "name": "Sync ERP integrations",
+        "description": "Run or manage ERP synchronization and external procurement sync jobs.",
+    },
+    {
+        "namespace": "users",
+        "action": "view",
+        "name": "View users",
+        "description": "Browse user accounts, profiles, and user-level access records.",
+    },
+    {
+        "namespace": "users",
+        "action": "create",
+        "name": "Create users",
+        "description": "Create new user accounts through controlled operator flows.",
+    },
+    {
+        "namespace": "users",
+        "action": "update",
+        "name": "Update users",
+        "description": "Edit user profile or account fields through authorized workflows.",
+    },
+    {
+        "namespace": "users",
+        "action": "delete",
+        "name": "Delete users",
+        "description": "Remove user accounts when deletion is explicitly permitted.",
+    },
+    {
+        "namespace": "users",
+        "action": "manage_roles",
+        "name": "Manage user roles",
+        "description": "Grant, revoke, or adjust user role and access assignments.",
+    },
+    {
+        "namespace": "vendors",
+        "action": "view",
+        "name": "View vendor profiles",
+        "description": "Browse vendor records, vendor profiles, and vendor summaries.",
+    },
+    {
+        "namespace": "vendors",
+        "action": "onboard",
+        "name": "Submit vendor onboarding",
+        "description": "Create a vendor onboarding submission from the shared account flow.",
+    },
+    {
+        "namespace": "vendors",
+        "action": "update",
+        "name": "Update vendor profiles",
+        "description": "Edit vendor profile details and operational profile data.",
+    },
+    {
+        "namespace": "vendors",
+        "action": "delete",
+        "name": "Delete vendor profiles",
+        "description": "Remove vendor profile records when deletion is permitted.",
+    },
+    {
+        "namespace": "vendors",
+        "action": "approve",
+        "name": "Approve vendor onboarding",
+        "description": "Approve or reject vendor onboarding submissions as an operator.",
+    },
+    {
+        "namespace": "contractors",
+        "action": "view",
+        "name": "View contractor profiles",
+        "description": "Browse contractor records, capability profiles, and verification status.",
+    },
+    {
+        "namespace": "contractors",
+        "action": "onboard",
+        "name": "Submit contractor onboarding",
+        "description": "Create a contractor onboarding submission from the shared account flow.",
+    },
+    {
+        "namespace": "contractors",
+        "action": "update",
+        "name": "Update contractor profiles",
+        "description": "Edit contractor profile details and qualifications.",
+    },
+    {
+        "namespace": "contractors",
+        "action": "approve",
+        "name": "Approve contractor onboarding",
+        "description": "Approve or reject contractor onboarding submissions as an operator.",
+    },
+    {
+        "namespace": "logistics",
+        "action": "view",
+        "name": "View logistics data",
+        "description": "Access courier profiles, shipment data, and logistics summaries.",
+    },
+    {
+        "namespace": "logistics",
+        "action": "onboard",
+        "name": "Submit courier onboarding",
+        "description": "Create a courier profile or logistics onboarding submission.",
+    },
+    {
+        "namespace": "logistics",
+        "action": "manage_profile",
+        "name": "Manage logistics profile",
+        "description": "Update courier-company profile information and operating settings.",
+    },
+    {
+        "namespace": "logistics",
+        "action": "manage_pricing",
+        "name": "Manage logistics pricing",
+        "description": "Create and update pricing zones and pricing rules for logistics operations.",
+    },
+    {
+        "namespace": "logistics",
+        "action": "manage_shipments",
+        "name": "Manage shipments",
+        "description": "Create or update shipment records, assignment, and fulfillment status.",
+    },
+    {
+        "namespace": "taxonomy",
+        "action": "view",
+        "name": "View taxonomy",
+        "description": "Browse categories, taxonomies, and structured classification data.",
+    },
+    {
+        "namespace": "taxonomy",
+        "action": "manage",
+        "name": "Manage taxonomy",
+        "description": "Create, edit, and retire taxonomy categories and master data groupings.",
+    },
+    {
+        "namespace": "security",
+        "action": "monitor",
+        "name": "Monitor security events",
+        "description": "Access throttling, violation, and security-monitoring dashboards.",
+    },
+    {
+        "namespace": "reports",
+        "action": "view",
+        "name": "View reports",
+        "description": "See regulatory, operational, and compliance reporting outputs.",
+    },
+    {
+        "namespace": "reports",
+        "action": "export",
+        "name": "Export reports",
+        "description": "Download or export generated reporting artifacts and summaries.",
+    },
+    {
+        "namespace": "reviews",
+        "action": "view",
+        "name": "View reviews",
+        "description": "Browse ratings and review summaries for marketplace participants.",
+    },
+    {
+        "namespace": "reviews",
+        "action": "create",
+        "name": "Create reviews",
+        "description": "Submit new ratings and reviews after a qualifying transaction.",
+    },
+]
+
+
+ROLE_PERMISSION_MATRIX = {
+    "GUEST": {
+        "catalog:view",
+        "contractors:view",
+        "contracts:view",
+        "projects:view",
+        "government:view",
+        "vendors:view",
+        "taxonomy:view",
+        "reviews:view",
+    },
+    "BUYER": {
+        "catalog:view",
+        "contractors:view",
+        "orders:create",
+        "orders:view",
+        "orders:cancel",
+        "contracts:view",
+        "projects:view",
+        "vendors:view",
+        "taxonomy:view",
+        "reviews:view",
+        "reviews:create",
+    },
+    "PROJECT_OWNER": {
+        "catalog:view",
+        "contractors:view",
+        "orders:create",
+        "orders:view",
+        "orders:cancel",
+        "contracts:view",
+        "contracts:post_contract",
+        "contracts:award_contract",
+        "contracts:manage_milestones",
+        "bids:view",
+        "projects:view",
+        "projects:create_project",
+        "projects:update_project",
+        "property:view",
+        "property:list_property",
+        "property:update_property",
+        "investments:onboard",
+        "milestones:view",
+        "milestones:manage_milestones",
+        "escrow:view",
+        "escrow:deposit_funds",
+        "escrow:release_funds",
+        "finance:apply",
+        "disputes:view",
+        "disputes:raise_dispute",
+        "logistics:view",
+        "banking:view",
+        "banking:manage_accounts",
+        "vendors:view",
+        "taxonomy:view",
+        "reviews:view",
+        "reviews:create",
+    },
+    "VENDOR": {
+        "catalog:view",
+        "catalog:create",
+        "catalog:update",
+        "catalog:manage_stock",
+        "logistics:view",
+        "orders:view",
+        "orders:process",
+        "banking:view",
+        "banking:manage_accounts",
+        "vendors:view",
+        "vendors:update",
+        "reviews:view",
+        "taxonomy:view",
+    },
+    "CONTRACTOR": {
+        "catalog:view",
+        "contractors:view",
+        "contractors:onboard",
+        "contractors:update",
+        "logistics:view",
+        "orders:view",
+        "orders:create",
+        "orders:cancel",
+        "contracts:view",
+        "bids:view",
+        "bids:submit_bid",
+        "bids:withdraw_bid",
+        "projects:view",
+        "milestones:view",
+        "disputes:view",
+        "disputes:raise_dispute",
+        "banking:view",
+        "banking:manage_accounts",
+        "reviews:view",
+        "reviews:create",
+        "taxonomy:view",
+    },
+    "INVESTOR": {
+        "projects:view",
+        "investments:onboard",
+        "investments:view",
+        "investments:pledge",
+        "investments:sign_agreement",
+        "compliance:view",
+        "reports:view",
+        "banking:view",
+        "banking:manage_accounts",
+    },
+    "VERIFIED_INVESTOR": {
+        "projects:view",
+        "investments:onboard",
+        "investments:view",
+        "investments:pledge",
+        "investments:sign_agreement",
+        "investments:transfer_stake",
+        "compliance:view",
+        "reports:view",
+        "banking:view",
+        "banking:manage_accounts",
+    },
+    "PROPERTY_MANAGER": {
+        "projects:view",
+        "property:view",
+        "property:list_property",
+        "property:update_property",
+        "reports:view",
+    },
+    "COURIER": {
+        "orders:view",
+        "integrations:view",
+        "logistics:view",
+        "logistics:onboard",
+        "logistics:manage_profile",
+        "logistics:manage_pricing",
+        "logistics:manage_shipments",
+        "reports:view",
+        "banking:view",
+        "banking:manage_accounts",
+    },
+    "GOVERNMENT": {
+        "government:view",
+        "government:publish_tender",
+        "reports:view",
+        "taxonomy:view",
+    },
+    "GOVERNMENT_OWNER": {
+        "government:view",
+        "government:publish_tender",
+        "government:audit_tender",
+        "reports:view",
+        "taxonomy:view",
+        "users:view",
+    },
+    "GOVERNMENT_AUDITOR": {
+        "government:view",
+        "government:audit_tender",
+        "compliance:view",
+        "reports:view",
+    },
+}
+
+
+def permission_key(namespace, action):
+    return f"{namespace}:{action}"
+
+
+def permission_codename(namespace, action):
+    return f"{namespace}_{action}"
+
+
+def get_permission_catalog():
+    definitions = []
+    for definition in PERMISSION_CATALOG:
+        namespace = definition["namespace"]
+        action = definition["action"]
+        key = permission_key(namespace, action)
+        default_roles = sorted(
+            role_name for role_name, permissions in ROLE_PERMISSION_MATRIX.items() if key in permissions
+        )
+        definitions.append(
+            {
+                **definition,
+                "key": key,
+                "codename": permission_codename(namespace, action),
+                "default_roles": default_roles,
+            }
+        )
+    return definitions
+
+
+def get_role_permission_matrix():
+    admin_permissions = {definition["key"] for definition in get_permission_catalog()}
+    matrix = {role_name: sorted(permissions) for role_name, permissions in ROLE_PERMISSION_MATRIX.items()}
+    matrix["ADMIN"] = sorted(admin_permissions)
+    return matrix
+
+
+def get_permissions_grouped_by_namespace():
+    grouped = defaultdict(list)
+    for definition in get_permission_catalog():
+        grouped[definition["namespace"]].append(definition)
+    return dict(grouped)

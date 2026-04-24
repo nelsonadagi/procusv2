@@ -1,254 +1,593 @@
 <template>
-    <div class="l-product-detail u-mb-20">
-        <div v-if="loading" class="l-flex l-flex--center u-p-20 l-flex--column">
-            <div class="c-loader u-mb-4"></div>
-            <p>Loading construction materials...</p>
-        </div>
-
-        <div v-else-if="error" class="l-container u-p-20 u-text-center">
-            <div class="c-alert c-alert--danger u-mb-6">{{ error }}</div>
-            <Button variant="primary" @click="$router.push('/')">Back to Marketplace</Button>
-        </div>
-
-        <div v-if="product" class="pz-l-container u-py-8">
-            <!-- Premium Breadcrumb -->
-            <nav class="pz-breadcrumb u-mb-8 pz-u-text-mono text-xs">
-                <router-link to="/" class="pz-breadcrumb__item">MARKETPLACE</router-link>
-                <span class="pz-breadcrumb__separator">//</span>
-                <span class="pz-breadcrumb__current pz-u-color-steel">{{ product.name }}</span>
-            </nav>
-
-            <div class="pz-l-dashboard">
-                <!-- Left: Image Gallery Module -->
-                <div class="pz-gallery">
-                    <div class="pz-gallery__main pz-u-border">
-                        <img :src="selectedImage || product.primary_image_url || '/placeholder.png'" :alt="product.name"
-                            class="pz-gallery__image">
-                        <div class="pz-gallery__badges">
-                            <Badge v-if="product.is_featured" variant="earth" size="large">FEATURED ASSET</Badge>
-                            <Badge v-if="product.is_on_sale" variant="finance" size="large">EFFICIENCY YIELD</Badge>
-                        </div>
-                    </div>
-
-                    <div v-if="product.images && product.images.length > 1"
-                        class="c-gallery__thumbs l-grid l-grid--cols-4 l-grid--gap-4 u-mt-4">
-                        <div v-for="img in product.images" :key="img.id"
-                            class="c-gallery__thumb c-card c-card--interactive"
-                            :class="{ 'c-gallery__thumb--active': selectedImage === img.image_url }"
-                            @click="selectedImage = img.image_url">
-                            <img :src="img.image_url" :alt="img.alt_text">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right: Product Information Module -->
-                <div class="pz-product-details">
-                    <div class="u-mb-4">
-                        <Badge variant="savanna">{{ product.category?.name || 'MATERIAL' }}</Badge>
-                    </div>
-                    <h1 class="pz-u-text-display text-4xl u-mb-2">{{ product.name }}</h1>
-                    <p class="pz-u-text-mono text-sm pz-u-color-steel u-mb-8">ASSET IDENTIFIER: {{ product.model_number
-                        || 'N/A' }}</p>
-
-                    <div class="pz-l-flex pz-l-flex--gap-6 u-mb-10 pz-u-text-mono text-xs pz-u-color-concrete">
-                        <span v-if="product.brand">BRAND: {{ product.brand }}</span>
-                        <span>VENDOR: {{ product.vendor_business_name }}</span>
-                    </div>
-
-                    <!-- Pricing Card -->
-                    <div class="pz-p-6 pz-u-bg-limestone pz-u-border u-mb-8">
-                        <div class="pz-l-flex pz-l-flex--align-end pz-l-flex--gap-2 u-mb-2">
-                            <span class="pz-u-text-display text-5xl pz-u-color-earth">${{ product.base_price }}</span>
-                            <span class="pz-u-text-mono text-lg pz-u-color-steel">/ {{ product.unit }}</span>
-                        </div>
-
-                        <div v-if="product.bulk_price" class="pz-u-border-t u-mt-4 u-pt-4">
-                            <div class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-2">
-                                <Badge variant="finance" size="small">BULK SCALE AVAILABLE</Badge>
-                                <span class="pz-u-text-mono text-xs">${{ product.bulk_price }} @ {{
-                                    product.bulk_threshold }}+ UNITS</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Availability & Logistics -->
-                    <div class="c-card u-mb-8">
-                        <div class="c-card__body l-grid l-grid--cols-1 l-grid--gap-4">
-                            <div class="l-flex l-flex--align-center l-flex--gap-3">
-                                <span :class="product.is_in_stock ? 'u-color-success' : 'u-color-danger'">●</span>
-                                <span class="font-medium">{{ product.is_in_stock ? 'In Stock' : 'Out of Stock' }}</span>
-                                <span class="u-color-muted text-sm" v-if="product.is_in_stock">({{
-                                    product.stock_quantity }} {{ product.unit }}s available)</span>
-                            </div>
-
-                            <div class="l-flex l-flex--align-center l-flex--gap-3 text-sm u-color-muted">
-                                <span>🚚</span>
-                                <span>Est. Delivery: {{ product.estimated_delivery_days || '3-5' }} days</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Main Actions -->
-                    <div class="l-flex l-flex--gap-4">
-                        <Button variant="primary" size="lg" block @click="requestQuote"
-                            :disabled="!product.is_in_stock">
-                            Request Professional Quote
-                        </Button>
-                        <Button variant="outline" size="lg" @click="contactVendor">Contact</Button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Extended Details Tabs -->
-            <div class="pz-tabs pz-p-6 pz-u-border pz-u-bg-limestone u-mt-16">
-                <div class="pz-tabs__nav">
-                    <button v-for="tab in detailTabs" :key="tab" class="pz-tabs__btn"
-                        :class="{ 'pz-tabs__btn--active': activeTab === tab }" @click="activeTab = tab">
-                        {{ tab }}
-                    </button>
-                </div>
-
-                <div class="c-card__body">
-                    <div v-if="activeTab === 'Description'" class="u-fade-in">
-                        <h3 class="u-mb-4">Description</h3>
-                        <p class="u-line-height-relaxed u-color-muted">{{ product.description }}</p>
-                    </div>
-
-                    <div v-if="activeTab === 'Specifications'" class="u-fade-in">
-                        <table class="c-table u-w-full">
-                            <tr v-if="product.brand">
-                                <td class="u-font-bold u-p-4 u-border-b">Brand</td>
-                                <td class="u-p-4 u-border-b">{{ product.brand }}</td>
-                            </tr>
-                            <tr v-if="product.quality_grade">
-                                <td class="u-font-bold u-p-4 u-border-b">Grade</td>
-                                <td class="u-p-4 u-border-b">{{ product.quality_grade }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="pz-material-detail">
+    <div v-if="loading" class="pz-detail-state">
+      <div class="c-loader u-mb-4"></div>
+      <p>Loading material intelligence...</p>
     </div>
+
+    <div v-else-if="error" class="pz-detail-state">
+      <div class="c-alert c-alert--danger u-mb-6">{{ error }}</div>
+      <Button variant="primary" @click="$router.push('/products')">Back to Materials</Button>
+    </div>
+
+    <div v-else-if="product" class="pz-l-container u-py-8">
+      <nav class="pz-breadcrumb u-mb-8 pz-u-text-mono text-xs">
+        <router-link to="/products" class="pz-breadcrumb__item">MATERIALS</router-link>
+        <span class="pz-breadcrumb__separator">//</span>
+        <span class="pz-breadcrumb__current pz-u-color-steel">{{ product.name }}</span>
+      </nav>
+
+      <section class="pz-detail-hero">
+        <div class="pz-detail-gallery">
+          <div class="pz-detail-gallery__main">
+            <img :src="selectedImage || product.primary_image_url || '/placeholder.png'" :alt="product.name">
+            <div class="pz-detail-gallery__badges">
+              <Badge v-if="product.is_featured" variant="earth">Featured</Badge>
+              <Badge v-if="product.inventory_signal === 'LOW_STOCK'" variant="warning">Low Stock</Badge>
+              <Badge v-else-if="product.inventory_signal === 'OUT_OF_STOCK'" variant="danger">Out of Stock</Badge>
+              <Badge v-else variant="success">In Stock</Badge>
+            </div>
+          </div>
+          <div v-if="product.images?.length > 1" class="pz-detail-gallery__thumbs">
+            <button
+              v-for="img in product.images"
+              :key="img.id"
+              type="button"
+              class="pz-detail-gallery__thumb"
+              :class="{ 'pz-detail-gallery__thumb--active': selectedImage === img.image_url }"
+              @click="selectedImage = img.image_url"
+            >
+              <img :src="img.image_url" :alt="img.alt_text || product.name">
+            </button>
+          </div>
+        </div>
+
+        <div class="pz-detail-summary">
+          <div class="pz-l-flex pz-l-flex--wrap pz-l-flex--gap-3 u-mb-3">
+            <Badge variant="savanna">{{ product.category?.name || 'Material' }}</Badge>
+            <Badge v-if="product.brand" variant="secondary">{{ product.brand }}</Badge>
+            <Badge v-for="cert in certificationHighlights" :key="cert" variant="success">{{ cert }}</Badge>
+          </div>
+
+          <h1 class="pz-u-text-display text-4xl u-mb-3">{{ product.name }}</h1>
+          <p class="pz-u-color-steel u-mb-6">{{ product.short_description || product.description }}</p>
+
+          <div class="pz-detail-meta">
+            <div><span>Vendor</span><strong>{{ product.vendor_business_name || 'Marketplace Vendor' }}</strong></div>
+            <div><span>Location</span><strong>{{ product.vendor_location || product.vendor_formatted_address || 'Location on request' }}</strong></div>
+            <div><span>Origin</span><strong>{{ product.country_of_origin || 'Not specified' }}</strong></div>
+            <div><span>Packaging</span><strong>{{ product.packaging_details || 'Standard packaging' }}</strong></div>
+          </div>
+
+          <div class="pz-detail-price">
+            <div>
+              <div class="pz-detail-price__amount">{{ configStore.formatPrice(product.base_price) }}</div>
+              <div class="pz-detail-price__unit">per {{ product.unit }}</div>
+            </div>
+            <div v-if="product.bulk_price" class="pz-detail-price__bulk">
+              <div>Bulk: {{ configStore.formatPrice(product.bulk_price) }}</div>
+              <small>{{ product.bulk_threshold }}+ {{ product.unit }}</small>
+            </div>
+          </div>
+
+          <div class="pz-detail-panels">
+            <div class="pz-detail-panel">
+              <span>Inventory</span>
+              <strong>{{ product.stock_quantity }} {{ product.unit }}</strong>
+              <small>Reorder at {{ product.reorder_level || 0 }}</small>
+            </div>
+            <div class="pz-detail-panel">
+              <span>Lead Time</span>
+              <strong>{{ product.estimated_delivery_days || '3-5' }} days</strong>
+              <small>{{ product.delivery_regions?.length ? product.delivery_regions.join(', ') : 'Delivery regions on request' }}</small>
+            </div>
+            <div class="pz-detail-panel">
+              <span>Minimum Order</span>
+              <strong>{{ product.min_order_quantity || 1 }} {{ product.unit }}</strong>
+              <small>{{ product.max_order_quantity ? `Max ${product.max_order_quantity}` : 'No max limit set' }}</small>
+            </div>
+          </div>
+
+          <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
+            <Button variant="primary" size="lg" :disabled="product.inventory_signal === 'OUT_OF_STOCK'" @click="requestQuote(product)">
+              Request Quote
+            </Button>
+            <Button variant="outline" size="lg" @click="contactVendor">Contact Vendor</Button>
+          </div>
+        </div>
+      </section>
+
+      <section class="pz-detail-grid u-mt-10">
+        <div class="pz-detail-main">
+          <div class="pz-detail-card">
+            <div class="pz-detail-card__header">
+              <div>
+                <div class="pz-detail-card__eyebrow">Material Brief</div>
+                <h3>Description</h3>
+              </div>
+            </div>
+            <p class="pz-u-color-steel">{{ product.description }}</p>
+          </div>
+
+          <div v-if="highlightAttributes.length" class="pz-detail-card">
+            <div class="pz-detail-card__header">
+              <div>
+                <div class="pz-detail-card__eyebrow">Fast Scan</div>
+                <h3>Key Attributes</h3>
+              </div>
+            </div>
+            <div class="pz-detail-chip-grid">
+              <div v-for="attribute in highlightAttributes" :key="attribute.name" class="pz-detail-chip">
+                <span>{{ attribute.name }}</span>
+                <strong>{{ attribute.value }}{{ attribute.unit ? ` ${attribute.unit}` : '' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="pz-detail-card">
+            <div class="pz-detail-card__header">
+              <div>
+                <div class="pz-detail-card__eyebrow">Technical Layer</div>
+                <h3>Specifications</h3>
+              </div>
+            </div>
+            <table class="pz-detail-table">
+              <tbody>
+                <tr v-for="spec in specificationRows" :key="spec.label">
+                  <td>{{ spec.label }}</td>
+                  <td>{{ spec.value }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="groupedAttributes.length" class="pz-detail-card">
+            <div class="pz-detail-card__header">
+              <div>
+                <div class="pz-detail-card__eyebrow">Structured Attributes</div>
+                <h3>Performance & Physical Data</h3>
+              </div>
+            </div>
+            <div class="pz-l-grid pz-l-grid--md-cols-2 pz-l-grid--gap-4">
+              <div v-for="group in groupedAttributes" :key="group.name" class="pz-detail-subcard">
+                <h4>{{ group.name }}</h4>
+                <ul class="pz-detail-list">
+                  <li v-for="item in group.items" :key="`${group.name}-${item.name}`">
+                    <span>{{ item.name }}</span>
+                    <strong>{{ item.value }}{{ item.unit ? ` ${item.unit}` : '' }}</strong>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="pz-detail-side">
+          <div class="pz-detail-card">
+            <div class="pz-detail-card__header">
+              <div>
+                <div class="pz-detail-card__eyebrow">Compliance</div>
+                <h3>Certifications</h3>
+              </div>
+            </div>
+            <div v-if="product.certification_entries?.length" class="pz-detail-stack">
+              <div v-for="cert in product.certification_entries" :key="cert.id" class="pz-detail-subcard">
+                <h4>{{ cert.display_name || cert.registry_name || 'Certification' }}</h4>
+                <p>{{ cert.issuing_body || 'Issuing body not specified' }}</p>
+                <small v-if="cert.certification_number">Ref: {{ cert.certification_number }}</small>
+              </div>
+            </div>
+            <p v-else class="pz-u-color-steel">No structured certification records published yet.</p>
+          </div>
+
+          <div class="pz-detail-card">
+            <div class="pz-detail-card__header">
+              <div>
+                <div class="pz-detail-card__eyebrow">Procurement Pack</div>
+                <h3>Documents</h3>
+              </div>
+            </div>
+            <div v-if="publicDocuments.length" class="pz-detail-stack">
+              <a v-for="doc in publicDocuments" :key="doc.id" :href="doc.external_url || doc.file_url" target="_blank" rel="noopener" class="pz-detail-doc">
+                <strong>{{ doc.title }}</strong>
+                <span>{{ doc.document_type }}</span>
+              </a>
+            </div>
+            <p v-else class="pz-u-color-steel">Datasheets and brochures will appear here once published.</p>
+          </div>
+
+          <div class="pz-detail-card">
+            <div class="pz-detail-card__header">
+              <div>
+                <div class="pz-detail-card__eyebrow">Handling</div>
+                <h3>Logistics & Usage</h3>
+              </div>
+            </div>
+            <ul class="pz-detail-list">
+              <li><span>Special handling</span><strong>{{ product.requires_special_handling ? 'Required' : 'Standard' }}</strong></li>
+              <li><span>Weight</span><strong>{{ product.shipping_weight || product.weight || 'N/A' }}{{ product.shipping_weight || product.weight ? ' kg' : '' }}</strong></li>
+              <li><span>Warranty</span><strong>{{ product.warranty_period || 'Not specified' }}</strong></li>
+            </ul>
+            <p v-if="product.handling_instructions" class="pz-u-color-steel u-mt-4">{{ product.handling_instructions }}</p>
+          </div>
+
+          <div class="pz-detail-card">
+            <div class="pz-detail-card__header">
+              <div>
+                <div class="pz-detail-card__eyebrow">Recommended Use</div>
+                <h3>Applications</h3>
+              </div>
+            </div>
+            <ul class="pz-detail-tag-list">
+              <li v-for="item in applicationList" :key="item">{{ item }}</li>
+            </ul>
+          </div>
+        </aside>
+      </section>
+    </div>
+  </div>
 </template>
 
 <script setup>
-    import { ref, onMounted, computed } from 'vue';
-    import { useRoute, useRouter } from 'vue-router';
-    import api from '../services/api';
-    import { useAuthStore } from '../stores/auth';
+import { computed, inject, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import api from '../services/api';
+import { useAuthStore } from '../stores/auth';
+import { useConfigStore } from '../stores/config';
+import Button from '../components/ui/Button.vue';
+import Badge from '../components/ui/Badge.vue';
 
-    // UI Components
-    import Button from '../components/ui/Button.vue';
-    import Badge from '../components/ui/Badge.vue';
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+const configStore = useConfigStore();
+const showAlert = inject('showAlert');
 
-    const route = useRoute();
-    const router = useRouter();
-    const authStore = useAuthStore();
+const product = ref(null);
+const loading = ref(true);
+const error = ref(null);
+const selectedImage = ref(null);
 
-    const product = ref(null);
-    const loading = ref(true);
-    const error = ref(null);
-    const selectedImage = ref(null);
-    const activeTab = ref('Description');
-    const relatedProducts = ref([]);
+const certificationHighlights = computed(() =>
+  (product.value?.certification_entries || [])
+    .slice(0, 3)
+    .map((entry) => entry.display_name || entry.registry_name)
+    .filter(Boolean)
+);
 
-    const detailTabs = ['Description', 'Specifications', 'Logistics', 'Compliance'];
+const highlightAttributes = computed(() =>
+  (product.value?.attribute_entries || []).filter((entry) => entry.is_highlight).slice(0, 6)
+);
 
-    const fetchProduct = async () => {
-        loading.value = true;
-        error.value = null;
-        try {
-            const productId = route.params.id;
-            const response = await api.get(`/v1/products/${productId}/`);
-            product.value = response.data;
-            if (product.value.primary_image_url) selectedImage.value = product.value.primary_image_url;
-        } catch (err) {
-            error.value = 'Product not found or unavailable.';
-        } finally {
-            loading.value = false;
-        }
-    };
+const groupedAttributes = computed(() => {
+  const grouped = new Map();
+  for (const entry of product.value?.attribute_entries || []) {
+    const groupName = entry.group || 'General';
+    if (!grouped.has(groupName)) {
+      grouped.set(groupName, []);
+    }
+    grouped.get(groupName).push(entry);
+  }
+  return Array.from(grouped.entries()).map(([name, items]) => ({ name, items }));
+});
 
-    const requestQuote = async () => {
-        if (!authStore.isAuthenticated) {
-            alert('Please login to request a quote');
-            router.push('/login');
-            return;
-        }
-        try {
-            await api.post('/orders/quote-requests/', {
-                items: [{ product: product.value.id, quantity: product.value.min_order_quantity || 1 }]
-            });
-            alert('Quote request sent successfully!');
-            router.push('/buyer/dashboard');
-        } catch (err) {
-            alert('Failed to request quote.');
-        }
-    };
+const publicDocuments = computed(() =>
+  (product.value?.documents || []).filter((entry) => entry.is_public && (entry.external_url || entry.file_url))
+);
 
-    const contactVendor = () => alert('Contact feature coming soon!');
+const applicationList = computed(() => {
+  const raw = `${product.value?.applications || ''}\n${product.value?.features || ''}`;
+  return raw
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+});
 
-    onMounted(fetchProduct);
+const specificationRows = computed(() => {
+  if (!product.value) {
+    return [];
+  }
+  const rows = [
+    ['Brand', product.value.brand],
+    ['Model / SKU', product.value.model_number],
+    ['Quality Grade', product.value.quality_grade],
+    ['Dimensions', product.value.dimensions],
+    ['Color / Finish', product.value.color],
+    ['Composition', product.value.material_composition],
+  ]
+    .filter(([, value]) => value)
+    .map(([label, value]) => ({ label, value }));
+
+  for (const [label, value] of Object.entries(product.value.technical_specifications || {})) {
+    rows.push({ label, value });
+  }
+  return rows;
+});
+
+const fetchProduct = async () => {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await api.get(`/v1/products/${route.params.id}/`);
+    product.value = response.data;
+    selectedImage.value = response.data.primary_image_url || response.data.images?.[0]?.image_url || null;
+  } catch (err) {
+    error.value = 'Material not found or unavailable.';
+  } finally {
+    loading.value = false;
+  }
+};
+
+const requestQuote = async (material) => {
+  if (!authStore.isAuthenticated) {
+    showAlert?.('Please sign in to request a quote.', 'info');
+    router.push('/login');
+    return;
+  }
+  try {
+    await api.post('/orders/quote-requests/', {
+      items: [{ product: material.id, quantity: material.min_order_quantity || 1 }],
+    });
+    showAlert?.('Quote request sent successfully.', 'success');
+    router.push('/buyer/dashboard');
+  } catch (err) {
+    showAlert?.(err.response?.data?.detail || 'Failed to request quote.', 'error');
+  }
+};
+
+const contactVendor = () => {
+  showAlert?.('Vendor messaging will open from this detail page once chat routing is enabled for materials.', 'info');
+};
+
+onMounted(fetchProduct);
 </script>
 
 <style scoped>
-    .pz-breadcrumb__item {
-        color: var(--pz-color-earth-orange);
-        text-decoration: none;
-    }
+.pz-material-detail {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(246, 242, 236, 0.96)),
+    radial-gradient(circle at top left, rgba(212, 101, 42, 0.12), transparent 28%);
+}
 
-    .pz-breadcrumb__separator {
-        color: var(--pz-color-concrete-grey);
-    }
+.pz-detail-state {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 2rem;
+}
 
-    .pz-gallery__main {
-        position: relative;
-        aspect-ratio: 1/1;
-        background: var(--pz-color-limestone-white);
-        overflow: hidden;
-    }
+.pz-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 2rem;
+}
 
-    .pz-gallery__image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
+.pz-detail-gallery__main {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 16px 16px 0 rgba(10, 10, 15, 0.05);
+  aspect-ratio: 1 / 1;
+}
 
-    .pz-gallery__badges {
-        position: absolute;
-        top: var(--pz-space-4);
-        left: var(--pz-space-4);
-        display: flex;
-        flex-direction: column;
-        gap: var(--pz-space-2);
-    }
+.pz-detail-gallery__main img,
+.pz-detail-gallery__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-    .pz-spec-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+.pz-detail-gallery__badges {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
 
-    .pz-spec-table td {
-        padding: var(--pz-space-4);
-        border-bottom: 1px solid var(--pz-color-limestone-white);
-        background: var(--pz-color-limestone-white);
-    }
+.pz-detail-gallery__thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
 
-    .pz-spec-table tr:hover td {
-        background: var(--pz-color-limestone-white);
-        border-color: var(--pz-color-earth-orange);
-    }
+.pz-detail-gallery__thumb {
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  background: white;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  cursor: pointer;
+}
 
-    .pz-spec-label {
-        font-family: var(--pz-font-mono);
-        font-size: 0.75rem;
-        color: var(--pz-color-concrete-grey);
-        width: 200px;
-    }
+.pz-detail-gallery__thumb--active {
+  border-color: var(--pz-color-earth-orange);
+}
 
-    .pz-spec-value {
-        font-family: var(--pz-font-primary);
-        color: var(--pz-color-foundation-black);
-    }
+.pz-detail-summary,
+.pz-detail-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(10, 10, 15, 0.1);
+  box-shadow: 12px 12px 0 rgba(10, 10, 15, 0.05);
+}
+
+.pz-detail-summary {
+  padding: 1.5rem;
+}
+
+.pz-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.pz-detail-meta div,
+.pz-detail-panel {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.pz-detail-meta span,
+.pz-detail-panel span,
+.pz-detail-card__eyebrow {
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-detail-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(10, 10, 15, 0.08);
+  border-bottom: 1px solid rgba(10, 10, 15, 0.08);
+  margin-bottom: 1rem;
+}
+
+.pz-detail-price__amount {
+  font-family: var(--pz-font-display);
+  font-size: clamp(2rem, 3.8vw, 3.4rem);
+  line-height: 1;
+}
+
+.pz-detail-price__unit,
+.pz-detail-price__bulk small {
+  color: var(--pz-color-steel-grey);
+}
+
+.pz-detail-panels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.pz-detail-panel {
+  padding: 0.9rem;
+  background: rgba(245, 241, 235, 0.9);
+}
+
+.pz-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 1.5rem;
+}
+
+.pz-detail-main,
+.pz-detail-side,
+.pz-detail-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.pz-detail-card {
+  padding: 1.2rem;
+}
+
+.pz-detail-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pz-detail-card h3,
+.pz-detail-subcard h4 {
+  margin: 0.15rem 0 0;
+}
+
+.pz-detail-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.pz-detail-chip,
+.pz-detail-subcard,
+.pz-detail-doc {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem;
+  background: rgba(246, 242, 236, 0.88);
+  border: 1px solid rgba(10, 10, 15, 0.08);
+}
+
+.pz-detail-doc {
+  text-decoration: none;
+  color: inherit;
+}
+
+.pz-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pz-detail-table td {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(10, 10, 15, 0.08);
+}
+
+.pz-detail-table td:first-child {
+  width: 40%;
+  font-family: var(--pz-font-mono);
+  font-size: 0.78rem;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-detail-list,
+.pz-detail-tag-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.pz-detail-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pz-detail-tag-list {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.pz-detail-tag-list li {
+  padding: 0.7rem 0.8rem;
+  background: rgba(246, 242, 236, 0.88);
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  font-size: 0.92rem;
+}
+
+.pz-breadcrumb__item {
+  color: var(--pz-color-earth-orange);
+  text-decoration: none;
+}
+
+.pz-breadcrumb__separator {
+  color: var(--pz-color-concrete-grey);
+}
+
+@media (max-width: 980px) {
+  .pz-detail-hero,
+  .pz-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pz-detail-meta,
+  .pz-detail-panels {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

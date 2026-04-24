@@ -1,5 +1,5 @@
 <template>
-    <div class="pz-table-wrapper">
+    <div class="pz-table-wrapper pz-data-table-shell">
         <table class="pz-table">
             <thead class="pz-table__head">
                 <tr>
@@ -51,7 +51,7 @@
     }
 
     .pz-table__head {
-        background-color: var(--pz-color-foundation-black);
+        background: linear-gradient(180deg, rgba(10, 10, 15, 0.98), rgba(30, 30, 38, 0.96));
     }
 
     .pz-table__th {
@@ -61,7 +61,7 @@
         font-weight: var(--pz-weight-semibold);
         color: var(--pz-color-limestone-white);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.12em;
         font-size: var(--pz-text-caption);
         white-space: nowrap;
     }
@@ -71,7 +71,11 @@
     }
 
     .pz-table__tr:nth-child(even) {
-        background-color: #F5F5F3;
+        background-color: rgba(245, 245, 243, 0.8);
+    }
+
+    .pz-table__tr:hover {
+        background: rgba(212, 101, 42, 0.04);
     }
 
     .pz-table__td {

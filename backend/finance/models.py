@@ -12,6 +12,20 @@ class FinanceProduct(models.Model):
         return self.name
 
 class FinanceApplication(models.Model):
+    class TargetType(models.TextChoices):
+        PROPERTY = 'PROPERTY', 'Property'
+        PROJECT = 'PROJECT', 'Project'
+        MATERIAL_ORDER = 'MATERIAL_ORDER', 'Material Order'
+        CONTRACT = 'CONTRACT', 'Contract'
+        GENERAL_WORKING_CAPITAL = 'GENERAL_WORKING_CAPITAL', 'General Working Capital'
+
+    class PurposeCategory(models.TextChoices):
+        ACQUISITION = 'ACQUISITION', 'Acquisition'
+        COMPLETION = 'COMPLETION', 'Completion'
+        RENOVATION = 'RENOVATION', 'Renovation'
+        MATERIALS_PROCUREMENT = 'MATERIALS_PROCUREMENT', 'Materials Procurement'
+        WORKING_CAPITAL = 'WORKING_CAPITAL', 'Working Capital'
+
     class Status(models.TextChoices):
         SUBMITTED = 'SUBMITTED', 'Submitted'
         APPROVED = 'APPROVED', 'Approved'
@@ -20,7 +34,11 @@ class FinanceApplication(models.Model):
 
     applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='finance_applications')
     product = models.ForeignKey(FinanceProduct, on_delete=models.CASCADE)
+    target_type = models.CharField(max_length=30, choices=TargetType.choices, default=TargetType.GENERAL_WORKING_CAPITAL)
+    property = models.ForeignKey('property.PropertyListing', on_delete=models.SET_NULL, null=True, blank=True, related_name='finance_applications')
+    project = models.ForeignKey('projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='finance_applications')
     requested_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    purpose_category = models.CharField(max_length=30, choices=PurposeCategory.choices, default=PurposeCategory.WORKING_CAPITAL)
     purpose = models.TextField()
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED)
     created_at = models.DateTimeField(auto_now_add=True)

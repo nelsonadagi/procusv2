@@ -10,4 +10,32 @@ const api = axios.create({
     },
 });
 
+// Request interceptor: Attach token if it exists
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Token ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Response interceptor: Handle unauthorized/forbidden errors
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            // Optional: Handle auto-logout or redirect here if needed
+            // localStorage.removeItem('token');
+            // localStorage.removeItem('user');
+            // window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

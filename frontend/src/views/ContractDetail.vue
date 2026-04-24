@@ -33,8 +33,9 @@
             </div>
             <div>
               <div class="pz-u-text-mono text-xs pz-u-color-concrete">PROJECTED BUDGET</div>
-              <div class="pz-u-text-display text-lg pz-u-color-savanna">${{ contract.budget_min }} - ${{
-                contract.budget_max }}</div>
+              <div class="pz-u-text-display text-lg pz-u-color-savanna">{{ configStore.formatPrice(contract.budget_min)
+                }} - {{
+                  configStore.formatPrice(contract.budget_max) }}</div>
             </div>
           </div>
         </Card>
@@ -54,7 +55,8 @@
               class="pz-u-border pz-p-4 pz-u-bg-limestone pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center">
               <div>
                 <div class="pz-u-text-display">{{ m.title }}</div>
-                <div class="pz-u-text-mono text-xs pz-u-color-steel">DUE: {{ m.due_date }} • CAPITAL: ${{ m.amount }}
+                <div class="pz-u-text-mono text-xs pz-u-color-steel">DUE: {{ m.due_date }} • CAPITAL: {{
+                  configStore.formatPrice(m.amount) }}
                 </div>
               </div>
               <div class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-4">
@@ -63,6 +65,7 @@
                   @click="approveMilestone(m.id)">RELEASE FUNDS</Button>
                 <Button v-if="isContractor && m.status === 'PENDING'" size="small" variant="primary">DEPLOY
                   WORK</Button>
+                <Button size="small" variant="outline" @click="openChat">Chat</Button>
               </div>
             </div>
           </div>
@@ -76,13 +79,13 @@
               <div class="flex justify-between">
                 <div class="font-bold">{{ bid.contractor?.company_name || 'Contractor' }}</div>
                 <div class="text-right">
-                  <div class="font-bold text-xl">${{ bid.proposed_cost }}</div>
+                  <div class="font-bold text-xl">{{ configStore.formatPrice(bid.proposed_cost) }}</div>
                   <div class="text-sm text-muted">{{ bid.proposed_timeline_days }} Days</div>
                 </div>
               </div>
               <div class="mt-2 text-sm text-gray-600">{{ bid.message }}</div>
               <div class="mt-4 flex justify-end gap-2" v-if="bid.status === 'SUBMITTED'">
-                <Button size="sm" variant="outline">Shortlist</Button>
+                <Button size="sm" variant="outline" :loading="shortlistingBidId === bid.id" @click="shortlistBid(bid.id)">Shortlist</Button>
                 <Button size="sm" variant="primary" @click="awardBid(bid.id)">Award Contract</Button>
               </div>
               <div v-else class="mt-2 text-right">
@@ -97,7 +100,8 @@
       <div class="pz-space-y-6">
         <Card title="Operational Command" v-if="canBid" class="u-sticky u-top-24">
           <form @submit.prevent="submitBid" class="pz-space-y-6">
-            <PzInput label="Projected Expenditure ($)" type="number" v-model="bidForm.proposed_cost" required />
+            <PzInput :label="`Projected Expenditure (${configStore.activeCurrency.symbol})`" type="number"
+              v-model="bidForm.proposed_cost" required />
             <PzInput label="Deployment Duration (Days)" type="number" v-model="bidForm.proposed_timeline_days"
               required />
 
@@ -135,7 +139,8 @@
   <Modal :isOpen="showAddMilestone" title="Add Milestone" size="md" @close="showAddMilestone = false">
     <form id="ms-form" @submit.prevent="addMilestone" class="pz-l-flex pz-l-flex--column pz-l-flex--gap-4">
       <PzInput v-model="milestoneForm.title" label="Title" required />
-      <PzInput v-model="milestoneForm.amount" label="Amount" type="number" required />
+      <PzInput v-model="milestoneForm.amount" :label="`Amount (${configStore.activeCurrency.symbol})`" type="number"
+        required />
       <PzInput v-model="milestoneForm.due_date" label="Due Date" type="date" required />
     </form>
     <template #footer>
@@ -143,27 +148,55 @@
       <Button type="submit" form="ms-form" variant="primary">Add</Button>
     </template>
   </Modal>
+
+  <!-- Chat Modal -->
+  <Modal :isOpen="showChatModal" title="CONTRACT_OPERATIONS_CHAT" size="lg" @close="showChatModal = false">
+    <ChatWindow v-if="activeChatRoomId" :roomId="String(activeChatRoomId)" />
+  </Modal>
+
+  <Modal :isOpen="showAwardConfirm" title="AWARD_CONTRACT" size="sm" @close="closeAwardConfirm">
+    <div class="pz-confirm-panel">
+      <p class="pz-confirm-panel__title">Award this contract to the selected bidder?</p>
+      <p class="pz-confirm-panel__body">
+        This moves the contract out of bidding and into the awarded workflow. Use this only when procurement review is complete.
+      </p>
+    </div>
+    <template #footer>
+      <Button variant="outline" @click="closeAwardConfirm">Cancel</Button>
+      <Button variant="primary" :loading="awardingBid" @click="confirmAwardBid">Award Contract</Button>
+    </template>
+  </Modal>
 </template>
 
 <script setup>
-  import { ref, onMounted, computed } from 'vue';
+  import { ref, onMounted, computed, inject } from 'vue';
   import { useRoute } from 'vue-router';
   import api from '../services/api';
   import { useAuthStore } from '../stores/auth';
+  import { useConfigStore } from '../stores/config';
   import Card from '../components/ui/Card.vue';
   import Button from '../components/ui/Button.vue';
   import Badge from '../components/ui/Badge.vue';
   import Modal from '../components/ui/Modal.vue';
   import PzInput from '../components/PzInput.vue';
+  import ChatWindow from '../components/chat/ChatWindow.vue';
 
   const route = useRoute();
   const authStore = useAuthStore();
+  const configStore = useConfigStore();
+  const showAlert = inject('showAlert');
   const contract = ref(null);
   const bids = ref([]);
   const milestones = ref([]);
   const myBid = ref(null);
   const submittingBid = ref(false);
   const showAddMilestone = ref(false);
+  const showChatModal = ref(false);
+  const activeChatRoomId = ref(null);
+  const showAwardConfirm = ref(false);
+  const pendingAwardBidId = ref(null);
+  const awardingBid = ref(false);
+  const shortlistingBidId = ref(null);
 
   const bidForm = ref({ proposed_cost: null, proposed_timeline_days: null, message: '' });
   const milestoneForm = ref({ title: '', amount: null, due_date: '' });
@@ -180,6 +213,9 @@
   async function loadContract() {
     const id = route.params.id;
     try {
+      bids.value = [];
+      milestones.value = [];
+      myBid.value = null;
       const res = await api.get(`/contracts/${id}/`);
       contract.value = res.data;
 
@@ -203,13 +239,15 @@
         }
       }
 
-      // Milestones
-      // Use 'nested' milestones if provided in serializer, or fetch active ones.
-      // Assuming /milestones/?contract={id} works?
-      // We didn't enable filtering for MilestoneViewSet.
-      // But ContractSerializer might include 'milestones'.
-      if (contract.value.milestones) {
+      if (contract.value?.milestones?.length) {
         milestones.value = contract.value.milestones;
+      } else if (contract.value?.status === 'AWARDED' || contract.value?.status === 'IN_PROGRESS' || contract.value?.status === 'COMPLETED') {
+        try {
+          const milestonesRes = await api.get(`/contracts/${id}/milestones/`);
+          milestones.value = milestonesRes.data;
+        } catch (e) {
+          milestones.value = [];
+        }
       }
 
     } catch (err) {
@@ -221,23 +259,50 @@
     submittingBid.value = true;
     try {
       await api.post(`/contracts/${route.params.id}/bids/`, bidForm.value);
-      alert('Bid submitted successfully!');
+      showAlert('Bid submitted successfully.', 'success');
       loadContract();
     } catch (err) {
-      alert('Bid submission failed');
+      showAlert(err.response?.data?.detail || 'Bid submission failed.', 'error');
     } finally {
       submittingBid.value = false;
     }
   }
 
-  async function awardBid(bidId) {
-    if (!confirm("Award contract to this bidder? This action cannot be undone.")) return;
+  async function shortlistBid(bidId) {
+    shortlistingBidId.value = bidId;
     try {
-      await api.post(`/bids/${bidId}/award/`);
-      alert('Contract Awarded!');
+      await api.post(`/bids/${bidId}/shortlist/`);
+      showAlert('Bid shortlisted successfully.', 'success');
       loadContract();
     } catch (err) {
-      alert('Award failed');
+      showAlert(err.response?.data?.detail || err.response?.data?.error || 'Shortlisting failed.', 'error');
+    } finally {
+      shortlistingBidId.value = null;
+    }
+  }
+
+  function awardBid(bidId) {
+    pendingAwardBidId.value = bidId;
+    showAwardConfirm.value = true;
+  }
+
+  function closeAwardConfirm() {
+    showAwardConfirm.value = false;
+    pendingAwardBidId.value = null;
+  }
+
+  async function confirmAwardBid() {
+    if (!pendingAwardBidId.value) return;
+    awardingBid.value = true;
+    try {
+      await api.post(`/bids/${pendingAwardBidId.value}/award/`);
+      showAlert('Contract awarded successfully.', 'success');
+      closeAwardConfirm();
+      loadContract();
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Award failed.', 'error');
+    } finally {
+      awardingBid.value = false;
     }
   }
 
@@ -245,20 +310,31 @@
     try {
       await api.post(`/contracts/${route.params.id}/milestones/`, milestoneForm.value);
       showAddMilestone.value = false;
+      milestoneForm.value = { title: '', amount: null, due_date: '' };
+      showAlert('Milestone added successfully.', 'success');
       loadContract(); // Refresh to see new milestone
     } catch (err) {
-      alert('Failed to add milestone');
+      showAlert(err.response?.data?.detail || 'Failed to add milestone.', 'error');
     }
   }
 
   async function approveMilestone(mId) {
     try {
       await api.post(`/milestones/${mId}/approve/`);
-      // Refresh local state
-      const m = milestones.value.find(x => x.id === mId);
-      if (m) m.status = 'APPROVED';
+      showAlert('Milestone approved and funds released.', 'success');
+      loadContract();
     } catch (err) {
-      alert('Approval failed');
+      showAlert(err.response?.data?.detail || err.response?.data?.error || 'Approval failed.', 'error');
+    }
+  }
+
+  async function openChat() {
+    try {
+      const res = await api.post('/chat/rooms/get-or-create/', { contract: route.params.id });
+      activeChatRoomId.value = res.data.id;
+      showChatModal.value = true;
+    } catch (err) {
+      showAlert(err.response?.data?.error || 'Failed to initiate chat session.', 'error');
     }
   }
 
@@ -297,5 +373,17 @@
     100% {
       transform: rotate(360deg);
     }
+  }
+
+  .pz-confirm-panel__title {
+    margin: 0;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .pz-confirm-panel__body {
+    margin: 0.75rem 0 0;
+    color: var(--pz-color-text-secondary);
+    line-height: 1.6;
   }
 </style>

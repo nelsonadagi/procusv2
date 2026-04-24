@@ -210,31 +210,39 @@ Phase 4 — escrow-backed projects need *project-level* structure, not just cont
 
 ## Phase 4 — Projects, Property & Capital Pipeline
 
-> **Theme:** Introduce the concept of a **Project** as the master entity — connecting materials procurement, contracts, financing, and real estate into a unified capital pipeline.
+> **Theme:** Introduce a connected property and project operating model where property remains a standalone marketplace domain while still linking into financing, procurement, execution, and capital flows.
 
 ### 🎯 Goals
 - Create a top-level `Project` entity that aggregates all platform activities
+- keep property as a standalone marketplace and operating asset module
+- enable approved property managers to operate listings on behalf of owners
+- allow public discovery, inquiries, and appointment booking for property assets
 - Enable investors to discover and pledge capital to construction projects
-- Connect real estate/property listings to upstream project demand
+- allow financing to target either a property or a project
+- connect real estate/property listings to upstream project demand
 - Provide project owners with a unified execution dashboard
 
 ### 🧩 New Backend Modules
 | Module | App | Responsibility |
 |---|---|---|
 | Projects | `projects` | Project lifecycle, requirements, funding status, updates feed |
-| Property | `property` | Real estate listings with zoning and development metadata |
+| Property | `property` | Standalone property listings, development metadata, inquiries, appointments, and project linkage |
 | Investments | `investments` | Investor pledge and commitment workflow |
 
 ### 🔑 Key Data Models
 
 ```
-PropertyListing ──▶ Project ──▶ Contract (execution)
-                        │
-                        └──▶ ProjectRequirement (materials/services needed)
-                        │
-                        └──▶ InvestmentCommitment (investor pledges)
-                        │
-                        └──▶ ProjectUpdate (progress feed)
+PropertyListing ──▶ PropertyInquiry / Appointment
+        │
+        ├──▶ FinanceApplication (property-targeted)
+        │
+        └──▶ Project ──▶ Contract (execution)
+                    │
+                    ├──▶ ProjectRequirement (materials/services needed)
+                    │
+                    ├──▶ InvestmentCommitment (investor pledges)
+                    │
+                    └──▶ ProjectUpdate (progress feed)
 ```
 
 | Model | Key Fields |
@@ -243,18 +251,23 @@ PropertyListing ──▶ Project ──▶ Contract (execution)
 | `ProjectRequirement` | `type` (MATERIAL/CONTRACTOR/SERVICE), `description`, `quantity` |
 | `InvestmentCommitment` | `investor`, `amount_committed`, `status` (PLEDGED → CONFIRMED) |
 | `ProjectContractLink` | Connects `Project` ↔ `Contract` |
-| `PropertyListing` | `asset_type` (LAND/RESIDENTIAL/COMMERCIAL), `price_estimate`, `status` |
+| `PropertyListing` | `asset_type`, `listing_type`, `price_estimate`, `status`, `financing_allowed` |
 | `DevelopmentMetadata` | `zoning_info`, `build_ready`, `utilities_available` |
+| `PropertyInquiry` | lead capture, callback details, chat linkage |
+| `PropertyAppointment` | calendar booking with owner/manager-defined availability |
 | `PropertyProjectLink` | Connects `Property` ↔ `Project` |
 
 ### 🌐 Frontend Views
 - `ProjectList.vue` — Project marketplace and investment discovery
 - `ProjectDetail.vue` — Full project view with requirements, investment, and updates
 - `CreateProject.vue` — Owner project creation flow
+- `PropertyListing.vue` — Property discovery and filtering
+- `PropertyDetail.vue` — Property hub for inquiries, appointments, financing, linked project context, and suggested materials/services
 - `InvestorDashboard.vue` — Portfolio and pledge management
+- `PropertyManagerDashboard.vue` — Listing operations, inquiries, appointments, and availability management
 - `OwnerDashboard.vue` — Multi-project management
 
-### 🔗 API Endpoints (v4)
+### 🔗 API Endpoints (v4 foundation)
 ```
 GET|POST   /api/projects/
 POST       /api/projects/{id}/requirements/
@@ -264,6 +277,8 @@ POST       /api/projects/{id}/updates/
 GET|POST   /api/property/
 POST       /api/property/{id}/link-project/
 ```
+
+Target property workflow additions build on this foundation with inquiry, appointment, availability, and finance-entry surfaces.
 
 ### ➡️ Sets the stage for
 Phase 5 — investment must become *regulated* — KYC, legal agreements, government tendering.

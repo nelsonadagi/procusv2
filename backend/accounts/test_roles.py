@@ -31,3 +31,32 @@ class TestUserRoles:
         groups = [g.name for g in user.groups.all()]
         assert 'INVESTOR' in groups
         assert 'VENDOR' not in groups
+
+    def test_grant_role_adds_secondary_group(self, user_factory):
+        user = user_factory(role=User.Role.PROJECT_OWNER)
+        user.grant_role(User.Role.VENDOR)
+
+        user.refresh_from_db()
+        groups = [g.name for g in user.groups.all()]
+        assert user.role == User.Role.PROJECT_OWNER
+        assert User.Role.VENDOR in user.roles
+        assert 'PROJECT_OWNER' in groups
+        assert 'VENDOR' in groups
+
+    def test_grant_role_admin_clears_secondary_roles(self, user_factory):
+        user = user_factory(role=User.Role.PROJECT_OWNER, roles=[User.Role.VENDOR])
+        user.grant_role(User.Role.ADMIN)
+
+        user.refresh_from_db()
+        groups = [g.name for g in user.groups.all()]
+        assert user.role == User.Role.ADMIN
+        assert user.roles == []
+        assert user.is_staff is True
+        assert 'ADMIN' in groups
+
+    def test_government_role_syncs_to_government_group(self, user_factory):
+        user = user_factory(role=User.Role.GOVERNMENT)
+
+        groups = [g.name for g in user.groups.all()]
+        assert 'GOVERNMENT' in groups
+        assert 'GOVERNMENT_OWNER' not in groups

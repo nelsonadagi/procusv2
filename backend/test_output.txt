@@ -1,0 +1,136 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-8.4.1, pluggy-1.6.0 -- /Users/mac/.pyenv/versions/3.10.13/bin/python3.10
+cachedir: .pytest_cache
+django: version: 4.2.16, settings: config.settings (from ini)
+rootdir: /Users/mac/ujenzi_market_place/construction-marketplace/backend
+configfile: pytest.ini
+plugins: mock-3.15.1, anyio-4.9.0, Faker-40.1.0, asyncio-1.1.0, django-4.11.1, cov-7.0.0
+asyncio: mode=strict, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+reviews/tests.py::TestReviewsAPI::test_create_rating Using existing test database for alias 'default'...
+Seeding comprehensive RBAC system...
+Created permission: catalog_view
+Created permission: catalog_create
+Created permission: catalog_update
+Created permission: catalog_delete
+Created permission: catalog_manage_stock
+Created permission: orders_view
+Created permission: orders_create
+Created permission: orders_update
+Created permission: orders_cancel
+Created permission: orders_process
+Created permission: contracts_view
+Created permission: contracts_post_contract
+Created permission: contracts_award_contract
+Created permission: contracts_manage_milestones
+Created permission: bids_view
+Created permission: bids_submit_bid
+Created permission: bids_withdraw_bid
+Created permission: bids_award_bid
+Created permission: escrow_view
+Created permission: escrow_release_funds
+Created permission: escrow_refund_funds
+Created permission: escrow_dispute_funds
+Created permission: finance_view
+Created permission: finance_apply
+Created permission: finance_approve_loan
+Created permission: finance_disburse
+Created permission: disputes_view
+Created permission: disputes_raise_dispute
+Created permission: disputes_arbitrate_dispute
+Created permission: disputes_close_dispute
+Created permission: projects_view
+Created permission: projects_create_project
+Created permission: projects_update_project
+Created permission: projects_delete_project
+Created permission: property_view
+Created permission: property_list_property
+Created permission: property_update_property
+Created permission: investments_view
+Created permission: investments_pledge
+Created permission: investments_sign_agreement
+Created permission: investments_transfer_stake
+Created permission: enterprise_view
+Created permission: enterprise_request_approval
+Created permission: enterprise_approve_request
+Created permission: enterprise_manage_org
+Created permission: government_view
+Created permission: government_publish_tender
+Created permission: government_audit_tender
+Created permission: milestones_view
+Created permission: milestones_manage_milestones
+Created permission: compliance_view
+Created permission: compliance_verify_kyc
+Created permission: compliance_report_aml
+Created permission: risk_view
+Created permission: risk_manage_ai_rules
+Created permission: risk_view_anomaly
+Created permission: banking_view
+Created permission: banking_reconcile
+Created permission: banking_settle
+Created permission: integrations_view
+Created permission: integrations_manage_api_keys
+Created permission: integrations_sync_erp
+Created permission: users_view
+Created permission: users_create
+Created permission: users_update
+Created permission: users_delete
+Created permission: users_manage_roles
+Role GUEST synchronized with 4 permissions.
+Role BUYER synchronized with 5 permissions.
+Role VENDOR synchronized with 6 permissions.
+Role CONTRACTOR synchronized with 6 permissions.
+Role PROJECT_OWNER synchronized with 9 permissions.
+Role INVESTOR synchronized with 5 permissions.
+Role VERIFIED_INVESTOR synchronized with 6 permissions.
+Role GOVERNMENT_OWNER synchronized with 3 permissions.
+Role GOVERNMENT_AUDITOR synchronized with 3 permissions.
+Role ADMIN synchronized with 67 permissions.
+RBAC Seeding complete.
+DEBUG: Status=400, Data={'score': [ErrorDetail(string='This field is required.', code='required')]}
+FAILED
+
+=================================== FAILURES ===================================
+______________________ TestReviewsAPI.test_create_rating _______________________
+
+self = <reviews.tests.TestReviewsAPI object at 0x1072a6500>
+api_client = <rest_framework.test.APIClient object at 0x10774ddb0>
+project_owner = <User: mooreedward (PROJECT_OWNER)>
+vendor = <User: betty43 (VENDOR)>
+
+    def test_create_rating(self, api_client, project_owner, vendor):
+        v_profile = Vendor.objects.create(
+            user=vendor,
+            business_name="Vendor Co",
+            registration_number="123",
+            location="City",
+            verified_status='APPROVED'
+        )
+        order = Order.objects.create(buyer=project_owner, vendor=v_profile, total_amount=1000, status='COMPLETED')
+    
+        api_client.force_authenticate(user=project_owner)
+        url = reverse('ratings-list')
+        data = {
+            'order': order.id,
+            'rating': 5,
+            'comment': 'Great!'
+        }
+        response = api_client.post(url, data)
+        if response.status_code != 201:
+            print(f"DEBUG: Status={response.status_code}, Data={response.data}")
+>       assert response.status_code == status.HTTP_201_CREATED
+E       assert 400 == 201
+E        +  where 400 = <Response status_code=400, "application/json">.status_code
+E        +  and   201 = status.HTTP_201_CREATED
+
+reviews/tests.py:30: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  django.request:log.py:241 Bad Request: /api/reviews/ratings/
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.10.13-final-0 _______________
+
+Coverage HTML written to dir htmlcov
+=========================== short test summary info ============================
+FAILED reviews/tests.py::TestReviewsAPI::test_create_rating - assert 400 == 201
+============================== 1 failed in 3.49s ===============================

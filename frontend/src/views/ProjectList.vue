@@ -1,39 +1,12 @@
 <template>
   <div class="pz-marketplace">
-    <!-- Premium Global Hero -->
-    <section class="pz-hero-premium">
-      <div class="pz-hero-premium__mesh"></div>
-      <div class="pz-l-container pz-hero-premium__content">
-        <h1 class="pz-u-text-display pz-hero-premium__title">Strategic Asset Portfolio</h1>
-        <p class="pz-hero-premium__subtitle pz-u-text-mono">
-          UNIFIED PROJECT COMMAND • REGIONAL DEVELOPMENTS • PORTFOLIO SYNDICATION
-        </p>
-
-        <!-- Glassmorphism Discovery -->
-        <div class="pz-discovery-glass">
-          <div class="pz-discovery-glass__input-group">
-            <span class="pz-discovery-glass__icon">🔍</span>
-            <input v-model="searchQuery" type="text" placeholder="PROSPECT ASSETS..." class="pz-discovery-glass__input">
-          </div>
-          <Button variant="primary" size="lg" class="u-hide-mobile">FILTER PORTFOLIO</Button>
-        </div>
-
-        <div class="pz-hero-premium__stats pz-u-text-mono">
-          <div class="pz-stat-premium">
-            <span class="pz-stat-premium__val">{{ projects.length }}</span>
-            <span class="pz-stat-premium__label">ACTIVE SITES</span>
-          </div>
-          <div class="pz-stat-premium">
-            <span class="pz-stat-premium__val">$250M+</span>
-            <span class="pz-stat-premium__label">VALUATION</span>
-          </div>
-          <div class="pz-stat-premium">
-            <span class="pz-stat-premium__val">STRATEGIC</span>
-            <span class="pz-stat-premium__label">ASSETS</span>
-          </div>
-        </div>
-      </div>
-    </section>
+    <EntryHero
+      v-model="searchQuery"
+      search-only
+      title="Search projects"
+      placeholder="Search projects by title or location"
+      search-label="Search Projects"
+    />
 
     <div class="pz-l-container u-py-12">
       <!-- Unified Discovery Filters -->
@@ -60,7 +33,7 @@
           </div>
 
           <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Valuation Range ($)</span>
+            <span class="pz-filter-bar__label">Valuation Range ({{ configStore.activeCurrency.symbol || '$' }})</span>
             <div class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-2">
               <input v-model.number="budgetMin" type="number" placeholder="MIN" class="pz-filter-bar__input">
               <span class="pz-u-text-mono text-xs pz-u-color-concrete">/</span>
@@ -93,15 +66,15 @@
         <div class="loading-spinner"></div>
         <p class="u-mt-4 u-color-muted">Fetching project portfolio...</p>
       </div>
-      <div v-else :class="viewMode === 'grid' ? 'pz-premium-grid' : 'pz-listing-list'">
-        <article v-for="project in projects" :key="project.id" class="pz-premium-card"
+      <div v-else-if="filteredProjects.length" :class="viewMode === 'grid' ? 'pz-premium-grid' : 'pz-listing-list'">
+        <article v-for="project in filteredProjects" :key="project.id" class="pz-premium-card"
           :class="{ 'pz-premium-card--list': viewMode === 'list' }" @click="$router.push(`/projects/${project.id}`)">
 
           <div class="pz-premium-card__media">
             <img :src="project.primary_image_url || '/placeholder.png'" :alt="project.title"
               class="pz-premium-card__img">
             <div class="pz-premium-card__badges">
-              <Badge variant="savanna">{{ project.status }}</Badge>
+              <Badge variant="default">{{ project.status }}</Badge>
               <Badge v-if="project.funding_required" variant="finance">FUNDING OPEN</Badge>
             </div>
           </div>
@@ -122,23 +95,29 @@
             <div class="pz-premium-card__pricing">
               <div class="pz-price-display">
                 <span class="pz-price-display__unit">PROJECT VALUATION</span>
-                <div class="pz-price-display__val">${{ project.estimated_budget }}</div>
+                <div class="pz-price-display__val">{{ configStore.formatPrice(project.estimated_budget) }}</div>
               </div>
               <Button variant="primary" size="sm">GO TO SITE</Button>
             </div>
           </div>
         </article>
       </div>
+      <div v-else class="pz-u-text-center u-py-20 pz-u-border">
+        <p class="pz-u-text-mono text-xs pz-u-color-concrete">No projects match the current search and filter selection.</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, computed } from 'vue';
   import api from '../services/api';
   import Button from '../components/ui/Button.vue';
   import Badge from '../components/ui/Badge.vue';
+  import EntryHero from '../components/ui/EntryHero.vue';
+  import { useConfigStore } from '../stores/config';
 
+  const configStore = useConfigStore();
   const projects = ref([]);
   const loading = ref(true);
   const viewMode = ref('grid');
@@ -147,7 +126,19 @@
   const selectedStatus = ref('');
   const budgetMin = ref(null);
   const budgetMax = ref(null);
-
+  const filteredProjects = computed(() => {
+    return projects.value.filter((project) => {
+      const matchesSearch = !searchQuery.value || [project.title, project.location].some((value) =>
+        String(value || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      );
+      const matchesLocation = !selectedLocation.value || String(project.location || '').toLowerCase().includes(selectedLocation.value.toLowerCase());
+      const matchesStatus = !selectedStatus.value || project.status === selectedStatus.value;
+      const budget = Number(project.estimated_budget || 0);
+      const matchesBudgetMin = budgetMin.value === null || budget >= Number(budgetMin.value);
+      const matchesBudgetMax = budgetMax.value === null || budget <= Number(budgetMax.value);
+      return matchesSearch && matchesLocation && matchesStatus && matchesBudgetMin && matchesBudgetMax;
+    });
+  });
   const clearFilters = () => {
     searchQuery.value = '';
     selectedLocation.value = '';

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@700&family=JetBrains+Mono:wght@400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@600;700;800&display=swap');
 
 *,
 *::before,
@@ -19,13 +19,20 @@ body {
   font-family: var(--pz-font-primary);
   font-size: var(--pz-text-body);
   line-height: var(--pz-leading-body);
+  letter-spacing: -0.01em;
   color: var(--pz-color-text-primary);
   background-color: var(--pz-color-limestone-white);
-  /* Glossy ambient background to make glassmorphism visible */
   background-image: 
-    radial-gradient(at 0% 0%, rgba(255, 107, 43, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(212, 140, 69, 0.05) 0px, transparent 50%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(250, 250, 248, 0.98)),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 47px,
+      rgba(10, 10, 15, 0.018) 47px,
+      rgba(10, 10, 15, 0.018) 48px
+    ),
+    radial-gradient(circle at top left, rgba(212, 101, 42, 0.06), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(184, 115, 51, 0.045), transparent 24%);
   background-attachment: fixed;
   overflow-x: hidden;
   max-width: 100vw;
@@ -35,6 +42,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--pz-font-display);
   font-weight: var(--pz-weight-bold);
   line-height: var(--pz-leading-snug);
+  letter-spacing: -0.04em;
   color: var(--pz-color-text-primary);
 }
 
@@ -49,18 +57,44 @@ code, pre, kbd, samp {
 }
 
 a {
-  color: var(--pz-color-accent-tech);
+  color: var(--pz-color-earth-orange);
   text-decoration: none;
   transition: color var(--pz-transition-fast);
 }
 
 a:hover {
-  color: var(--pz-color-foundation-black);
+  color: #9B441B;
 }
 
 :focus-visible {
-  outline: 2px solid var(--pz-color-steel-blue);
+  outline: 2px solid var(--pz-color-earth-orange);
   outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen-reader only text utility */
+.pz-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 ::selection {

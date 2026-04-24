@@ -64,3 +64,29 @@ class TestEscrowLifecycle:
         
         escrow.refresh_from_db()
         assert escrow.total_amount_held == 2000 # Unchanged
+
+    def test_escrow_deposit(self, api_client, project_owner):
+        from conftest import ContractFactory
+        contract = ContractFactory(owner=project_owner)
+        
+        api_client.force_authenticate(user=project_owner)
+        url = reverse('escrow-deposit')
+        data = {'contract_id': contract.id, 'amount': 1000}
+        response = api_client.post(url, data)
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['balance'] == 1000
+        assert EscrowAccount.objects.filter(contract=contract, total_amount_held=1000).exists()
+
+    def test_trigger_insufficient_funds(self, api_client, project_owner):
+        from conftest import EscrowAccountFactory, MilestoneFactory, ContractFactory
+        contract = ContractFactory(owner=project_owner)
+        escrow = EscrowAccountFactory(contract=contract, total_amount_held=100)
+        milestone = MilestoneFactory(contract=contract, amount=500)
+        
+        api_client.force_authenticate(user=project_owner)
+        url = reverse('escrow-release-trigger')
+        response = api_client.post(url, {'milestone_id': milestone.id})
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Insufficient" in response.data['error']

@@ -3,8 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import VendorViewSet
 
 router = DefaultRouter()
-router.register(r'profiles', VendorViewSet, basename='vendors')
+router.register(r'', VendorViewSet, basename='vendors')
 
 urlpatterns = [
-    path('', include(router.urls)),
-]
+    path('me/', VendorViewSet.as_view({'get': 'me'}), name='vendor-me'),
+] + router.urls

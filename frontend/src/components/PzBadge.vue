@@ -11,7 +11,7 @@
         variant: {
             type: String,
             default: 'default',
-            validator: (v) => ['default', 'success', 'warning', 'error', 'info', 'finance'].includes(v)
+            validator: (v) => ['default', 'success', 'warning', 'error', 'info', 'finance', 'earth', 'savanna', 'ghost'].includes(v)
         },
         size: {
             type: String,
@@ -30,11 +30,12 @@
     .pz-badge {
         display: inline-flex;
         align-items: center;
-        font-family: var(--pz-font-primary);
-        font-weight: var(--pz-weight-medium);
+        font-family: var(--pz-font-mono);
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border-radius: var(--pz-border-radius);
+        letter-spacing: 0.08em;
+        border-radius: var(--pz-border-radius-sm);
+        border: 1px solid currentColor;
     }
 
     .pz-badge--small {
@@ -73,7 +74,22 @@
     }
 
     .pz-badge--error {
-        background-color: rgba(212, 101, 42, 0.15);
-        color: #B8531F;
+        background-color: var(--pz-color-danger-soft);
+        color: var(--pz-color-danger);
+    }
+
+    .pz-badge--earth {
+        background-color: rgba(212, 101, 42, 0.1);
+        color: var(--pz-color-earth-orange);
+    }
+
+    .pz-badge--savanna {
+        background-color: rgba(5, 150, 105, 0.1);
+        color: var(--pz-color-savanna-green);
+    }
+
+    .pz-badge--ghost {
+        background-color: transparent;
+        color: var(--pz-color-structural-steel);
     }
 </style>

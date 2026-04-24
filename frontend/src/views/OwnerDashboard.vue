@@ -1,328 +1,745 @@
 <template>
-    <div class="pz-admin-console">
-        <div class="pz-l-container pz-admin-console__layout">
-            <!-- 01: Portfolio Sidebar -->
-            <aside class="pz-admin-console__sidebar">
-                <div class="pz-side-nav">
-                    <div class="pz-side-nav__group">
-                        <h3 class="pz-side-nav__title">CAPITAL_OVERSIGHT</h3>
-                        <button class="pz-side-nav__item pz-side-nav__item--active">
-                            <span class="pz-side-nav__icon">◰</span> PORTFOLIO_OVERVIEW
-                        </button>
-                        <button class="pz-side-nav__item">
-                            <span class="pz-side-nav__icon">◈</span> ESCROW_RELEASES
-                        </button>
-                        <button class="pz-side-nav__item">
-                            <span class="pz-side-nav__icon">⧇</span> PROCUREMENT_LOGS
-                        </button>
-                    </div>
+  <DashboardShell
+    v-model:active-section="activeTab"
+    accent="steel"
+    title="Project Control Center"
+    eyebrow="Account: Project Owner // Status: Active"
+    :sidebar-groups="[
+      {
+        title: 'Portfolio Management',
+        items: [
+          { id: 'projects', label: 'Overview', icon: '◰' },
+          { id: 'properties', label: 'My Properties', icon: '◰' },
+          { id: 'escrow', label: 'Payments', icon: '◈' },
+          { id: 'logs', label: 'Activity Logs', icon: '⧇' }
+        ]
+      },
+      {
+        title: 'Quick Actions',
+        items: [
+          { id: 'new-project', label: 'Start New Project', icon: '+', action: () => $router.push('/projects/new') },
+          { id: 'exit', label: 'Exit Dashboard', icon: '⇚', action: () => $router.push('/') }
+        ]
+      }
+    ]"
+  >
+    <template #headerActions>
+      <div class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-4">
+        <div class="pz-status-indicator pz-status-indicator--pulse"></div>
+        <Badge variant="success">Compliance: Verified</Badge>
+      </div>
+    </template>
 
-                    <div class="pz-side-nav__group u-mt-12">
-                        <h3 class="pz-side-nav__title">QUICK_ACTIONS</h3>
-                        <button class="pz-side-nav__item" @click="$router.push('/projects/new')">
-                            <span class="pz-side-nav__icon">+</span> INITIALIZE_PROJECT
-                        </button>
-                        <button class="pz-side-nav__item" @click="$router.push('/')">
-                            <span class="pz-side-nav__icon">⇚</span> EXIT_CONSOLE
-                        </button>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- 02: Operational Interface -->
-            <main class="pz-admin-console__main">
-                <header class="pz-admin-console__header">
-                    <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-end">
-                        <div>
-                            <div class="pz-u-text-mono text-xs pz-u-color-earth u-mb-2" style="letter-spacing: 0.3em;">
-                                SECURE_IDENTITY: PROJECT_OWNER // SESSION: ACTIVE
-                            </div>
-                            <h1 class="pz-u-text-display" style="font-size: 2.5rem; line-height: 1;">Project Control
-                            </h1>
-                        </div>
-                        <div class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-4">
-                            <div class="pz-status-indicator pz-status-indicator--pulse"></div>
-                            <Badge variant="success">COMPLIANCE: NOMINAL</Badge>
-                        </div>
-                    </div>
-                </header>
-
-                <!-- Command Nodes (Stats) -->
-                <div class="pz-l-grid pz-l-grid--md-cols-3 pz-l-grid--gap-6 u-mb-12">
-                    <div class="pz-command-node pz-card--interactive u-hover-spring">
-                        <div class="pz-command-node__label u-text-glitch" data-text="CAPITAL_DEPLOYED">CAPITAL_DEPLOYED
-                        </div>
-                        <div class="pz-command-node__value pz-u-color-savanna">$850,000</div>
-                        <div class="pz-command-node__accent"></div>
-                    </div>
-                    <div class="pz-command-node pz-card--interactive u-hover-spring">
-                        <div class="pz-command-node__label u-text-glitch" data-text="ESCROW_SECURED">ESCROW_SECURED
-                        </div>
-                        <div class="pz-command-node__value">$120,400</div>
-                        <div class="pz-command-node__accent"></div>
-                    </div>
-                    <div class="pz-command-node pz-card--interactive u-hover-spring">
-                        <div class="pz-command-node__label u-text-glitch" data-text="ASSET_VALUATION">ASSET_VALUATION
-                        </div>
-                        <div class="pz-command-node__value pz-u-color-earth">$2.4M</div>
-                        <div class="pz-command-node__accent"></div>
-                    </div>
-                </div>
-
-                <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--lg-cols-3 pz-l-grid--gap-8">
-                    <!-- Active Portfolio Node -->
-                    <section class="u-lg-col-span-1">
-                        <div class="pz-admin-card pz-u-border-b">
-                            <div class="pz-admin-card__header">
-                                <h3 class="pz-admin-card__title">ACTIVE_PROJECT_NODES</h3>
-                                <span class="pz-u-text-mono text-xs pz-u-color-concrete">{{ projects.length }}
-                                    UNITS</span>
-                            </div>
-                            <div class="pz-l-flex pz-l-flex--column">
-                                <div v-for="project in projects" :key="project.id"
-                                    class="pz-u-p-6 pz-u-border-b u-cursor-pointer pz-u-transition-base"
-                                    style="background: white;" @click="$router.push(`/projects/${project.id}`)">
-                                    <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-start u-mb-3">
-                                        <strong class="pz-u-text-mono text-sm">{{ project.title.toUpperCase()
-                                            }}</strong>
-                                        <Badge variant="secondary" size="sm">{{ project.status }}</Badge>
-                                    </div>
-                                    <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center">
-                                        <span class="pz-u-text-mono text-xs pz-u-color-concrete">📍 {{ project.location
-                                            }}</span>
-                                        <span class="pz-u-text-mono text-xs pz-u-color-earth">↳ VIEW_DETAIL</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Procurement Stream -->
-                    <section class="u-lg-col-span-2">
-                        <div class="pz-admin-card">
-                            <div class="pz-admin-card__header">
-                                <h3 class="pz-admin-card__title">PROCUREMENT_TIMELINE</h3>
-                            </div>
-                            <div class="pz-table-wrapper">
-                                <table class="pz-admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th>SEQUENCE_ID</th>
-                                            <th>RESOURCE_ALLOCATION</th>
-                                            <th>PROTOCOL_STATUS</th>
-                                            <th class="u-text-right">VALUATION</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td class="pz-u-text-mono text-xs">ORD-00881</td>
-                                            <td>
-                                                <div class="font-bold">Dangote Cement (Type II)</div>
-                                                <div class="pz-u-text-mono text-xs pz-u-color-concrete">VOLUME: 500
-                                                    UNITS</div>
-                                            </td>
-                                            <td>
-                                                <Badge variant="warning">IN_TRANSIT</Badge>
-                                            </td>
-                                            <td class="pz-u-text-mono text-right font-bold">$4,250.00</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="pz-u-text-mono text-xs">ORD-00879</td>
-                                            <td>
-                                                <div class="font-bold">TMT Structural Steel</div>
-                                                <div class="pz-u-text-mono text-xs pz-u-color-concrete">SPEC: 12mm Grade
-                                                    60</div>
-                                            </td>
-                                            <td>
-                                                <Badge variant="success">FULFILLED</Badge>
-                                            </td>
-                                            <td class="pz-u-text-mono text-right font-bold">$2,100.00</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Escrow Pulse -->
-                        <div class="pz-u-bg-limestone pz-u-border u-mt-8 pz-p-6">
-                            <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center">
-                                <div>
-                                    <h4 class="pz-u-text-mono text-xs font-bold u-mb-1">NEXT_ESCROW_MILESTONE</h4>
-                                    <p class="pz-u-text-mono text-xs pz-u-color-concrete">PHASE 2: STRUCTURAL FRAMEWORK
-                                        SLAB</p>
-                                </div>
-                                <div class="u-text-right">
-                                    <div class="pz-u-text-display text-xl">$45,000</div>
-                                    <span class="pz-u-text-mono text-xs pz-u-color-savanna">READY_FOR_RELEASE</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </main>
+    <div v-if="activeTab === 'projects'" class="pz-tab-enter-active">
+      <!-- Command Nodes (Stats) -->
+      <div class="pz-l-grid pz-l-grid--md-cols-3 pz-l-grid--gap-6 u-mb-12">
+        <div class="pz-command-node pz-card--interactive u-hover-spring pz-glass-surface">
+          <div class="pz-command-node__label">Total Investment</div>
+          <div class="pz-command-node__value pz-u-color-savanna">{{ configStore.formatPrice(totalBudget) }}</div>
+          <div class="pz-command-node__accent"></div>
         </div>
+        <div class="pz-command-node pz-card--interactive u-hover-spring pz-glass-surface">
+          <div class="pz-command-node__label">Active Projects</div>
+          <div class="pz-command-node__value">{{ activeProjectCount }}</div>
+          <div class="pz-command-node__accent"></div>
+        </div>
+        <div class="pz-command-node pz-card--interactive u-hover-spring pz-glass-surface">
+          <div class="pz-command-node__label">Funding Projects</div>
+          <div class="pz-command-node__value pz-u-color-earth">{{ fundingProjectCount }}</div>
+          <div class="pz-command-node__accent"></div>
+        </div>
+      </div>
+
+      <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--lg-cols-3 pz-l-grid--gap-8">
+        <!-- Active Portfolio Node -->
+        <section class="u-lg-col-span-1">
+          <div class="pz-admin-card pz-glass-panel">
+            <div class="pz-admin-card__header">
+              <h3 class="pz-admin-card__title">Active Project Units</h3>
+              <span class="pz-u-text-mono text-xs pz-u-color-concrete">{{ projects.length }} Units</span>
+            </div>
+            <div class="pz-l-flex pz-l-flex--column">
+              <div
+                v-for="project in projectPreview"
+                :key="project.id"
+                class="pz-project-item pz-u-p-6 pz-u-border-b u-cursor-pointer"
+                @click="$router.push(`/projects/${project.id}`)"
+              >
+                <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-start u-mb-3">
+                  <strong class="pz-u-text-mono text-sm pz-project-item__title">{{ project.title }}</strong>
+                  <Badge variant="secondary" size="sm">{{ project.status }}</Badge>
+                </div>
+                <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center">
+                  <span class="pz-u-text-mono text-xs pz-u-color-concrete">
+                    {{ project.formatted_address || project.location_text || project.location || 'Location pending' }}
+                  </span>
+                  <span class="pz-u-text-mono text-xs pz-color-action-link">↳ View Details</span>
+                </div>
+              </div>
+              <div v-if="projectPreview.length === 0" class="pz-u-p-6 pz-u-color-concrete pz-u-text-mono text-xs">
+                No owner projects found yet.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Procurement Stream -->
+        <section class="u-lg-col-span-2">
+          <div class="pz-admin-card pz-glass-panel">
+            <div class="pz-admin-card__header">
+              <h3 class="pz-admin-card__title">Recent Project Updates</h3>
+            </div>
+            <div class="pz-table-wrapper">
+              <table class="pz-admin-table">
+                <thead>
+                  <tr>
+                    <th>Project</th>
+                    <th>Update</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="update in recentUpdates" :key="update.id" class="pz-table-row-interactive">
+                    <td class="font-bold">{{ update.projectTitle }}</td>
+                    <td class="pz-u-text-mono text-xs">{{ update.update_text }}</td>
+                    <td class="pz-u-text-mono text-xs">{{ formatDate(update.created_at) }}</td>
+                  </tr>
+                  <tr v-if="recentUpdates.length === 0">
+                    <td colspan="3" class="pz-u-text-mono text-xs pz-u-color-concrete">
+                      No project updates published yet.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Escrow Pulse -->
+          <div class="pz-workspace-status-card u-mt-8 pz-p-6">
+            <div class="pz-workspace-status-card__bg"></div>
+            <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center pz-workspace-status-card__content">
+              <div>
+                <h4 class="pz-u-text-mono text-xs font-bold u-mb-1 text-white">Owner Workspace Status</h4>
+                <p class="pz-u-text-mono text-xs pz-u-color-limestone">Projects and properties are now scoped to your account.</p>
+              </div>
+              <div class="u-text-right">
+                <div class="pz-u-text-display text-xl text-white">{{ projectPreview.length }}</div>
+                <span class="pz-u-text-mono text-xs pz-u-color-savanna">Visible In Workspace</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
+
+    <div v-else-if="activeTab === 'properties'" class="pz-tab-enter-active">
+      <PropertiesSection scope="mine" />
+    </div>
+
+    <div v-else-if="activeTab === 'escrow'" class="pz-tab-enter-active">
+      <div class="pz-l-grid pz-l-grid--md-cols-3 pz-l-grid--gap-6 u-mb-8">
+        <div class="pz-finance-card pz-glass-surface">
+          <div class="pz-finance-card__icon pz-u-bg-savanna-soft">◈</div>
+          <div class="pz-finance-card__content">
+            <div class="pz-finance-card__label">Total Escrow Balance</div>
+            <div class="pz-finance-card__value">KSh 12,450,000</div>
+          </div>
+        </div>
+        <div class="pz-finance-card pz-glass-surface">
+          <div class="pz-finance-card__icon pz-u-bg-copper-soft">◷</div>
+          <div class="pz-finance-card__content">
+            <div class="pz-finance-card__label">Pending Releases</div>
+            <div class="pz-finance-card__value">KSh 3,250,000</div>
+          </div>
+        </div>
+        <div class="pz-finance-card pz-glass-surface">
+          <div class="pz-finance-card__icon pz-u-bg-steel-soft">✓</div>
+          <div class="pz-finance-card__content">
+            <div class="pz-finance-card__label">Completed Payments</div>
+            <div class="pz-finance-card__value">KSh 45,800,000</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="pz-admin-card pz-glass-panel">
+        <div class="pz-admin-card__header">
+          <h3 class="pz-admin-card__title">Recent Escrow Transactions</h3>
+          <button class="pz-btn-glass pz-u-text-mono text-xs">View All</button>
+        </div>
+        <div class="pz-table-wrapper">
+          <table class="pz-admin-table">
+            <thead>
+              <tr>
+                <th>Transaction ID</th>
+                <th>Project</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="trx in escrowTransactions" :key="trx.id" class="pz-table-row-interactive">
+                <td class="pz-u-text-mono text-xs font-bold">{{ trx.id }}</td>
+                <td>{{ trx.project }}</td>
+                <td class="font-bold">{{ trx.amount }}</td>
+                <td>
+                  <Badge :variant="trx.status === 'Released' ? 'success' : (trx.status === 'In Escrow' ? 'warning' : 'secondary')" size="sm">
+                    {{ trx.status }}
+                  </Badge>
+                </td>
+                <td class="pz-u-text-mono text-xs">{{ trx.date }}</td>
+                <td><button class="pz-action-btn">Review ↳</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="activeTab === 'logs'" class="pz-tab-enter-active">
+      <div class="pz-admin-card pz-glass-panel">
+        <div class="pz-admin-card__header">
+          <h3 class="pz-admin-card__title">Activity Timeline</h3>
+        </div>
+        <div class="pz-timeline-container pz-u-p-6">
+          <div v-for="(log, idx) in activityLogs" :key="log.id" class="pz-timeline-item" :style="{ animationDelay: `${idx * 0.1}s` }">
+            <div class="pz-timeline-item__node" :class="`pz-timeline-item__node--${log.type}`"></div>
+            <div class="pz-timeline-item__content">
+              <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center u-mb-1">
+                <strong class="pz-u-text-mono text-xs">{{ log.user }}</strong>
+                <span class="pz-u-text-mono text-xs pz-u-color-concrete">{{ log.time }}</span>
+              </div>
+              <p class="pz-timeline-item__text">{{ log.action }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="pz-module-state pz-glass-panel pz-tab-enter-active">
+      <div class="pz-module-state__visual">
+        <div class="pz-module-state__ring pz-module-state__ring--1"></div>
+        <div class="pz-module-state__ring pz-module-state__ring--2"></div>
+        <div class="pz-module-state__icon">⧉</div>
+      </div>
+      <div class="pz-module-state__kicker">FEATURE_STANDBY</div>
+      <h3 class="pz-module-state__title">{{ activeTab }} is coming soon</h3>
+      <p class="pz-module-state__body">
+        This section is currently under development. Connected data, actions, and review states will be deployed in the next platform update.
+      </p>
+      <button class="pz-btn-glass u-mt-6" @click="activeTab = 'projects'">Return to Overview ↳</button>
+    </div>
+  </DashboardShell>
 </template>
 
 <script setup>
-    import { ref, onMounted } from 'vue';
-    import api from '../services/api';
-    import Button from '../components/ui/Button.vue';
-    import Badge from '../components/ui/Badge.vue';
+import { computed, ref, onMounted, defineAsyncComponent } from 'vue';
+import api from '../services/api';
+import { useConfigStore } from '../stores/config';
+import Badge from '../components/ui/Badge.vue';
+import DashboardShell from '../components/layout/DashboardShell.vue';
 
-    const projects = ref([]);
+const PropertiesSection = defineAsyncComponent(() => import('../components/admin/PropertiesSection.vue'));
 
-    onMounted(async () => {
-        try {
-            const res = await api.get('/v2/projects/');
-            projects.value = (res.data.results || res.data).slice(0, 3);
-        } catch (e) {
-            console.error(e);
-        }
-    });
+const configStore = useConfigStore();
+const activeTab = ref('projects');
+const projects = ref([]);
+
+const escrowTransactions = ref([
+  { id: 'TRX-9982', project: 'Nairobi Heights', amount: 'KSh 2,500,000', status: 'Released', date: 'Oct 12, 2025' },
+  { id: 'TRX-9981', project: 'Lavington Villas', amount: 'KSh 850,000', status: 'In Escrow', date: 'Oct 10, 2025' },
+  { id: 'TRX-9980', project: 'Westlands Commercial', amount: 'KSh 4,200,000', status: 'Pending Approval', date: 'Oct 05, 2025' }
+]);
+
+const activityLogs = ref([
+  { id: 'LOG-01', user: 'System', action: 'Compliance verification completed for Lavington Villas', time: '2 hours ago', type: 'system' },
+  { id: 'LOG-02', user: 'Owner', action: 'Approved milestone 2 payment for Nairobi Heights', time: '1 day ago', type: 'user' },
+  { id: 'LOG-03', user: 'Contractor', action: 'Uploaded site survey report for Westlands Commercial', time: '2 days ago', type: 'external' },
+  { id: 'LOG-04', user: 'System', action: 'Generated monthly portfolio performance report', time: '3 days ago', type: 'system' }
+]);
+
+const projectPreview = computed(() => projects.value.slice(0, 3));
+const totalBudget = computed(() =>
+  projects.value.reduce((sum, project) => sum + Number(project.estimated_budget || 0), 0)
+);
+const activeProjectCount = computed(() =>
+  projects.value.filter((project) => project.status !== 'COMPLETED').length
+);
+const fundingProjectCount = computed(() =>
+  projects.value.filter((project) => project.funding_required).length
+);
+const recentUpdates = computed(() =>
+  projects.value
+    .flatMap((project) =>
+      (project.updates || []).map((update) => ({
+        ...update,
+        projectTitle: project.title
+      }))
+    )
+    .sort((left, right) => new Date(right.created_at) - new Date(left.created_at))
+    .slice(0, 5)
+);
+
+function formatDate(value) {
+  return new Date(value).toLocaleDateString();
+}
+
+onMounted(async () => {
+  try {
+    const res = await api.get('/v4/projects/', { params: { owner: 'me' } });
+    projects.value = res.data.results || res.data;
+  } catch (e) {
+    console.error(e);
+  }
+});
 </script>
 
 <style scoped>
-    .pz-admin-console {
-        background: var(--pz-color-limestone-white);
-        min-height: 100vh;
-        padding: var(--pz-space-4) 0;
-    }
+/* Glassmorphism & Surface Utilities */
+.pz-glass-surface {
+  background: var(--pz-glass-bg);
+  backdrop-filter: var(--pz-blur-md);
+  -webkit-backdrop-filter: var(--pz-blur-md);
+  border: 1px solid var(--pz-glass-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
 
-    @media (min-width: 768px) {
-        .pz-admin-console {
-            padding: var(--pz-space-8) 0;
-        }
-    }
+.pz-glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: var(--pz-blur-lg);
+  -webkit-backdrop-filter: var(--pz-blur-lg);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--pz-shadow-lg);
+}
 
-    .pz-admin-console__layout {
-        display: flex;
-        flex-direction: column;
-        gap: var(--pz-space-6);
-    }
+/* Animations */
+@keyframes tabEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 
-    @media (min-width: 1024px) {
-        .pz-admin-console__layout {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: var(--pz-space-8);
-        }
-    }
+.pz-tab-enter-active {
+  animation: tabEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
-    .pz-admin-console__sidebar {
-        height: auto;
-    }
+@keyframes pz-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
 
-    @media (min-width: 1024px) {
-        .pz-admin-console__sidebar {
-            position: sticky;
-            top: var(--pz-space-8);
-            height: fit-content;
-        }
-    }
+@keyframes gradientPan {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 
-    .pz-admin-console__header {
-        margin-bottom: var(--pz-space-6);
-        padding-bottom: var(--pz-space-4);
-        border-bottom: 2px solid var(--pz-color-foundation-black);
-    }
+/* Commands & Stats */
+.pz-command-node {
+  padding: var(--pz-space-5);
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--pz-border-radius-lg);
+  transition: all var(--pz-transition-spring);
+}
 
-    @media (min-width: 768px) {
-        .pz-admin-console__header {
-            margin-bottom: var(--pz-space-8);
-            padding-bottom: var(--pz-space-6);
-        }
-    }
+.pz-command-node:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--pz-shadow-xl);
+  border-color: var(--pz-color-earth-orange);
+}
 
-    /* Command Nodes */
-    .pz-command-node {
-        background: white;
-        border: 1px solid var(--pz-color-foundation-black);
-        padding: var(--pz-space-4);
-        position: relative;
-        overflow: hidden;
-    }
+.pz-command-node__label {
+  font-family: var(--pz-font-mono);
+  font-size: 0.685rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--pz-color-concrete-grey);
+  margin-bottom: var(--pz-space-2);
+}
 
-    .pz-command-node__label {
-        font-family: var(--pz-font-mono);
-        font-size: 0.625rem;
-        font-weight: 700;
-        color: var(--pz-color-concrete-grey);
-        margin-bottom: var(--pz-space-2);
-    }
+.pz-command-node__value {
+  font-family: var(--pz-font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
 
-    .pz-command-node__value {
-        font-family: var(--pz-font-display);
-        font-size: 1.75rem;
-        font-weight: 800;
-    }
+.pz-command-node__accent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  background: var(--pz-color-foundation-black);
+  transition: width var(--pz-transition-spring), background var(--pz-transition-base);
+}
 
-    .pz-command-node__accent {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--pz-color-foundation-black);
-    }
+.pz-command-node:hover .pz-command-node__accent {
+  width: 8px;
+  background: var(--pz-color-earth-orange);
+}
 
-    .pz-command-node:hover .pz-command-node__accent {
-        background: var(--pz-color-earth-orange);
-    }
+/* Admin Card (Overridden for better look) */
+.pz-admin-card {
+  border-radius: var(--pz-border-radius-lg);
+  overflow: hidden;
+}
 
-    /* Admin Cards & Tables */
-    .pz-admin-card {
-        background: white;
-        border: 1px solid var(--pz-color-concrete-grey);
-    }
+.pz-admin-card__header {
+  padding: var(--pz-space-4) var(--pz-space-6);
+  border-bottom: 1px solid rgba(10, 10, 15, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.4);
+}
 
-    .pz-admin-card__header {
-        padding: var(--pz-space-4) var(--pz-space-6);
-        border-bottom: 1px solid var(--pz-color-concrete-grey);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+.pz-admin-card__title {
+  font-family: var(--pz-font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
 
-    .pz-admin-card__title {
-        font-family: var(--pz-font-mono);
-        font-size: 0.875rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-    }
+/* Projects Flow */
+.pz-project-item {
+  background: transparent;
+  transition: all var(--pz-transition-base);
+  border-bottom: 1px solid rgba(10, 10, 15, 0.05);
+}
 
-    .pz-table-wrapper {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
+.pz-project-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  padding-left: var(--pz-space-8);
+}
 
-    .pz-admin-table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 600px;
-    }
+.pz-project-item__title {
+  transition: color var(--pz-transition-base);
+}
 
-    .pz-admin-table th {
-        text-align: left;
-        padding: var(--pz-space-3) var(--pz-space-6);
-        font-family: var(--pz-font-mono);
-        font-size: 0.65rem;
-        color: var(--pz-color-concrete-grey);
-        border-bottom: 1px solid var(--pz-color-concrete-grey);
-        background: var(--pz-color-limestone-white);
-    }
+.pz-project-item:hover .pz-project-item__title {
+  color: var(--pz-color-earth-orange);
+}
 
-    .pz-admin-table td {
-        padding: var(--pz-space-4) var(--pz-space-6);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        vertical-align: middle;
-    }
+.pz-color-action-link {
+  color: var(--pz-color-earth-orange);
+  transition: transform var(--pz-transition-fast);
+  display: inline-block;
+}
 
-    .u-lg-col-span-1 {
-        grid-column: span 1;
-    }
+.pz-project-item:hover .pz-color-action-link {
+  transform: translateX(4px);
+}
 
-    .u-lg-col-span-2 {
-        grid-column: span 2;
-    }
+/* Tables */
+.pz-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pz-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.pz-admin-table th {
+  text-align: left;
+  padding: var(--pz-space-3) var(--pz-space-6);
+  font-family: var(--pz-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+  border-bottom: 1px solid rgba(10, 10, 15, 0.05);
+  background: rgba(10, 10, 15, 0.02);
+}
+
+.pz-admin-table td {
+  padding: var(--pz-space-4) var(--pz-space-6);
+  border-bottom: 1px solid rgba(10, 10, 15, 0.05);
+  vertical-align: middle;
+}
+
+.pz-table-row-interactive {
+  transition: background var(--pz-transition-base);
+}
+
+.pz-table-row-interactive:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* Escrow Dashboard specific */
+.pz-finance-card {
+  display: flex;
+  align-items: center;
+  gap: var(--pz-space-4);
+  padding: var(--pz-space-5);
+  border-radius: var(--pz-border-radius-lg);
+  transition: all var(--pz-transition-spring);
+}
+
+.pz-finance-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--pz-shadow-lg);
+}
+
+.pz-finance-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--pz-border-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.pz-u-bg-savanna-soft { background: rgba(5, 150, 105, 0.15); color: var(--pz-color-savanna-green); }
+.pz-u-bg-copper-soft { background: rgba(184, 115, 51, 0.15); color: var(--pz-color-copper-circuit); }
+.pz-u-bg-steel-soft { background: rgba(37, 99, 235, 0.15); color: var(--pz-color-steel-blue); }
+
+.pz-finance-card__label {
+  font-family: var(--pz-font-mono);
+  font-size: 0.685rem;
+  color: var(--pz-color-concrete-grey);
+  margin-bottom: 0.25rem;
+}
+
+.pz-finance-card__value {
+  font-family: var(--pz-font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.pz-action-btn {
+  background: none;
+  border: none;
+  font-family: var(--pz-font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--pz-color-steel-blue);
+  cursor: pointer;
+  transition: all var(--pz-transition-fast);
+}
+
+.pz-action-btn:hover {
+  color: var(--pz-color-foundation-black);
+  transform: translateX(4px);
+}
+
+/* Timeline */
+.pz-timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pz-space-6);
+  position: relative;
+}
+
+.pz-timeline-container::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--pz-space-6) + 5px);
+  top: var(--pz-space-6);
+  bottom: var(--pz-space-6);
+  width: 2px;
+  background: rgba(10, 10, 15, 0.05);
+}
+
+.pz-timeline-item {
+  display: flex;
+  gap: var(--pz-space-4);
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: tabEnter 0.5s ease forwards;
+}
+
+.pz-timeline-item__node {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 5px;
+  background: var(--pz-color-foundation-black);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+.pz-timeline-item__node--system { background: var(--pz-color-steel-blue); }
+.pz-timeline-item__node--user { background: var(--pz-color-savanna-green); }
+.pz-timeline-item__node--external { background: var(--pz-color-copper-circuit); }
+
+.pz-timeline-item__content {
+  background: rgba(255, 255, 255, 0.6);
+  padding: var(--pz-space-4);
+  border-radius: var(--pz-border-radius-md);
+  border: 1px solid rgba(10, 10, 15, 0.05);
+  flex-grow: 1;
+  transition: all var(--pz-transition-base);
+}
+
+.pz-timeline-item:hover .pz-timeline-item__content {
+  background: white;
+  box-shadow: var(--pz-shadow-md);
+  transform: translateX(4px);
+}
+
+.pz-timeline-item__text {
+  font-size: 0.95rem;
+  color: var(--pz-color-structural-steel);
+  margin: 0;
+}
+
+/* Buttons */
+.pz-btn-glass {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(10, 10, 15, 0.1);
+  padding: var(--pz-space-2) var(--pz-space-4);
+  border-radius: var(--pz-border-radius-lg);
+  font-family: var(--pz-font-mono);
+  font-weight: 700;
+  color: var(--pz-color-foundation-black);
+  cursor: pointer;
+  transition: all var(--pz-transition-spring);
+  backdrop-filter: var(--pz-blur-sm);
+}
+
+.pz-btn-glass:hover {
+  background: white;
+  box-shadow: var(--pz-shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--pz-color-earth-orange);
+}
+
+/* Banners & Empty States */
+.pz-workspace-status-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--pz-border-radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pz-workspace-status-card__bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--pz-color-foundation-black) 0%, #1A1A24 100%);
+  z-index: 0;
+}
+
+.pz-workspace-status-card__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(212, 101, 42, 0.4), transparent 50%);
+  opacity: 0.8;
+  animation: pz-pulse 4s infinite alternate;
+}
+
+.pz-workspace-status-card__content {
+  position: relative;
+  z-index: 1;
+}
+
+.pz-module-state {
+  border-radius: var(--pz-border-radius-lg);
+  padding: clamp(2rem, 5vw, 4rem);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pz-module-state__visual {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--pz-space-6);
+}
+
+.pz-module-state__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--pz-color-earth-orange);
+  opacity: 0.2;
+}
+
+.pz-module-state__ring--1 {
+  animation: pz-pulse 3s infinite;
+}
+
+.pz-module-state__ring--2 {
+  inset: -10px;
+  border-color: var(--pz-color-copper-circuit);
+  animation: pz-pulse 3s infinite;
+  animation-delay: 1.5s;
+}
+
+.pz-module-state__icon {
+  font-size: 2rem;
+  color: var(--pz-color-earth-orange);
+  z-index: 1;
+}
+
+.pz-module-state__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  color: var(--pz-color-concrete-grey);
+  text-transform: uppercase;
+}
+
+.pz-module-state__title {
+  margin: 0.7rem 0 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-module-state__body {
+  max-width: 32rem;
+  margin: 0.8rem 0 0;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+/* Utilities */
+.pz-status-indicator {
+  width: 12px;
+  height: 12px;
+  background: var(--pz-color-savanna-green);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.pz-status-indicator--pulse {
+  animation: pz-pulse 3s infinite;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.u-lg-col-span-1 { grid-column: span 1; }
+.u-lg-col-span-2 { grid-column: span 2; }
+
+@media (min-width: 1024px) {
+  .pz-l-grid--lg-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pz-status-indicator--pulse, .pz-tab-enter-active, .pz-workspace-status-card__bg::after, .pz-module-state__ring--1, .pz-module-state__ring--2 {
+    animation: none;
+  }
+}
 </style>

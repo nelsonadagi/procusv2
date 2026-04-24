@@ -11,6 +11,7 @@ export const useAuthStore = defineStore('auth', {
 
     getters: {
         isAuthenticated: (state) => !!state.token,
+        isAdmin: (state) => state.user?.role === 'ADMIN' || state.user?.is_staff || false,
         userRole: (state) => state.user?.role || 'GUEST',
         hasPermission: (state) => (permission) => {
             if (state.user?.role === 'ADMIN') return true;
@@ -39,9 +40,6 @@ export const useAuthStore = defineStore('auth', {
                 localStorage.setItem('token', token);
                 localStorage.setItem('user', JSON.stringify(user));
 
-                // Add auth header to future requests
-                api.defaults.headers.common['Authorization'] = `Token ${token}`;
-
                 return true;
             } catch (err) {
                 this.error = err.response?.data?.detail || 'Login failed';
@@ -63,7 +61,6 @@ export const useAuthStore = defineStore('auth', {
                     this.user = user;
                     localStorage.setItem('token', token);
                     localStorage.setItem('user', JSON.stringify(user));
-                    api.defaults.headers.common['Authorization'] = `Token ${token}`;
                     return true;
                 }
                 return true;
@@ -80,14 +77,11 @@ export const useAuthStore = defineStore('auth', {
             this.token = null;
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            delete api.defaults.headers.common['Authorization'];
         },
 
-        // Initialize token header on app start
-        init() {
-            if (this.token) {
-                api.defaults.headers.common['Authorization'] = `Token ${this.token}`;
-            }
+        setUser(user) {
+            this.user = user;
+            localStorage.setItem('user', JSON.stringify(user));
         }
     }
 });

@@ -1,4 +1,4 @@
-# UX Improvement: Role as Profile Setting
+# UX Improvement: Shared Registration And Approval-Driven Role Activation
 
 ## 🎯 Problem Identified
 
@@ -9,17 +9,18 @@ The original registration flow required users to select a role (PROJECT_OWNER, C
 3. **Registration Friction**: Extra field increased abandonment risk
 4. **Inflexible**: Users couldn't easily change their primary role later
 
-## ✅ Solution Implemented
+## ✅ Direction Of Travel
 
 ### Registration Simplified
 - **Removed** role selection from registration form
-- **Default** all new users to `PROJECT_OWNER` (buyer role)
-- **Added** informational note: "You can set your role in your profile after registration"
+- **Default** all new users to `PROJECT_OWNER` as the base role
+- **Added** informational note that specialized workspaces are activated after sign-in
 
-### Profile Management Enhanced
-- **Added** "Primary Role" dropdown in Profile tab
-- **Editable** at any time via `/buyer/dashboard` → Profile tab
-- **Flexible** users can switch between roles as needed
+### Role Activation Model
+- **Base access first**: users start in the shared buyer-owner workspace
+- **Specialized onboarding second**: vendor, contractor, investor, courier, and government workspaces are activated intentionally
+- **Admin approval third**: specialized roles should be granted as a result of approval workflows
+- **Multi-role normal users**: users may hold multiple approved non-admin roles
 
 ---
 
@@ -34,13 +35,15 @@ The original registration flow required users to select a role (PROJECT_OWNER, C
 5. Role is locked
 ```
 
-### After (New Flow)
+### Current target flow
 ```
 1. Visit /register
 2. Fill name, email, password
-3. ✅ No role selection needed
+3. No role selection needed
 4. Submit → Auto-assigned PROJECT_OWNER
-5. Later: Update role in profile anytime
+5. Sign in to the shared workspace
+6. Start specialized onboarding only when needed
+7. Admin approves and activates specialized role access
 ```
 
 ---
@@ -52,20 +55,21 @@ The original registration flow required users to select a role (PROJECT_OWNER, C
 - Lower cognitive load for new users
 - Higher conversion rate
 
-### 2. **Multi-Role Support**
-- Vendors can also buy materials
-- Contractors can invest in projects
-- Users aren't locked into one identity
+### 2. **Admin-controlled specialization**
+- Vendors can be approved after supplier onboarding
+- Contractors can be approved after contractor onboarding
+- Investors can be approved after investor/KYC onboarding
+- Users are not forced into a specialization before they understand the platform
 
 ### 3. **Better Onboarding**
 - Users explore platform first
 - Choose role after understanding options
 - Can change mind without creating new account
 
-### 4. **Flexibility**
-- Role determines default dashboard view
-- Users can access features across roles
-- Example: Vendor can switch to buyer view to purchase materials
+### 4. **Multi-role flexibility**
+- `PROJECT_OWNER` remains the base identity
+- Approved non-admin roles can be accumulated in `roles[]`
+- Example: one user can be both `PROJECT_OWNER` and `VENDOR`
 
 ---
 
@@ -87,14 +91,19 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         role = validated_data.get('role', 'PROJECT_OWNER')
 ```
 
-#### 2. Made Role Editable in Profile
+#### 2. Multi-role support exists in the user model
 ```python
-# accounts/serializers.py
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        read_only_fields = ('email', 'username', 'permissions', 'groups')
-        # role is NOT in read_only_fields, so it's editable
+# accounts/models.py
+class User(AbstractUser):
+    role = models.CharField(...)
+    roles = models.JSONField(default=list, blank=True)
 ```
+
+Policy implication:
+
+- `role` should represent the current primary or active workspace
+- `roles[]` should hold approved additional non-admin roles
+- `ADMIN` should remain separate from normal multi-role identities
 
 ### Frontend Changes
 
@@ -104,26 +113,30 @@ class UserSerializer(serializers.ModelSerializer):
 <template>
   <!-- Removed role dropdown -->
   <div class="info-box">
-    <p><strong>Note:</strong> You can set your role in your profile after registration.</p>
+    <p><strong>Note:</strong> New accounts start in the shared buyer-owner workspace. Specialized dashboards are activated after onboarding and approval.</p>
   </div>
 </template>
 ```
 
-#### 2. Added Role to Profile Settings
+#### 2. Added workspace activation affordances to profile areas
 ```vue
-<!-- BuyerDashboard.vue → Profile Tab -->
-<div class="form-group">
-  <label>Primary Role</label>
-  <select v-model="profile.role" class="form-input">
-    <option value="PROJECT_OWNER">Project Owner / Buyer</option>
-    <option value="CONTRACTOR">Contractor</option>
-    <option value="VENDOR">Vendor / Supplier</option>
-    <option value="INVESTOR">Investor</option>
-    <option value="GOVERNMENT">Government</option>
-  </select>
-  <small class="form-hint">Your primary role determines your default dashboard view</small>
-</div>
+<!-- BuyerDashboard.vue -->
+<RoleActivationCards />
 ```
+
+#### 3. Prompt language direction
+
+Prompt copy should now follow this pattern:
+
+- shared account first
+- specialization second
+- admin approval third
+
+That means:
+
+- registration should talk about one account and expandable workflows
+- dashboards should talk about activation, submission, pending review, and approval
+- profile screens should not imply that a raw role dropdown is the source of truth
 
 ---
 
@@ -133,8 +146,10 @@ class UserSerializer(serializers.ModelSerializer):
 ```
 1. Register as default (PROJECT_OWNER)
 2. Browse and buy cement for their warehouse
-3. Later: Change role to VENDOR in profile
-4. Now can sell products AND buy materials
+3. Open vendor workspace
+4. Submit vendor onboarding
+5. Admin approves vendor role
+6. User can now sell products AND buy materials
 ```
 
 ### Use Case 2: Contractor Exploring Platform
@@ -142,16 +157,18 @@ class UserSerializer(serializers.ModelSerializer):
 1. Register without knowing what role to choose
 2. Explore marketplace, contracts, tenders
 3. Decide they want to bid on contracts
-4. Update role to CONTRACTOR in profile
-5. Access contractor-specific features
+4. Submit contractor onboarding
+5. Admin approves contractor role
+6. Access contractor-specific features
 ```
 
 ### Use Case 3: Multi-Role User
 ```
 1. User is both investor and project owner
-2. Can switch role based on current activity:
+2. Can hold multiple approved non-admin roles:
    - INVESTOR role → View investment opportunities
    - PROJECT_OWNER role → Manage construction projects
+   - VENDOR role → Sell inventory
 ```
 
 ---
@@ -160,12 +177,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 ### Registration Page
 - **Cleaner**: Fewer fields, less intimidating
-- **Informative**: Blue info box explains role can be set later
+- **Informative**: Copy explains that all normal users begin in the base workspace
 - **Password Hint**: Added "Minimum 8 characters recommended"
 
 ### Profile Page
-- **Clear Labeling**: "Primary Role" instead of just "Role"
-- **Helpful Hint**: Explains what role affects
+- **Clear Labeling**: If role controls remain visible, they should reflect approved access and active workspace, not self-service specialization
+- **Helpful Hint**: Explain that specialized access depends on onboarding plus approval
 - **User-Friendly Options**: Descriptive labels (e.g., "Project Owner / Buyer")
 
 ---
@@ -173,9 +190,10 @@ class UserSerializer(serializers.ModelSerializer):
 ## 🔐 Security Considerations
 
 ### RBAC Still Enforced
-- Role changes don't bypass permissions
+- Role changes do not bypass permissions
+- Specialized access should depend on approved onboarding state
 - Each role has specific access controls
-- Changing role doesn't grant unauthorized access
+- Switching active workspace should not grant unauthorized access
 
 ### Audit Trail
 - Role changes can be logged (future enhancement)
@@ -188,27 +206,22 @@ class UserSerializer(serializers.ModelSerializer):
 ### Metrics to Monitor
 - **Registration Completion Rate**: Should increase
 - **Time to Register**: Should decrease
-- **Profile Update Rate**: Users setting role post-registration
+- **Activation Start Rate**: Users starting specialized onboarding after registration
+- **Approval Conversion Rate**: Started specialized onboarding versus approved activation
 - **Multi-Role Usage**: Users switching between roles
 
 ### Success Criteria
 - ✅ Faster registration (< 30 seconds)
 - ✅ Higher conversion (fewer abandoned registrations)
 - ✅ More flexible user experience
+- ✅ Clear approval-state messaging in specialized workspaces
 - ✅ Positive user feedback on role flexibility
 
 ---
 
 ## 🚀 Future Enhancements
 
-### Phase 2: Multi-Role Profiles
-Instead of single "primary role", allow users to have multiple active roles:
-```javascript
-user.roles = ['VENDOR', 'PROJECT_OWNER', 'INVESTOR']
-user.active_role = 'VENDOR'  // Current view
-```
-
-### Phase 3: Role-Based Dashboards
+### Phase 2: Multi-role dashboard switching
 Unified dashboard with role switcher:
 ```
 ┌─────────────────────────────────┐
@@ -219,11 +232,11 @@ Unified dashboard with role switcher:
 └─────────────────────────────────┘
 ```
 
-### Phase 4: Smart Role Suggestions
+### Phase 3: Smart role prompts
 Based on user activity:
 ```
-"We noticed you've been browsing materials. 
-Would you like to enable Buyer features?"
+"We noticed you're preparing to supply materials.
+Would you like to activate vendor onboarding?"
 ```
 
 ---
@@ -232,12 +245,13 @@ Would you like to enable Buyer features?"
 
 - [x] Register without selecting role
 - [x] Default role is PROJECT_OWNER
-- [x] Can update role in profile
-- [x] Role change persists after logout/login
-- [x] Role change updates navigation/dashboard
-- [x] RBAC still enforced after role change
+- [x] Registration copy explains shared-account onboarding
+- [ ] Specialized roles are granted by admin approval workflow
+- [ ] `roles[]` holds approved non-admin roles
+- [ ] `ADMIN` remains separate from normal multi-role user identities
+- [ ] Dashboard prompts explain missing profile versus missing approval
 - [x] Info box displays on registration page
-- [x] Form hint displays on profile page
+- [ ] Profile and admin prompts fully match approval-driven specialization
 
 ---
 
@@ -254,9 +268,9 @@ Updated files:
 
 **Before**: Rigid, confusing registration requiring upfront role decision
 
-**After**: Flexible, user-friendly registration with post-signup role selection
+**Now targeted**: Shared registration with approval-driven specialization, multi-role support for non-admin users, and prompt copy that reflects approval states clearly
 
-**Result**: Better UX, higher conversion, multi-role support
+**Result**: Better UX, clearer admin workflows, and more realistic role governance
 
 ---
 

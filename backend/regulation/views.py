@@ -4,11 +4,19 @@ from rest_framework.decorators import action
 from django.utils import timezone
 from .models import InvestorProfile, InvestmentAgreement
 from .serializers import InvestorProfileSerializer, InvestmentAgreementSerializer
+from rbac.permissions import HasRequiredPermission
 
 class InvestorProfileViewSet(viewsets.ModelViewSet):
     queryset = InvestorProfile.objects.all()
     serializer_class = InvestorProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
+    required_permission = 'investments:view'
+    permission_map = {
+        'create': 'investments:onboard',
+        'update': 'investments:onboard',
+        'partial_update': 'investments:onboard',
+        'onboard': 'investments:onboard',
+    }
 
     def get_queryset(self):
          if self.request.user.role == 'ADMIN': return self.queryset
@@ -28,7 +36,14 @@ class InvestorProfileViewSet(viewsets.ModelViewSet):
 class InvestmentAgreementViewSet(viewsets.ModelViewSet):
     queryset = InvestmentAgreement.objects.all()
     serializer_class = InvestmentAgreementSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
+    required_permission = 'investments:view'
+    permission_map = {
+        'create': 'investments:sign_agreement',
+        'update': 'investments:sign_agreement',
+        'partial_update': 'investments:sign_agreement',
+        'sign': 'investments:sign_agreement',
+    }
 
     def perform_create(self, serializer):
         serializer.save(investor=self.request.user)

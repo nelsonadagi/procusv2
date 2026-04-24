@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Project, ProjectRequirement, InvestmentCommitment, ProjectUpdate
+from platform_settings.serializers import LocationSyncMixin
 
 class ProjectRequirementSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,7 +24,7 @@ class ProjectUpdateSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['project', 'posted_by', 'created_at']
 
-class ProjectSerializer(serializers.ModelSerializer):
+class ProjectSerializer(LocationSyncMixin, serializers.ModelSerializer):
     requirements = ProjectRequirementSerializer(many=True, read_only=True)
     updates = ProjectUpdateSerializer(many=True, read_only=True)
     commitments = InvestmentCommitmentSerializer(many=True, read_only=True)
@@ -32,3 +33,16 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = '__all__'
         read_only_fields = ['owner', 'status', 'created_at']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if request and request.user:
+            validated_data['owner'] = request.user
+        project = super().create(validated_data)
+        self._sync_location_obj(project, validated_data)
+        return project
+
+    def update(self, instance, validated_data):
+        project = super().update(instance, validated_data)
+        self._sync_location_obj(project, validated_data)
+        return project

@@ -29,6 +29,11 @@ wcwidth==0.5.3
 PyYAML
 cryptography
 Pillow
+channels
+channels-redis
+daphne
+python-dotenv
+requests
 
 # Testing & Quality
 pytest==8.3.4

@@ -3,12 +3,17 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import ReliabilityScore
 from .serializers import ReliabilityScoreSerializer
+from rbac.permissions import HasRequiredPermission
 
 class ScoringViewSet(viewsets.ReadOnlyModelViewSet):
     # Admin can see all, User sees own
     queryset = ReliabilityScore.objects.all()
     serializer_class = ReliabilityScoreSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
+    required_permission = 'risk:view'
+    permission_map = {
+        'recalculate': 'risk:manage_ai_rules',
+    }
 
     def get_queryset(self):
         if self.request.user.role == 'ADMIN':

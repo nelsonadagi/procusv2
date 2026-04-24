@@ -21,7 +21,7 @@ const props = defineProps({
   size: {
     type: String,
     default: 'medium',
-    validator: (v) => ['small', 'medium', 'large'].includes(v)
+    validator: (v) => ['small', 'medium', 'large', 'xsmall'].includes(v)
   },
   disabled: Boolean,
   loading: Boolean,
@@ -45,15 +45,21 @@ const buttonClasses = computed(() => ({
   align-items: center;
   justify-content: center;
   gap: var(--pz-space-1);
-  font-family: var(--pz-font-primary);
-  font-weight: var(--pz-weight-semibold);
+  font-family: var(--pz-font-mono);
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.0625em;
-  border: var(--pz-border-width) solid transparent;
-  border-radius: var(--pz-border-radius);
+  letter-spacing: 0.08em;
+  border: var(--pz-border-width) solid var(--pz-border-color-strong);
+  border-radius: var(--pz-border-radius-sm);
   cursor: pointer;
   transition: all var(--pz-transition-base);
   text-decoration: none;
+  box-shadow: var(--pz-shadow-sm);
+}
+
+.pz-button--xsmall {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.68rem;
 }
 
 .pz-button--small {
@@ -75,22 +81,24 @@ const buttonClasses = computed(() => ({
   background-color: var(--pz-color-earth-orange);
   color: var(--pz-color-limestone-white);
   border-color: var(--pz-color-earth-orange);
+  box-shadow: var(--pz-shadow-offset-sm);
 }
 
 .pz-button--primary:hover:not(:disabled) {
-  background-color: #B8531F;
-  border-color: #B8531F;
-  transform: translateY(-2px);
+  background-color: #A84C1F;
+  border-color: #A84C1F;
+  transform: translate(-2px, -2px);
 }
 
 .pz-button--secondary {
-  background-color: transparent;
-  color: var(--pz-color-steel-blue);
-  border-color: var(--pz-color-steel-blue);
+  background-color: var(--pz-color-foundation-black);
+  color: var(--pz-color-limestone-white);
+  border-color: var(--pz-color-foundation-black);
+  box-shadow: var(--pz-shadow-offset-sm);
 }
 
 .pz-button--secondary:hover:not(:disabled) {
-  background-color: rgba(37, 99, 235, 0.1);
+  transform: translate(-2px, -2px);
 }
 
 .pz-button--tertiary {
@@ -115,7 +123,13 @@ const buttonClasses = computed(() => ({
 .pz-button--ghost {
   background-color: transparent;
   color: var(--pz-color-text-secondary);
-  border-color: var(--pz-color-concrete-grey);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.pz-button--ghost:hover:not(:disabled) {
+  background-color: rgba(10, 10, 15, 0.05);
+  color: var(--pz-color-foundation-black);
 }
 
 .pz-button:disabled {

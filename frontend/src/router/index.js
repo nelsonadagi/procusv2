@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ProductList from '../views/ProductList.vue'
+import { useAuthStore } from '../stores/auth'
+
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -7,7 +8,7 @@ const router = createRouter({
         {
             path: '/',
             name: 'home',
-            component: ProductList
+            component: () => import('../views/ProductList.vue')
         },
         {
             path: '/products/:id',
@@ -23,6 +24,11 @@ const router = createRouter({
             path: '/register',
             name: 'register',
             component: () => import('../views/Register.vue')
+        },
+        {
+            path: '/vendors/register',
+            name: 'vendor-register',
+            component: () => import('../views/VendorRegistration.vue')
         },
         {
             path: '/contractors/register',
@@ -67,44 +73,93 @@ const router = createRouter({
         {
             path: '/investor/dashboard',
             name: 'investor-dashboard',
-            component: () => import('../views/InvestorDashboard.vue')
+            component: () => import('../views/InvestorDashboard.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/government/dashboard',
+            name: 'government-dashboard',
+            component: () => import('../views/GovernmentDashboard.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/admin/reports',
             name: 'regulatory-reports',
-            component: () => import('../views/RegulatoryReports.vue')
+            component: () => import('../views/RegulatoryReports.vue'),
+            meta: { requiresAuth: true, requiresAdmin: true }
         },
         {
             path: '/admin',
             name: 'admin-dashboard',
-            component: () => import('../views/AdminDashboard.vue')
+            component: () => import('../views/AdminDashboard.vue'),
+            meta: { requiresAuth: true, requiresAdmin: true }
         },
         {
             path: '/vendor/dashboard',
             name: 'vendor-dashboard',
-            component: () => import('../views/VendorDashboard.vue')
+            component: () => import('../views/VendorDashboard.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/contractor/dashboard',
             name: 'contractor-dashboard',
-            component: () => import('../views/ContractorDashboard.vue')
+            component: () => import('../views/ContractorDashboard.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/courier/dashboard',
+            name: 'courier-dashboard',
+            component: () => import('../views/CourierDashboard.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/owner/dashboard',
             name: 'owner-dashboard',
-            component: () => import('../views/OwnerDashboard.vue')
+            component: () => import('../views/OwnerDashboard.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/buyer/dashboard',
             name: 'buyer-dashboard',
-            component: () => import('../views/BuyerDashboard.vue')
+            component: () => import('../views/BuyerDashboard.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/market/secondary',
             name: 'secondary-market',
             component: () => import('../views/SecondaryMarket.vue')
         },
+        {
+            path: '/properties',
+            name: 'property-list',
+            component: () => import('../views/PropertyListing.vue')
+        },
+        {
+            path: '/properties/:id',
+            name: 'property-detail',
+            component: () => import('../views/PropertyDetail.vue')
+        },
+        {
+            path: '/property-manager/dashboard',
+            name: 'property-manager-dashboard',
+            component: () => import('../views/PropertyManagerDashboard.vue'),
+            meta: { requiresAuth: true }
+        },
     ]
 })
+
+router.beforeEach((to) => {
+    const authStore = useAuthStore();
+
+    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+        return { name: 'login' };
+    }
+
+    if (to.meta.requiresAdmin && !authStore.isAdmin) {
+        return authStore.isAuthenticated ? { name: 'home' } : { name: 'login' };
+    }
+
+    return true;
+});
 
 export default router

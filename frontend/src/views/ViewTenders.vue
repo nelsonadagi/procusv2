@@ -1,40 +1,12 @@
 <template>
   <div class="pz-marketplace">
-    <!-- Premium Global Hero -->
-    <section class="pz-hero-premium">
-      <div class="pz-hero-premium__mesh"></div>
-      <div class="pz-l-container pz-hero-premium__content">
-        <h1 class="pz-u-text-display pz-hero-premium__title">Construction Tenders</h1>
-        <p class="pz-hero-premium__subtitle pz-u-text-mono">
-          STRATEGIC PROCUREMENT GATEWAY • GOVERNMENT & PRIVATE DEPLOYMENTS
-        </p>
-
-        <!-- Glassmorphism Discovery -->
-        <div class="pz-discovery-glass">
-          <div class="pz-discovery-glass__input-group">
-            <span class="pz-discovery-glass__icon">🔍</span>
-            <input v-model="searchQuery" type="text" placeholder="PROSPECT TENDER OPPORTUNITIES..."
-              class="pz-discovery-glass__input">
-          </div>
-          <Button variant="primary" size="lg" class="u-hide-mobile">EXECUTE DISCOVERY</Button>
-        </div>
-
-        <div class="pz-hero-premium__stats pz-u-text-mono">
-          <div class="pz-stat-premium">
-            <span class="pz-stat-premium__val">{{ tenders.length }}</span>
-            <span class="pz-stat-premium__label">ACTIVE TENDERS</span>
-          </div>
-          <div class="pz-stat-premium">
-            <span class="pz-stat-premium__val">VERIFIED</span>
-            <span class="pz-stat-premium__label">COMMAND</span>
-          </div>
-          <div class="pz-stat-premium">
-            <span class="pz-stat-premium__val">PAN-REGIONAL</span>
-            <span class="pz-stat-premium__label">COVERAGE</span>
-          </div>
-        </div>
-      </div>
-    </section>
+    <EntryHero
+      v-model="searchQuery"
+      search-only
+      title="Search tenders"
+      placeholder="Search tender opportunities"
+      search-label="Search Tenders"
+    />
 
     <main class="pz-l-container u-py-12">
       <!-- Unified Discovery Filters -->
@@ -81,8 +53,8 @@
         <p class="pz-u-text-mono text-xs">SYNCHRONIZING TENDER REGISTRY...</p>
       </div>
 
-      <div v-else-if="tenders.length > 0" :class="viewMode === 'grid' ? 'pz-premium-grid' : 'pz-listing-list'">
-        <div v-for="tender in tenders" :key="tender.id" class="pz-premium-card">
+      <div v-else-if="filteredTenders.length > 0" :class="viewMode === 'grid' ? 'pz-premium-grid' : 'pz-listing-list'">
+        <div v-for="tender in filteredTenders" :key="tender.id" class="pz-premium-card">
           <div class="pz-premium-card__media">
             <img :src="tender.featured_image_url || '/placeholder.png'" :alt="tender.title"
               class="pz-premium-card__img">
@@ -110,7 +82,8 @@
             <div class="pz-premium-card__pricing">
               <div class="pz-price-display">
                 <span class="pz-price-display__unit">BUDGET RANGE</span>
-                <div class="pz-price-display__val">${{ tender.budget_min }} - ${{ tender.budget_max }}</div>
+                <div class="pz-price-display__val">{{ configStore.formatPrice(tender.budget_min) }} - {{
+                  configStore.formatPrice(tender.budget_max) }}</div>
               </div>
               <Button @click="bid(tender.id)" variant="primary" size="sm">EXECUTE BID</Button>
             </div>
@@ -126,17 +99,19 @@
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, computed } from 'vue';
   import { useRouter } from 'vue-router';
   const viewMode = ref('grid');
   import api from '../services/api';
-  import Card from '../components/ui/Card.vue';
   import Button from '../components/ui/Button.vue';
   import Badge from '../components/ui/Badge.vue';
+  import EntryHero from '../components/ui/EntryHero.vue';
   import { useAuthStore } from '../stores/auth';
+  import { useConfigStore } from '../stores/config';
 
   const router = useRouter();
   const authStore = useAuthStore();
+  const configStore = useConfigStore();
   const tenders = ref([]);
   const loading = ref(true);
   const searchQuery = ref('');
@@ -144,7 +119,16 @@
   const selectedLocation = ref('');
   const budgetMin = ref(null);
   const budgetMax = ref(null);
-
+  const filteredTenders = computed(() => {
+    return tenders.value.filter((tender) => {
+      const matchesSearch = !searchQuery.value || [tender.title, tender.description_scope, tender.location].some((value) =>
+        String(value || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      );
+      const matchesStatus = !selectedStatus.value || tender.status === selectedStatus.value;
+      const matchesLocation = !selectedLocation.value || String(tender.location || '').toLowerCase().includes(selectedLocation.value.toLowerCase());
+      return matchesSearch && matchesStatus && matchesLocation;
+    });
+  });
   const clearFilters = () => {
     searchQuery.value = '';
     selectedStatus.value = '';

@@ -125,6 +125,97 @@ ProductImage:
 - ✅ Custom display order
 - ✅ Accessibility (alt text)
 
+### 9. **Structured Compliance & Technical Layers**
+
+The next product enhancement layer should not put every material concept into the root `Product` table. The catalog should keep `Product` as the listing root and use focused related records for richer materials data.
+
+#### Product Certification Registry
+
+Represents reusable certification definitions such as:
+- KEBS
+- ISO 9001
+- CE Mark
+- ASTM compliance
+
+Suggested fields:
+- `name`
+- `code`
+- `issuer`
+- `description`
+- `active`
+
+#### Product Certification
+
+Represents a certification held by a specific product.
+
+Suggested fields:
+- `product`
+- `registry` (nullable FK)
+- `display_name`
+- `certification_number`
+- `issuing_body`
+- `issued_on`
+- `expires_on`
+- `status`
+- `verification_url`
+- `document_url`
+
+Use cases:
+- show buyer trust signals
+- filter products by certification
+- support vendor compliance uploads
+
+#### Product Attribute
+
+Represents structured specifications and dimensions that are better modeled as repeatable key-value rows than as free-form text.
+
+Suggested fields:
+- `product`
+- `group`
+- `name`
+- `value`
+- `unit`
+- `is_highlight`
+- `sort_order`
+
+Use cases:
+- compressive strength
+- density
+- diameter
+- coating type
+- voltage
+- pressure rating
+
+#### Product Document
+
+Represents downloadable technical and commercial files attached to a product.
+
+Suggested fields:
+- `product`
+- `document_type`
+- `file`
+- `external_url`
+- `title`
+- `description`
+- `is_public`
+
+Use cases:
+- technical datasheets
+- safety sheets
+- installation guides
+- warranty cards
+- product brochures
+
+#### Inventory Signal Extensions
+
+The vendor-facing materials workflow should also support:
+- `reorder_level`
+- `country_of_origin`
+- `packaging_details`
+- computed inventory states such as `IN_STOCK`, `LOW_STOCK`, `OUT_OF_STOCK`
+
+These allow buyer discovery and vendor operations to feel more like a professional supply platform than a flat product board.
+
 ---
 
 ## 🚀 **New API Endpoints**
@@ -577,4 +668,3 @@ The vendor product creation form should now include all these fields organized i
 **Status**: ✅ **Backend Complete - Ready for Frontend Integration**  
 **Date**: 2026-01-31  
 **Impact**: Transforms marketplace into professional e-commerce platform
-

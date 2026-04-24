@@ -10,6 +10,7 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
+    throttle_scope = 'auth_sensitive'
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -26,6 +27,7 @@ class RegisterView(generics.CreateAPIView):
 class LoginView(views.APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
+    throttle_scope = 'auth_sensitive'
     def post(self, request):
         identity = request.data.get("email") # This could be username or email
         password = request.data.get("password")
@@ -76,7 +78,9 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         'CONTRACTOR': 'CONTRACTOR',
         'VENDOR': 'VENDOR',
         'INVESTOR': 'INVESTOR',
-        'GOVERNMENT': 'GOVERNMENT_OWNER',
+        'PROPERTY_MANAGER': 'PROPERTY_MANAGER',
+        'GOVERNMENT': 'GOVERNMENT',
+        'COURIER': 'COURIER',
         'ADMIN': 'ADMIN'
     }
 

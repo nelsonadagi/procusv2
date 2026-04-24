@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from .models import Contract
-from contractors.serializers import ContractorProfileSerializer
+from milestones.serializers import MilestoneSerializer
 
 class ContractSerializer(serializers.ModelSerializer):
     owner_username = serializers.CharField(source='owner.username', read_only=True)
+    milestones = MilestoneSerializer(many=True, read_only=True)
     
     class Meta:
         model = Contract

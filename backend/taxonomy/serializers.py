@@ -3,6 +3,8 @@ from .models import Category
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(source='uuid', read_only=True)
+    parent = serializers.UUIDField(source='parent.uuid', read_only=True)
     children = serializers.SerializerMethodField()
 
     class Meta:

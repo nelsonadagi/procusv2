@@ -1,14 +1,21 @@
 import os
 from pathlib import Path
 import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR.parent / '.env')
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-key-dev')
 
 DEBUG = os.environ.get('DEBUG', '0') == '1'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -17,6 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     
     # Third party
     'rest_framework',
@@ -56,7 +64,22 @@ INSTALLED_APPS = [
     'ai_engine',
     'liquidity',
     'integrations',
+    'notifications',
+    'security',
+    'chat', # Newly added chat app
+    'channels', # Django Channels
 ]
+
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [os.environ.get('REDIS_URL', 'redis://redis:6379/1')],
+        },
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -66,10 +89,16 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.locale.LocaleMiddleware', # Must be after SessionMiddleware and before CommonMiddleware
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
+
+# Internationalization
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 TEMPLATES = [
     {
@@ -95,6 +124,9 @@ DATABASES = {
     )
 }
 
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
+
 AUTH_USER_MODEL = 'accounts.User'
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -109,8 +141,17 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# Add Languages
+LANGUAGES = [
+    ('en', 'English'),
+    ('sw', 'Swahili'),
+]
+
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -130,8 +171,18 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'security.throttling.MonitoredAnonThrottle',
+        'security.throttling.MonitoredUserThrottle',
+        'security.throttling.MonitoredScopedThrottle',
+        'security.throttling.GlobalIPRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+        'auth_sensitive': '5/minute',
+        'payment_gateway': '10/minute',
+        'global_limit': '5000/hour',
+    },
     'PAGE_SIZE': 20,
 }
-
-# CORS
-CORS_ALLOW_ALL_ORIGINS = True # For MVP simplicity

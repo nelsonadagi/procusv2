@@ -1,11 +1,15 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from . import views # Import views to access test_vendor_orders_view
 from .views import OrderViewSet, QuoteRequestViewSet
 
-router = DefaultRouter()
-router.register(r'orders', OrderViewSet, basename='orders')
-router.register(r'quote-requests', QuoteRequestViewSet, basename='quote-requests')
+quote_router = DefaultRouter()
+quote_router.register(r'', QuoteRequestViewSet, basename='quote-requests')
+
+order_router = DefaultRouter()
+order_router.register(r'', OrderViewSet, basename='orders')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('quote-requests/', include(quote_router.urls)),
+    path('', include(order_router.urls)),
 ]

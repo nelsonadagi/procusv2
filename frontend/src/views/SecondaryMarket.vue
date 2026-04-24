@@ -4,9 +4,9 @@
     <section class="pz-hero-premium">
       <div class="pz-hero-premium__mesh"></div>
       <div class="pz-l-container pz-hero-premium__content">
-        <h1 class="pz-u-text-display pz-hero-premium__title">Institutional Asset Exchange</h1>
+        <h1 class="pz-u-text-display pz-hero-premium__title">Construction Asset Exchange</h1>
         <p class="pz-hero-premium__subtitle pz-u-text-mono">
-          SECONDARY LIQUIDITY • PEER-TO-PEER ASSET SETTLEMENT
+          LOCALE: {{ configStore.activeCountry?.name || 'GLOBAL' }} // BUY & SELL PROJECT STAKES
         </p>
 
         <!-- Glassmorphism Discovery -->
@@ -16,7 +16,7 @@
             <input v-model="searchQuery" type="text" placeholder="PROSPECT LIQUID ASSETS..."
               class="pz-discovery-glass__input">
           </div>
-          <Button variant="primary" size="lg" class="u-hide-mobile">EXECUTE DISCOVERY</Button>
+          <Button variant="primary" size="lg" class="u-hide-mobile">SEARCH ASSETS</Button>
         </div>
 
         <div class="pz-hero-premium__stats pz-u-text-mono">
@@ -41,7 +41,7 @@
       <div class="pz-filter-bar">
         <div class="pz-l-flex pz-l-flex--gap-6 pz-l-flex--align-center pz-l-flex--wrap">
           <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Asset Class</span>
+            <span class="pz-filter-bar__label">Asset Type</span>
             <select v-model="selectedAssetType" class="pz-filter-bar__control">
               <option value="">All Instruments</option>
               <option value="EQUITY">Equity Stakes</option>
@@ -51,19 +51,28 @@
           </div>
 
           <div class="pz-filter-bar__item">
+            <span class="pz-filter-bar__label">Market Hub</span>
+            <select v-model="selectedCountry" class="pz-filter-bar__control" @change="fetchTrades">
+              <option value="">Global Marketplace</option>
+              <option v-for="c in configStore.countries" :key="c.id" :value="c.id">{{ c.flag_emoji }} {{ c.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="pz-filter-bar__item">
             <span class="pz-filter-bar__label">Yield Protocol</span>
             <select v-model="selectedYield" class="pz-filter-bar__control">
-              <option value="">Full Spectrum</option>
+              <option value="">All Yields</option>
               <option value="HIGH">High Yield (>10%)</option>
-              <option value="STABLE">Performance (5-10%)</option>
-              <option value="GROWTH">Equity Growth</option>
+              <option value="STABLE">Stable (5-10%)</option>
+              <option value="GROWTH">Growth Focused</option>
             </select>
           </div>
         </div>
 
         <div class="pz-l-flex pz-l-flex--gap-4 pz-l-flex--align-center">
-          <Button variant="outline" size="sm" @click="requestSale">LIQUIDATE ASSET</Button>
-          <Button variant="ghost" size="sm">RESET PARAMETERS</Button>
+          <Button variant="outline" size="sm" @click="requestSale">SELL STAKE</Button>
+          <Button variant="ghost" size="sm">RESET FILTERS</Button>
         </div>
       </div>
 
@@ -90,47 +99,46 @@
             <h4 class="pz-premium-card__title">Operational Equity Share</h4>
 
             <div class="pz-premium-card__specs">
-              <span class="pz-spec-dot">VOLUME: ${{ trade.amount }}</span>
-              <span class="pz-spec-dot">VALUATION: ${{ trade.price }}</span>
+              <span class="pz-spec-dot">VOLUME: {{ configStore.formatPrice(trade.amount) }}</span>
+              <span class="pz-spec-dot">VALUATION: {{ configStore.formatPrice(trade.price) }}</span>
             </div>
 
             <div class="pz-premium-card__pricing">
               <div class="pz-price-display">
                 <span class="pz-price-display__unit">ASK PRICE</span>
-                <span class="pz-price-display__val">${{ trade.price }}</span>
+                <span class="pz-price-display__val">{{ configStore.formatPrice(trade.price) }}</span>
               </div>
-              <Button variant="primary" size="sm" @click="buy(trade.id)">ACQUIRE</Button>
+              <Button variant="primary" size="sm" @click="buy(trade.id)">BUY STAKE</Button>
             </div>
           </div>
         </div>
       </div>
 
       <div class="pz-u-bg-limestone pz-u-border pz-p-10 u-mt-12 pz-u-text-center">
-        <h3 class="pz-u-text-display text-2xl u-mb-4">Liquidate Operational Stakes</h3>
+        <h3 class="pz-u-text-display text-2xl u-mb-4">Sell Your Project Stake</h3>
         <p class="pz-u-text-mono text-sm pz-u-color-steel u-mb-8 max-w-2xl mx-auto">
-          LIST YOUR PROJECT EQUITY FOR SALE ON THE REGULATED SECONDARY MARKET. ALL TRADES ARE SECURED VIA ESCROW
-          PROTOCOLS.
+          LIST YOUR PROJECT EQUITY FOR SALE ON OUR SECURE SECONDARY MARKET. ALL TRADES ARE PROTECTED VIA ESCROW.
         </p>
-        <Button variant="outline" size="large" @click="requestSale">INITIALIZE SELL ORDER</Button>
+        <Button variant="outline" size="large" @click="requestSale">LIST STAKE FOR SALE</Button>
       </div>
     </div>
 
     <!-- Buy Modal -->
-    <Modal :isOpen="showBuyModal" title="Acquire Asset" size="md" @close="closeBuyModal">
+    <Modal :isOpen="showBuyModal" title="Buy Asset Stake" size="md" @close="closeBuyModal">
       <div class="pz-l-flex pz-l-flex--column pz-l-flex--gap-4">
-        <p class="pz-u-text-mono pz-u-color-steel">Confirm acquisition of asset stake #{{ selectedTradeId }}.</p>
+        <p class="pz-u-text-mono pz-u-color-steel">Confirm purchase of asset stake #{{ selectedTradeId }}.</p>
         <div class="pz-alert pz-alert--info">
           Funds will be placed in secure escrow until ownership transfer is verified.
         </div>
         <div class="pz-l-flex pz-l-flex--justify-between u-mt-4">
           <Button variant="ghost" @click="closeBuyModal">CANCEL</Button>
-          <Button variant="primary" @click="confirmBuy">CONFIRM ACQUISITION</Button>
+          <Button variant="primary" @click="confirmBuy">CONFIRM PURCHASE</Button>
         </div>
       </div>
     </Modal>
 
     <!-- Sell Modal -->
-    <Modal :isOpen="showSellModal" title="Initialize Sell Order" size="md" @close="closeSellModal">
+    <Modal :isOpen="showSellModal" title="Sell Your Stake" size="md" @close="closeSellModal">
       <form @submit.prevent="confirmSell" class="pz-l-flex pz-l-flex--column pz-l-flex--gap-4">
         <PzInput v-model="sellForm.assetName" label="Asset Name / Description" required />
         <PzInput v-model="sellForm.volume" label="Volume ($)" type="number" required />
@@ -138,7 +146,7 @@
         <PzInput v-model="sellForm.yield" label="Target Yield (%)" type="number" required />
         <div class="pz-l-flex pz-l-flex--justify-between u-mt-4">
           <Button type="button" variant="ghost" @click="closeSellModal">CANCEL</Button>
-          <Button type="submit" variant="primary">SUBMIT LISTING</Button>
+          <Button type="submit" variant="primary">LIST FOR SALE</Button>
         </div>
       </form>
     </Modal>
@@ -153,10 +161,13 @@
   import Badge from '../components/ui/Badge.vue';
   import Modal from '../components/ui/Modal.vue';
   import PzInput from '../components/PzInput.vue';
+  import { useConfigStore } from '../stores/config';
 
   const authStore = useAuthStore();
+  const configStore = useConfigStore();
   const trades = ref([]);
   const loading = ref(true);
+  const selectedCountry = ref('');
   const viewMode = ref('grid');
   const searchQuery = ref('');
   const selectedAssetType = ref('');
@@ -172,21 +183,33 @@
 
   const clearFilters = () => {
     searchQuery.value = '';
+    selectedCountry.value = (configStore.activeCountry?.id) || '';
     selectedAssetType.value = '';
     selectedYield.value = '';
     priceMin.value = null;
     priceMax.value = null;
+    fetchTrades();
   };
 
-  onMounted(async () => {
+  const fetchTrades = async () => {
+    loading.value = true;
     try {
-      const res = await api.get('/v6/secondary-trades/');
+      const params = {
+        country: selectedCountry.value || undefined
+      };
+      const res = await api.get('/v6/secondary-trades/', { params });
       trades.value = res.data.results || res.data;
     } catch (e) {
       console.error(e);
     } finally {
       loading.value = false;
     }
+  };
+
+  onMounted(async () => {
+    await configStore.fetchConfig();
+    selectedCountry.value = configStore.activeCountry?.id || '';
+    fetchTrades();
   });
 
   function buy(id) {

@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.gis.db import models as gis_models
 from django.conf import settings
 from cryptography.fernet import Fernet
 import base64
@@ -170,4 +171,78 @@ class Country(models.Model):
             # Only one default at a time
             Country.objects.exclude(pk=self.pk).update(is_default=False)
         super().save(*args, **kwargs)
+
+
+class ExchangeRateConfig(models.Model):
+    class Provider(models.TextChoices):
+        EXCHANGE_RATE_API = "EXCHANGE_RATE_API", "ExchangeRate-API"
+        EXCHANGERATE_HOST = "EXCHANGERATE_HOST", "Exchangerate.host"
+        OPEN_EXCHANGE_RATES = "OPEN_EXCHANGE_RATES", "Open Exchange Rates"
+        CUSTOM = "CUSTOM", "Custom API"
+
+    provider = models.CharField(max_length=32, choices=Provider.choices, default=Provider.EXCHANGE_RATE_API)
+    label = models.CharField(max_length=100, default="Primary Exchange Rate API")
+    base_url = models.URLField(help_text="The API endpoint URL (e.g. https://v6.exchangerate-api.com/v6/KEY/latest/USD)")
+    _api_key = models.TextField(db_column='api_key', blank=True, null=True) # Encrypted
+    
+    # Mapping configuration
+    mapping_config = models.JSONField(
+        default=dict, 
+        blank=True,
+        help_text="Mapping for JSON response. Example: {'rates_key': 'conversion_rates', 'date_key': 'time_last_update_utc'}"
+    )
+    
+    active = models.BooleanField(default=True)
+    last_sync = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Exchange Rate API Config"
+        verbose_name_plural = "Exchange Rate API Configs"
+
+    @property
+    def api_key(self):
+        return decrypt_value(self._api_key)
+
+    @api_key.setter
+    def api_key(self, value):
+        self._api_key = encrypt_value(value)
+
+    def __str__(self):
+        return f"{self.label} ({self.provider})"
+
+
+class Location(gis_models.Model):
+    name = models.CharField(max_length=255, blank=True, help_text="Common name for location")
+    address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True, related_name='locations')
+    
+    # PostGIS Point Field
+    point = gis_models.PointField(srid=4326, null=True, blank=True)
+    latitude = models.DecimalField(max_digits=12, decimal_places=9, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=12, decimal_places=9, null=True, blank=True)
+    
+    # Store raw hierarchy if needed (compatibility)
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Location"
+        verbose_name_plural = "Locations"
+        indexes = [
+            # Spatial indexes are handled by PostGIS but we can hint at geometry column
+        ]
+
+    def __str__(self):
+        if self.name:
+            return self.name
+        if self.address:
+            return self.address[:50]
+        if self.point:
+            return f"Point({self.point.x}, {self.point.y})"
+        return f"Location {self.id}"
+
 

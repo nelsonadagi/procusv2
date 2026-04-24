@@ -5,16 +5,16 @@
 This update introduces two key enhancements for vendors:
 1.  **"My Products" Filtering**: The inventory view now strictly shows only products belonging to the logged-in vendor.
 2.  **Bulk Product Import**: Vendors can now upload a CSV file to bulk create products.
+3.  **Inventory Ledger Controls**: Vendors can adjust stock with notes/references and inspect movement history per product.
 
 ---
 
 ## 🔒 **My Products Filtering**
 
 **How it works:**
-- When the dashboard loads, it first fetches the vendor's profile to get their ID.
-- Then, it fetches products filtered by this vendor ID:
+- The inventory view uses the vendor-scoped endpoint directly:
   ```http
-  GET /api/v1/products/?vendor={vendor_id}
+  GET /api/v1/products/me/
   ```
 - This ensures vendors never see other vendors' products in their inventory management view.
 
@@ -71,9 +71,17 @@ Twisted Steel Bar Y12,Steel,1200,piece,200,Apex
 - **Logic**: Iterates through CSV rows, looks up categories by name/slug, and creates `Product` entries linked to the request user's vendor profile.
 
 ### **Frontend**
-- **Component**: `VendorDashboard.vue`
-- **Logic**: Uses a hidden file input to trigger file selection, then uploads via `FormData`.
+- **Component**: `VendorInventorySection.vue`
+- **Logic**: Uses a hidden file input to trigger file selection, uploads via `FormData`, and refreshes the vendor-scoped inventory feed after import.
 - **Feedback**: Displays success message with count and any row-level errors.
+
+---
+
+## 🧾 **Operational Inventory Controls**
+
+- Use `POST /api/v1/products/{product_uuid}/adjust-inventory/` for real stock adjustments.
+- Use `GET /api/v1/products/{product_uuid}/inventory-history/` to review movement logs.
+- Product editing can still change stock, but vendor operations should prefer explicit adjustments so the ledger stays meaningful.
 
 ---
 

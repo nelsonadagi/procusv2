@@ -88,7 +88,8 @@
               </div>
               <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-end">
                 <span class="pz-u-text-mono text-xs pz-u-color-concrete">EST. CAPITAL</span>
-                <span class="pz-u-text-display pz-u-color-earth">${{ project.estimated_budget }}</span>
+                <span class="pz-u-text-display pz-u-color-earth">{{ configStore.formatPrice(project.estimated_budget)
+                  }}</span>
               </div>
               <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-end">
                 <span class="pz-u-text-mono text-xs pz-u-color-concrete">CURRENT PHASE</span>
@@ -104,12 +105,13 @@
                 </div>
               </div>
               <div class="pz-l-flex pz-l-flex--justify-between pz-u-text-mono text-xs">
-                <span>$450K COMMITTED</span>
-                <span>TARGET: $1M</span>
+                <span>{{ configStore.formatPrice(450000) }} COMMITTED</span>
+                <span>TARGET: {{ configStore.formatPrice(1000000) }}</span>
               </div>
 
               <div v-if="!isOwner" class="u-mt-6 pz-space-y-4">
-                <PzInput label="Commitment Amount ($)" type="number" v-model="pledgeAmount" />
+                <PzInput :label="`Commitment Amount (${configStore.activeCurrency.symbol})`" type="number"
+                  v-model="pledgeAmount" />
                 <Button variant="primary" fullWidth @click="pledge">COMMIT CAPITAL</Button>
               </div>
             </div>
@@ -137,6 +139,24 @@
                 DEPLOYMENT</Button>
             </div>
           </Card>
+
+          <Card title="Project Financing">
+            <div class="pz-space-y-4">
+              <p class="pz-u-text-mono text-xs pz-u-color-steel">Apply for financing tied directly to this project when acquisition capital is not the right fit and execution funding is needed instead.</p>
+              <select v-model="financeForm.product" class="pz-input">
+                <option disabled value="">Select financing product</option>
+                <option v-for="product in financeProducts" :key="product.id" :value="product.id">{{ product.name }}</option>
+              </select>
+              <select v-model="financeForm.purpose_category" class="pz-input">
+                <option value="COMPLETION">Completion</option>
+                <option value="MATERIALS_PROCUREMENT">Materials Procurement</option>
+                <option value="WORKING_CAPITAL">Working Capital</option>
+              </select>
+              <PzInput :label="`Requested Amount (${configStore.activeCurrency.symbol})`" type="number" v-model="financeForm.requested_amount" />
+              <textarea v-model="financeForm.purpose" class="pz-input u-w-full" rows="3" placeholder="Describe what the financing should support"></textarea>
+              <Button variant="outline" fullWidth @click="applyForFinance">APPLY FOR PROJECT FINANCE</Button>
+            </div>
+          </Card>
         </div>
       </div>
 
@@ -149,7 +169,7 @@
               <div class="pz-l-flex pz-l-flex--justify-between u-mb-2">
                 <span class="pz-u-text-display text-sm">{{ upd.posted_by }}</span>
                 <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ new Date(upd.created_at).toLocaleDateString()
-                  }}</span>
+                }}</span>
               </div>
               <p class="pz-u-text-mono text-xs pz-u-color-concrete">{{ upd.update_text }}</p>
             </div>
@@ -168,31 +188,50 @@
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { computed, ref, onMounted, inject } from 'vue';
   import { useRoute } from 'vue-router';
   import api from '../services/api';
+  import { useConfigStore } from '../stores/config';
+  import { useAuthStore } from '../stores/auth';
 
   // UI Components
   import Button from '../components/ui/Button.vue';
   import Badge from '../components/ui/Badge.vue';
 
   const route = useRoute();
+  const configStore = useConfigStore();
+  const authStore = useAuthStore();
+  const showAlert = inject('showAlert');
   const project = ref(null);
   const loading = ref(true);
-  const isOwner = ref(true);
+  const isOwner = computed(() => {
+    if (!project.value || !authStore.user) return false;
+    return authStore.isAdmin || authStore.user.id === project.value.owner;
+  });
   const selectedImage = ref(null);
+  const financeProducts = ref([]);
 
   // Forms
   const newReq = ref({ type: 'MATERIAL', description: '', quantity: '' });
   const pledgeAmount = ref(0);
   const contractIdToLink = ref('');
   const updateText = ref('');
+  const financeForm = ref({
+    product: '',
+    requested_amount: '',
+    purpose_category: 'COMPLETION',
+    purpose: '',
+  });
 
   const loadProject = async () => {
     loading.value = true;
     try {
-      const res = await api.get(`/v4/projects/${route.params.id}/`);
-      project.value = res.data;
+      const [projectRes, financeProductsRes] = await Promise.all([
+        api.get(`/v4/projects/${route.params.id}/`),
+        api.get('/v3/finance/products/'),
+      ]);
+      project.value = projectRes.data;
+      financeProducts.value = financeProductsRes.data.results || financeProductsRes.data;
       if (project.value.primary_image_url) selectedImage.value = project.value.primary_image_url;
     } catch (err) {
       console.error(err);
@@ -202,31 +241,74 @@
   };
 
   async function addRequirement() {
-    await api.post(`/v4/projects/${project.value.id}/requirements/`, newReq.value);
-    newReq.value = { type: 'MATERIAL', description: '', quantity: '' };
-    loadProject();
+    try {
+      await api.post(`/v4/projects/${project.value.id}/requirements/`, newReq.value);
+      newReq.value = { type: 'MATERIAL', description: '', quantity: '' };
+      showAlert('Requirement added successfully.', 'success');
+      loadProject();
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to add requirement.', 'error');
+    }
   }
 
   async function pledge() {
-    if (pledgeAmount.value <= 0) return alert('Enter a valid amount');
-    await api.post(`/v4/projects/${project.value.id}/commit/`, { amount_committed: pledgeAmount.value });
-    alert('Project commitment recorded successfully!');
-    pledgeAmount.value = 0;
-    loadProject();
+    if (pledgeAmount.value <= 0) {
+      showAlert('Enter a valid commitment amount.', 'error');
+      return;
+    }
+    try {
+      await api.post(`/v4/projects/${project.value.id}/commit/`, { amount_committed: pledgeAmount.value });
+      showAlert('Project commitment recorded successfully.', 'success');
+      pledgeAmount.value = 0;
+      loadProject();
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to record project commitment.', 'error');
+    }
   }
 
   async function linkContract() {
     if (!contractIdToLink.value) return;
-    await api.post(`/v4/projects/${project.value.id}/link-contract/`, { contract_id: contractIdToLink.value });
-    contractIdToLink.value = '';
-    loadProject();
+    try {
+      await api.post(`/v4/projects/${project.value.id}/link-contract/`, { contract_id: contractIdToLink.value });
+      contractIdToLink.value = '';
+      showAlert('Contract linked successfully.', 'success');
+      loadProject();
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to link contract.', 'error');
+    }
   }
 
   async function postUpdate() {
     if (!updateText.value) return;
-    await api.post(`/v4/projects/${project.value.id}/updates/`, { update_text: updateText.value });
-    updateText.value = '';
-    loadProject();
+    try {
+      await api.post(`/v4/projects/${project.value.id}/updates/`, { update_text: updateText.value });
+      updateText.value = '';
+      showAlert('Project update published successfully.', 'success');
+      loadProject();
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to publish project update.', 'error');
+    }
+  }
+
+  async function applyForFinance() {
+    if (!authStore.isAuthenticated) {
+      showAlert('Sign in to apply for project financing.', 'error');
+      return;
+    }
+    try {
+      await api.post('/v3/finance/applications/', {
+        product: financeForm.value.product,
+        target_type: 'PROJECT',
+        project: project.value.id,
+        requested_amount: financeForm.value.requested_amount,
+        purpose_category: financeForm.value.purpose_category,
+        purpose: financeForm.value.purpose,
+      });
+      showAlert('Project financing application submitted successfully.', 'success');
+      financeForm.value = { product: '', requested_amount: '', purpose_category: 'COMPLETION', purpose: '' };
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to submit financing application.', 'error');
+    }
   }
 
   onMounted(loadProject);

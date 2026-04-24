@@ -3,6 +3,7 @@ from accounts.permissions import IsProjectOwnerOrReadOnly, IsContractor
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 from .models import Contract
 from .serializers import ContractSerializer
 from bids.models import Bid
@@ -27,7 +28,7 @@ class ContractViewSet(viewsets.ModelViewSet):
         'partial_update': 'contracts:post_contract',
         'destroy': 'contracts:post_contract',
         'bids': 'bids:view', # Post bid handled inside
-        'milestones': 'contracts:manage_milestones',
+        'milestones': 'milestones:manage_milestones',
     }
 
     def perform_create(self, serializer):
@@ -49,7 +50,6 @@ class ContractViewSet(viewsets.ModelViewSet):
             if not is_admin and not status_param:
                 # Regular users see POSTED contracts OR their own contracts (regardless of status)
                 if user.is_authenticated:
-                    from django.db.models import Q
                     qs = qs.filter(Q(status='POSTED') | Q(owner=user))
                 else:
                     qs = qs.filter(status='POSTED')
@@ -62,8 +62,20 @@ class ContractViewSet(viewsets.ModelViewSet):
                 
             search = self.request.query_params.get('search')
             if search:
-                from django.db.models import Q
                 qs = qs.filter(Q(title__icontains=search) | Q(description_scope__icontains=search))
+
+            budget_min = self.request.query_params.get('budget_min')
+            if budget_min:
+                qs = qs.filter(budget_max__gte=budget_min)
+
+            budget_max = self.request.query_params.get('budget_max')
+            if budget_max:
+                qs = qs.filter(budget_min__lte=budget_max)
+
+            sort_by = self.request.query_params.get('sort_by')
+            allowed_sorts = {'created_at', '-created_at', 'budget_max', '-budget_max', 'budget_min', '-budget_min'}
+            if sort_by in allowed_sorts:
+                qs = qs.order_by(sort_by)
                 
             return qs
         except Exception as e:
@@ -101,12 +113,24 @@ class ContractViewSet(viewsets.ModelViewSet):
             serializer = BidSerializer(bids, many=True)
             return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], url_path='milestones')
+    @action(detail=True, methods=['get', 'post'], url_path='milestones')
     def milestones(self, request, pk=None):
         contract = self.get_object()
+        awarded_bid = contract.bids.filter(status='AWARDED').select_related('contractor__user').first()
+
+        if request.method == 'GET':
+            is_awarded_contractor = bool(
+                awarded_bid and request.user.is_authenticated and request.user == awarded_bid.contractor.user
+            )
+            if contract.owner != request.user and not is_awarded_contractor:
+                return Response({"error": "Not authorized to view milestones"}, status=status.HTTP_403_FORBIDDEN)
+
+            serializer = MilestoneSerializer(contract.milestones.all().order_by('due_date', 'id'), many=True)
+            return Response(serializer.data)
+
         if contract.owner != request.user:
             return Response({"error": "Only owner can define milestones"}, status=status.HTTP_403_FORBIDDEN)
-            
+
         serializer = MilestoneSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(contract=contract)

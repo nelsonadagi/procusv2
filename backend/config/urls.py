@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -12,7 +14,7 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')),
     path('api/rbac/', include('rbac.urls')),
     path('api/taxonomy/', include('taxonomy.urls')),
-    path('api/config/', include('platform_settings.urls')),
+    path('api/platform_settings/', include('platform_settings.urls')),
     path('api/vendors/', include('vendors.urls')),
     path('api/orders/', include('orders.urls')),
     path('api/reviews/', include('reviews.urls')),
@@ -21,6 +23,12 @@ urlpatterns = [
     path('api/projects/', include('projects.urls')),
     path('api/bids/', include('bids.urls')),
     path('api/milestones/', include('milestones.urls')),
+    path('api/notifications/', include('notifications.urls')),
+    path('api/property/', include('property.urls')),
+    path('api/security/', include('security.urls')),
+    path('api/logistics/', include('logistics.urls')),
+    path('api/compliance/', include('compliance.urls')),
+    path('api/chat/', include('chat.urls')), # Newly added chat app URLs
     # Add other apps here as we implement them
     # path('api/v1/', include('orders.urls')),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

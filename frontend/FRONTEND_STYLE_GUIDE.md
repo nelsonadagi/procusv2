@@ -1,91 +1,101 @@
-# Frontend Style Guide & Design System
+# Frontend Style Guide
 
-This project uses a **Vanilla CSS Design System** without utility libraries (No Tailwind, No Bootstrap).
-The system is built on modern CSS features: Variables (Custom Properties), Flexbox, and Grid.
+This frontend uses the **Paanguzo** design language: industrial, precise, high-contrast, and premium without drifting into generic SaaS visuals.
 
-## 1. Directory Structure (`src/styles/`)
+## 1. Source Of Truth
 
-We strictly separate concerns:
+Design tokens now center on:
 
-- `tokens.css`: **The Source of Truth**. Hex codes, spacing units, and raw values.
-- `base.css`: CSS Resets and element defaults (h1, p, a).
-- `layout.css`: Global layout helpers (.container, .grid, .flex).
-- `components.css`: Reusable UI classes (.btn, .card, .input).
-- `style.css`: The main entry point (imports all others).
+- `src/styles/variables.css`: primary Paanguzo brand tokens
+- `src/styles/base.css`: typography, resets, and global atmosphere
+- `src/styles/layout.css`: layout, nav, hero, dashboard, and shell patterns
+- `src/styles/components.css`: compatibility layer for older `c-*` styles
+- `src/styles/tokens.css`: legacy token bridge for older files
 
-## 2. Design Tokens available
+Use `variables.css` as the real source of truth.
 
-Use these CSS variables instead of hardcoded values.
+## 2. Visual Direction
 
-### Colors
-| Brand | Variable | Hex |
-|-------|----------|-----|
-| Primary | `--color-primary` | #1a73e8 |
-| Secondary | `--color-secondary` | #ff6d00 |
-| Background | `--color-bg-body` | #f4f6f9 |
+### Brand palette
 
-### Spacing
-Scale: 4px increments.
-`--space-1` (4px), `--space-2` (8px), `--space-4` (16px), `--space-6` (24px), `--space-8` (32px).
+- foundation black
+- structural steel
+- limestone white
+- earth orange
+- copper circuit
+- steel blue
+- savanna green
+- african violet
 
-## 3. Component Usage
+### Typography
 
-### Buttons (`.btn`)
-Use the `<Button>` Vue component or `.btn` classes.
+- `Sora` for display headlines and major brand moments
+- `IBM Plex Sans` for body and interface copy
+- `IBM Plex Mono` for labels, telemetry, badges, metrics, and system language
 
-```html
-<button class="btn btn-primary">Action</button>
-<button class="btn btn-outline btn-sm">Small</button>
-```
+### Shape language
 
-### Cards (`.card`)
-Use `<Card>` or standard markup:
+- sharp to lightly radiused edges
+- strong borders
+- structural panel separation
+- restrained shadows
+- limited, purposeful glass effects
 
-```html
-<div class="card">
-  <div class="card-header">Title</div>
-  <div class="card-body">Content</div>
-</div>
-```
+## 3. Styling Rules
 
-### Badges (`.badge`)
-Status indicators:
-- `.badge-success` (In Stock, Verified)
-- `.badge-warning` (Pending)
-- `.badge-danger` (Out of stock)
+1. Prefer `pz-*` classes and components over legacy `c-*` patterns for new work.
+2. Use `Button`, `Card`, `Badge`, and `Modal` from `src/components/ui/` for shared primitives.
+3. Do not introduce new ad hoc color values in components. Use CSS variables.
+4. Reserve accent colors semantically:
+   - earth = primary action
+   - copper = finance
+   - steel blue = info/system
+   - savanna = success
+   - violet = innovation/AI
+5. Keep display typography intentional. Not every heading should look like a hero.
 
-## 4. Layout Principles
+## 4. Preferred Component Feel
 
-### Container
-Wrap page content in `.container` (max-width 1280px).
+### Buttons
 
-### Grid System
-Use CSS Grid for layouts.
+- mono labels
+- uppercase by default
+- strong border presence
+- offset or structural shadow on major actions
 
-```css
-.my-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-4);
-}
-```
+### Cards
 
-### Flexbox Utilities
-Common helpers are available in `layout.css`:
-- `.flex`
-- `.justify-between`
-- `.items-center`
-- `.gap-4`
+- clear frame
+- quiet header treatment
+- high legibility
+- hover lift only where interactive
 
-## 5. CSS Authoring Rules
+### Badges
 
-1.  **Semantic Classes**: Use `.product-card`, not `.p-4.bg-white.rounded`.
-2.  **Scoped Styles**: In Vue components, always use `<style scoped>`.
-3.  **Variables**: Never use hex codes in component styles. Use `var(--color-primary)`.
-4.  **Mobile First**: Write base styles for mobile, then use `@media (min-width: 768px)` for desktop.
+- mono labels
+- uppercase
+- bordered pills or capsules
+- compact and scannable
 
-## 6. Migration Guide (Tailwind Removal)
+### Modals
 
-Tailwind has been completely removed.
-- **Do not use**: `text-xl`, `p-4`, `flex-row`.
-- **Use**: Normal CSS properties with our variables.
+- dark command header
+- strong frame
+- minimal ornament
+
+## 5. Layout Principles
+
+- mobile first
+- use grid for dashboards and index pages
+- use mono labels to establish hierarchy in operational screens
+- avoid overusing glow, blur, and floating effects
+- use atmospheric backgrounds sparingly and consistently
+
+## 6. Migration Guidance
+
+If you touch an older file that still depends on the legacy token system:
+
+- do not rewrite everything blindly
+- map it onto Paanguzo tokens
+- preserve behavior
+- reduce visual drift rather than creating a third design language

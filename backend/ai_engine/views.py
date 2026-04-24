@@ -3,12 +3,17 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import UnderwritingPrediction
 from .serializers import UnderwritingPredictionSerializer
+from rbac.permissions import HasRequiredPermission
 
 class PredictionViewSet(viewsets.ReadOnlyModelViewSet):
     # Admin only usually
     queryset = UnderwritingPrediction.objects.all()
     serializer_class = UnderwritingPredictionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
+    required_permission = 'risk:view'
+    permission_map = {
+        'predict_default': 'risk:manage_ai_rules',
+    }
 
     @action(detail=False, methods=['post'], url_path='predict-default')
     def predict_default(self, request):

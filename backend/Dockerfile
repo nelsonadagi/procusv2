@@ -1,12 +1,19 @@
-FROM python:3.10-slim
+FROM python:3.10-slim-bookworm
 
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies for Postgres
-RUN apt-get update && apt-get install -y libpq-dev gcc \
+# Install only the runtime system packages we currently need.
+# `psycopg2-binary` avoids needing gcc/libpq-dev at build time.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gettext \
+    binutils \
+    libproj-dev \
+    gdal-bin \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

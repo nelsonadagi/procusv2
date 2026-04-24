@@ -1,206 +1,221 @@
-<script setup>
-  import { ref, onMounted, watch } from 'vue';
-  import { useRouter } from 'vue-router';
-  import { useAuthStore } from './stores/auth';
-  import api from './services/api';
-  import Modal from './components/ui/Modal.vue';
-  import Button from './components/ui/Button.vue';
-  import PzInput from './components/PzInput.vue';
-
-  const authStore = useAuthStore();
-  const router = useRouter();
-
-  const showProfileModal = ref(false);
-  const userForm = ref({
-    first_name: '',
-    last_name: '',
-    role: '',
-    roles: [],
-    email: ''
-  });
-  const loading = ref(false);
-
-  const availableRoles = [
-    { code: 'PROJECT_OWNER', label: 'Project Owner / Buyer' },
-    { code: 'CONTRACTOR', label: 'Contractor' },
-    { code: 'VENDOR', label: 'Vendor / Supplier' },
-    { code: 'INVESTOR', label: 'Investor' }
-  ];
-
-  const isScrolled = ref(false);
-  const mobileMenuOpen = ref(false);
-
-  onMounted(() => {
-    authStore.init();
-    window.addEventListener('scroll', () => {
-      isScrolled.value = window.scrollY > 20;
-    });
-  });
-
-  function logout() {
-    authStore.logout();
-    router.push('/login');
-  }
-
-  function openProfile() {
-    if (authStore.user) {
-      userForm.value = {
-        ...authStore.user,
-        roles: authStore.user.roles || [authStore.user.role] // Ensure valid list
-      };
-      showProfileModal.value = true;
-    }
-  }
-
-  // Ensure Primary Role key is in Roles list
-  watch(() => userForm.value.role, (newRole) => {
-    if (newRole && !userForm.value.roles.includes(newRole)) {
-      userForm.value.roles.push(newRole);
-    }
-  });
-
-  async function saveProfile() {
-    loading.value = true;
-    // Basic Validation: Roles list must contain Primary role
-    if (!userForm.value.roles.includes(userForm.value.role)) {
-      userForm.value.roles.push(userForm.value.role);
-    }
-
-    try {
-      const res = await api.patch('/accounts/profile/', userForm.value);
-      // Update local store
-      authStore.user = res.data;
-      // Update localStorage
-      localStorage.setItem('user', JSON.stringify(res.data));
-
-      alert("Profile updated successfully!");
-      showProfileModal.value = false;
-    } catch (err) {
-      console.error("Profile update failed", err);
-      alert("Failed to update profile.");
-    } finally {
-      loading.value = false;
-    }
-  }
-</script>
-
 <template>
   <div class="l-app">
-    <!-- 1. Modernized Main Navigation -->
+    <!-- 1. Floating Glass Navigation -->
     <nav class="pz-nav" :class="{ 'pz-nav--scrolled': isScrolled }">
       <div class="pz-nav__wrapper">
-        <!-- Logo & Platform Name -->
         <router-link to="/" class="pz-nav__logo">
-          <span class="pz-nav__logo-text">PAANGUZO</span>
+          <span class="pz-nav__logo-text">{{ $t('app.logoText') }}</span>
           <span class="pz-nav__logo-line"></span>
         </router-link>
 
-        <!-- Public Navigation Menu -->
         <div class="pz-nav__menu u-hide-tablet">
-          <router-link to="/" class="pz-nav__link"
-            :class="{ 'pz-nav__link--active': $route.path === '/' }">Marketplace</router-link>
+          <router-link to="/" class="pz-nav__link" active-class="pz-nav__link--active">Materials</router-link>
+          <router-link to="/properties" class="pz-nav__link"
+            active-class="pz-nav__link--active">Properties</router-link>
           <router-link to="/contracts" class="pz-nav__link"
-            :class="{ 'pz-nav__link--active': $route.path === '/contracts' }">Contractors</router-link>
-          <router-link to="/tenders" class="pz-nav__link"
-            :class="{ 'pz-nav__link--active': $route.path === '/tenders' }">Tenders</router-link>
-          <router-link to="/projects" class="pz-nav__link"
-            :class="{ 'pz-nav__link--active': $route.path === '/projects' }">Projects</router-link>
-          <router-link to="/market/secondary" class="pz-nav__link"
-            :class="{ 'pz-nav__link--active': $route.path === '/market/secondary' }">Property</router-link>
+            active-class="pz-nav__link--active">Contracts</router-link>
+          <router-link to="/tenders" class="pz-nav__link" active-class="pz-nav__link--active">Tenders</router-link>
+          <router-link to="/projects" class="pz-nav__link" active-class="pz-nav__link--active">Projects</router-link>
         </div>
 
-        <!-- Role-Specific Management & User Actions -->
         <div class="pz-nav__actions">
-          <div v-if="authStore.isAuthenticated" class="pz-nav__panels u-hide-tablet">
-            <router-link v-if="authStore.hasRole('ADMIN')" to="/admin" class="pz-nav__pill pz-nav__pill--admin">⚙
-              Admin</router-link>
-            <router-link v-if="authStore.hasRole('PROJECT_OWNER')" to="/owner/dashboard"
-              class="pz-nav__pill">Owner</router-link>
-            <router-link v-if="authStore.hasRole('VENDOR')" to="/vendor/dashboard"
-              class="pz-nav__pill">Vendor</router-link>
-            <router-link v-if="authStore.hasRole('CONTRACTOR')" to="/contractor/dashboard"
-              class="pz-nav__pill">Contractor</router-link>
-            <router-link v-if="authStore.hasRole('INVESTOR')" to="/investor/dashboard"
-              class="pz-nav__pill">Investor</router-link>
+          <!-- Workspace Indicator -->
+          <div v-if="authStore.isAuthenticated && workspaceLabel" class="pz-nav__workspace u-hide-mobile">
+            <span class="pz-nav__workspace-dot" aria-hidden="true"></span>
+            <span class="pz-nav__workspace-label">{{ workspaceLabel }}</span>
           </div>
 
-          <template v-if="authStore.isAuthenticated">
-            <!-- Admin Quick Access -->
-            <router-link v-if="authStore.hasRole('ADMIN')" to="/admin" class="pz-nav__admin-btn"
-              title="Admin Dashboard">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-              <span>Admin</span>
-            </router-link>
-            <button @click="openProfile" class="pz-nav__profile-trigger">
-              <span class="pz-nav__avatar">👤</span>
-              <span class="pz-nav__username">{{ authStore.user?.first_name }}</span>
-            </button>
-            <button @click="logout" title="Logout" class="pz-nav__logout-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
+          <!-- Global Localization Section -->
+          <div class="pz-nav__localization u-hide-mobile">
+            <div class="pz-nav__loc-item">
+              <select v-model="configStore.activeCountryCode" @change="configStore.setCountry($event.target.value)"
+                class="pz-nav__loc-select">
+                <option v-for="c in configStore.countries" :key="c.iso_code" :value="c.iso_code">
+                  {{ c.flag_emoji }} {{ c.iso_code }}
+                </option>
+              </select>
+            </div>
+            <div class="pz-nav__loc-item">
+              <select v-model="configStore.activeCurrencyCode" @change="configStore.setCurrency($event.target.value)"
+                class="pz-nav__loc-select pz-nav__loc-select--currency">
+                <option v-for="cur in configStore.availableCurrencies" :key="cur.currency_code"
+                  :value="cur.currency_code">
+                  {{ cur.currency_code }} ({{ cur.symbol }})
+                </option>
+              </select>
+            </div>
+            <div class="pz-nav__loc-item">
+              <select v-model="locale" @change="changeLanguage" class="pz-nav__loc-select">
+                <option value="en">EN</option>
+                <option value="sw">SW</option>
+              </select>
+            </div>
+          </div>
+
+          <template v-if="!authStore.isAuthenticated">
+            <Button variant="ghost" size="sm" @click="openAuthModal('login')" class="u-hide-mobile">Login</Button>
+            <Button variant="primary" size="sm" @click="openAuthModal('register')">Get Started</Button>
           </template>
 
           <template v-else>
-            <router-link to="/login" class="pz-nav__link">Sign In</router-link>
-            <Button variant="primary" size="small" @click="router.push('/register')">Join Platform</Button>
+            <!-- Premium Profile Dropdown -->
+            <div class="pz-nav__dropdown-wrapper">
+              <div
+                class="pz-nav__profile-trigger"
+                role="button"
+                tabindex="0"
+                aria-haspopup="true"
+                :aria-expanded="showSettingsDropdown"
+                aria-label="Account menu"
+                @click.stop="showSettingsDropdown = !showSettingsDropdown"
+                @keydown.enter.space.prevent="showSettingsDropdown = !showSettingsDropdown"
+              >
+                <div class="pz-nav__avatar">{{ authStore.user?.first_name?.charAt(0) || 'U' }}</div>
+                <span class="pz-nav__username u-hide-mobile">{{ authStore.user?.first_name }}</span>
+                <span class="pz-nav__dropdown-icon" aria-hidden="true">▾</span>
+              </div>
+
+              <transition name="dropdown-slide">
+                <div v-if="showSettingsDropdown" class="pz-nav__dropdown"
+                  v-click-outside="() => showSettingsDropdown = false">
+                  <div class="pz-nav__dropdown-header">
+                    <span class="u-text-mono text-xs">Account Management</span>
+                  </div>
+
+                  <div class="pz-nav__dropdown-section">
+                    <h5 class="pz-nav__dropdown-label">Dashboards</h5>
+
+                    <!-- Active Workspaces -->
+                    <div class="pz-nav__dropdown-pill-group u-mb-4">
+                      <router-link
+                        v-for="ws in activeWorkspaces"
+                        :key="ws.id"
+                        :to="ws.path"
+                        class="pz-nav__dropdown-pill"
+                        :class="{ 'pz-nav__dropdown-pill--active': workspaceLabel === ws.label, 'pz-nav__dropdown-pill--admin': ws.id === 'admin' }"
+                        active-class="pz-nav__dropdown-pill--active"
+                        @click="showSettingsDropdown = false"
+                      >
+                        {{ ws.label }}
+                      </router-link>
+                    </div>
+
+                    <!-- Activation Links -->
+                    <div v-if="activationWorkspaces.length" class="pz-nav__dropdown-section-links">
+                      <div class="pz-nav__dropdown-label" style="margin-bottom: 8px;">Activate Workspace</div>
+                      <router-link
+                        v-for="ws in activationWorkspaces"
+                        :key="ws.path"
+                        :to="ws.path"
+                        class="pz-nav__dropdown-item pz-nav__dropdown-item--activate"
+                        @click="showSettingsDropdown = false"
+                      >
+                        <span aria-hidden="true">🔒</span> {{ ws.label }}
+                      </router-link>
+                    </div>
+                  </div>
+
+                  <div class="pz-nav__dropdown-footer">
+                    <button class="pz-nav__dropdown-item"
+                       @click="showProfileModal = true; showSettingsDropdown = false">
+                       Account Settings
+                     </button>
+                    <button class="pz-nav__dropdown-item pz-nav__dropdown-item--danger"
+                      @click="authStore.logout(); showSettingsDropdown = false">
+                      Log Out [⏻]
+                    </button>
+                  </div>
+                </div>
+              </transition>
+            </div>
           </template>
 
-          <!-- Mobile Toggle -->
-          <button class="pz-nav__hamburger" @click="mobileMenuOpen = !mobileMenuOpen">
-            ☰
+          <button
+            class="pz-nav__hamburger u-show-tablet"
+            aria-label="Toggle menu"
+            :aria-expanded="mobileMenuOpen"
+            @click="mobileMenuOpen = !mobileMenuOpen"
+          >
+            <span aria-hidden="true">{{ mobileMenuOpen ? '✕' : '☰' }}</span>
           </button>
         </div>
       </div>
 
-      <!-- Mobile Flyout Menu -->
+      <!-- Mobile Menu Overlay -->
       <transition name="fade">
         <div v-if="mobileMenuOpen" class="pz-nav__mobile-overlay" @click="mobileMenuOpen = false">
           <div class="pz-nav__mobile-menu" @click.stop>
-            <div class="pz-u-text-uppercase pz-u-color-steel u-mb-4" style="font-size: 0.75rem; font-weight: 700;">
-              Public
-              Marketplace</div>
-            <router-link to="/" class="pz-nav__mobile-link" @click="mobileMenuOpen = false">Marketplace</router-link>
+            <router-link to="/" class="pz-nav__mobile-link" @click="mobileMenuOpen = false">Materials</router-link>
+            <router-link to="/properties" class="pz-nav__mobile-link"
+              @click="mobileMenuOpen = false">Properties</router-link>
             <router-link to="/contracts" class="pz-nav__mobile-link"
-              @click="mobileMenuOpen = false">Contractors</router-link>
+              @click="mobileMenuOpen = false">Contracts</router-link>
             <router-link to="/tenders" class="pz-nav__mobile-link" @click="mobileMenuOpen = false">Tenders</router-link>
             <router-link to="/projects" class="pz-nav__mobile-link"
               @click="mobileMenuOpen = false">Projects</router-link>
-            <router-link to="/property" class="pz-nav__mobile-link" @click="mobileMenuOpen = false">Property
-              Listings</router-link>
 
-            <template v-if="authStore.isAuthenticated">
-              <hr class="u-my-6">
-              <div class="pz-u-text-uppercase pz-u-color-earth u-mb-4" style="font-size: 0.75rem; font-weight: 700;">
-                Management Panels</div>
-              <router-link v-if="authStore.hasRole('PROJECT_OWNER')" to="/owner/dashboard" class="pz-nav__mobile-link"
-                @click="mobileMenuOpen = false">Owner Panel</router-link>
-              <router-link v-if="authStore.hasRole('VENDOR')" to="/vendor/dashboard" class="pz-nav__mobile-link"
-                @click="mobileMenuOpen = false">Vendor Shop</router-link>
-              <router-link v-if="authStore.hasRole('CONTRACTOR')" to="/contractor/dashboard" class="pz-nav__mobile-link"
-                @click="mobileMenuOpen = false">Contractor Panel</router-link>
-              <router-link v-if="authStore.hasRole('INVESTOR')" to="/investor/dashboard" class="pz-nav__mobile-link"
-                @click="mobileMenuOpen = false">Investor Hub</router-link>
+            <div v-if="authStore.isAuthenticated" class="u-mt-auto pz-l-flex pz-l-flex--column pz-l-flex--gap-6">
+              <!-- Mobile Localization Cluster -->
+              <div class="pz-nav__mobile-localization">
+                <div class="pz-nav__mobile-loc-row">
+                  <label>Region</label>
+                  <select v-model="configStore.activeCountryCode" @change="configStore.setCountry($event.target.value)">
+                    <option v-for="c in configStore.countries" :key="c.iso_code" :value="c.iso_code">{{ c.flag_emoji }}
+                      {{
+                        c.name }}</option>
+                  </select>
+                </div>
+                <div class="pz-nav__mobile-loc-row">
+                  <label>Currency</label>
+                  <select v-model="configStore.activeCurrencyCode"
+                    @change="configStore.setCurrency($event.target.value)">
+                    <option v-for="cur in configStore.availableCurrencies" :key="cur.currency_code"
+                      :value="cur.currency_code">{{
+                        cur.currency_code }} ({{ cur.symbol }})</option>
+                  </select>
+                </div>
+                <div class="pz-nav__mobile-loc-row">
+                  <label>Language</label>
+                  <select v-model="locale" @change="changeLanguage">
+                    <option value="en">English (US)</option>
+                    <option value="sw">Kiswahili (KE)</option>
+                  </select>
+                </div>
+              </div>
 
-              <hr class="u-my-6">
-              <button @click="openProfile(); mobileMenuOpen = false" class="pz-nav__mobile-link">Profile
-                Settings</button>
-              <button @click="logout(); mobileMenuOpen = false" class="pz-nav__mobile-link">Log Out</button>
-            </template>
+              <div class="pz-l-flex pz-l-flex--column pz-l-flex--gap-4">
+                <div class="pz-nav__mobile-section-label">Active Workspaces</div>
+                <router-link
+                  v-for="ws in activeWorkspaces"
+                  :key="ws.id"
+                  :to="ws.path"
+                  class="pz-nav__mobile-link"
+                  :style="ws.id === 'admin' ? 'color: var(--pz-color-earth-orange);' : ''"
+                  @click="mobileMenuOpen = false"
+                >
+                  {{ ws.label }}
+                </router-link>
+
+                <template v-if="activationWorkspaces.length">
+                  <div class="pz-nav__mobile-section-label">Activate Workspace</div>
+                  <router-link
+                    v-for="ws in activationWorkspaces"
+                    :key="ws.path"
+                    :to="ws.path"
+                    class="pz-nav__mobile-link pz-nav__mobile-link--dim"
+                    @click="mobileMenuOpen = false"
+                  >
+                    <span aria-hidden="true">🔒</span> {{ ws.label }}
+                  </router-link>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </transition>
     </nav>
 
-    <!-- 2. Main Content Area -->
+    <!-- 2. Main Terminal Content -->
     <main class="l-main">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
@@ -209,121 +224,64 @@
       </router-view>
     </main>
 
-    <!-- 3. Premium Global Footer (Industrial Command) -->
-    <footer class="pz-footer">
-      <div class="pz-footer__mesh"></div>
-
-      <!-- Precision Status Bar -->
-      <div class="pz-footer__status">
-        <div class="pz-l-container pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center">
-          <div class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-3">
-            <span class="pz-status-indicator pz-status-indicator--pulse"></span>
-            <span class="pz-u-text-mono text-xs u-color-savanna" style="letter-spacing: 0.2em;">PROTOCOL: NOMINAL</span>
-          </div>
-          <div class="pz-u-text-mono text-xs pz-u-color-concrete u-hide-mobile">
-            NODE: P-CORE-2026 // UPTIME: 99.98% // ENCRYPTION: SECURE
-          </div>
-        </div>
-      </div>
-
-      <div class="pz-l-container pz-footer__main">
-        <!-- Industrial Status Bar (Integrated) -->
-        <div class="pz-footer__brand-lockup u-mb-12 u-hide-mobile">
-          <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center">
-            <h2 class="pz-u-text-display" style="font-size: 1.5rem; color: white;">BUILDING_BEYOND_BOUNDARIES</h2>
-            <div class="pz-footer__cta">
-              <Button variant="ghost" size="sm"
-                style="border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);">
-                CONNECTED_TERMINAL_V1.1
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Industrial Grid (4-Column Premium Desktop Layout) -->
-        <div
-          class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--lg-cols-4 pz-l-grid--gap-12 pz-u-border-t pz-pt-12"
-          style="border-top-color: rgba(255,255,255,0.05);">
-
-          <!-- Column 01: Brand Identity -->
-          <div class="pz-l-flex pz-l-flex--column pz-l-flex--gap-8">
-            <div class="pz-nav__logo">
-              <span class="pz-nav__logo-text" style="color: white; font-size: 1.5rem;">PAANGUZO</span>
-              <span class="pz-nav__logo-line" style="width: 32px;"></span>
-            </div>
-            <div>
-              <h4 class="pz-footer__heading">SOCIAL_NODES</h4>
-              <div class="pz-l-flex pz-l-flex--gap-2 pz-l-flex--wrap">
-                <a href="#" class="pz-social-icon">LN</a>
-                <a href="#" class="pz-social-icon">X</a>
-                <a href="#" class="pz-social-icon">GH</a>
-                <a href="#" class="pz-social-icon">IG</a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Column 02: Strategic Mission -->
+    <footer class="pz-shell-footer">
+      <div class="pz-l-container pz-shell-footer__container">
+        <div class="pz-shell-footer__cta">
           <div>
-            <h4 class="pz-footer__heading">01_CORE_MISSION</h4>
-            <p class="pz-u-text-mono text-xs pz-u-color-concrete u-line-height-relaxed">
-              THE DEFINITIVE OPERATING SYSTEM FOR GLOBAL INFRASTRUCTURE.
-              ENGINEERING BEYOND BOUNDARIES THROUGH UNIFIED PROCUREMENT AND COMMAND-LEVEL LOGISTICS.
+            <p class="pz-shell-footer__eyebrow">Ready To Act</p>
+            <h2 class="pz-shell-footer__title">Search, classify, open details, and move straight into the workflow.</h2>
+            <p class="pz-shell-footer__body">
+              The platform should help users act quickly. These links take them to the live entry points that matter.
             </p>
-            <div class="u-mt-12 pz-u-border-l pz-pl-6" style="border-left: 2px solid var(--pz-color-earth-orange);">
-              <span class="pz-u-text-display text-lg" style="color: white; line-height: 1.2;">BUILDING THE
-                FUTURE.</span>
-            </div>
           </div>
-
-          <!-- Column 03: Operational Network -->
-          <div>
-            <h4 class="pz-footer__heading">02_OPERATIONAL_NODES</h4>
-            <ul class="pz-footer__list pz-l-grid pz-l-grid--cols-1 pz-l-grid--gap-4">
-              <li><router-link to="/" class="pz-footer__link">PROCUREMENT_OS</router-link></li>
-              <li><router-link to="/contracts" class="pz-footer__link">WORKS_REGISTRY</router-link></li>
-              <li><router-link to="/tenders" class="pz-footer__link">TENDER_BOARD</router-link></li>
-              <li><router-link to="/projects" class="pz-footer__link">PROTOCOL_CORE</router-link></li>
-            </ul>
-          </div>
-
-          <!-- Column 04: Command Center -->
-          <div class="pz-l-flex pz-l-flex--column pz-l-flex--gap-8">
-            <div>
-              <h4 class="pz-footer__heading">03_COMMAND_HUB</h4>
-              <div class="pz-footer__input-wrapper u-mb-4">
-                <input type="email" placeholder="OPERATOR@SYSTEM.IO" class="pz-footer__input">
-                <button class="pz-footer__input-btn">➔</button>
-              </div>
-              <p class="pz-u-text-mono" style="font-size: 0.6rem; color: var(--pz-color-concrete-grey);">
-                SECURE TLS-ENCRYPTED DATA STREAM.
-              </p>
-            </div>
-            <div>
-              <h4 class="pz-footer__heading">SYSTEM_STATUS</h4>
-              <ul class="pz-footer__list">
-                <li><a href="#" class="pz-footer__link pz-footer__link--dim">LEGAL.MD</a></li>
-                <li><a href="#" class="pz-footer__link pz-footer__link--dim">PRIVACY.MD</a></li>
-              </ul>
-            </div>
+          <div class="pz-shell-footer__cta-links">
+            <router-link to="/" class="pz-shell-footer__button">Search Materials</router-link>
+            <router-link to="/properties" class="pz-shell-footer__button">Browse Properties</router-link>
+            <router-link to="/contracts" class="pz-shell-footer__button">View Contracts</router-link>
+            <router-link to="/projects" class="pz-shell-footer__button">Open Projects</router-link>
           </div>
         </div>
 
-        <div class="pz-footer__bottom">
-          <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center pz-l-flex--wrap pz-l-flex--gap-4">
-            <div class="pz-u-text-mono text-xs pz-u-color-concrete">
-              / PAANGUZO CORE SYSTEM / 2026 / ALL PROTOCOLS RESERVED
-            </div>
-            <div class="pz-l-flex pz-l-flex--gap-6">
-              <a href="#" class="pz-footer__link pz-footer__link--dim">LEGAL.MD</a>
-              <a href="#" class="pz-footer__link pz-footer__link--dim">PRIVACY.MD</a>
-            </div>
+        <div class="pz-shell-footer__grid">
+          <div class="pz-shell-footer__column">
+            <h3 class="pz-shell-footer__heading">Explore</h3>
+            <router-link to="/" class="pz-shell-footer__link">Materials Marketplace</router-link>
+            <router-link to="/properties" class="pz-shell-footer__link">Property Marketplace</router-link>
+            <router-link to="/contracts" class="pz-shell-footer__link">Contracts</router-link>
+            <router-link to="/tenders" class="pz-shell-footer__link">Tender Board</router-link>
+            <router-link to="/projects" class="pz-shell-footer__link">Projects</router-link>
           </div>
+
+          <div class="pz-shell-footer__column">
+            <h3 class="pz-shell-footer__heading">Start Work</h3>
+            <router-link to="/projects/new" class="pz-shell-footer__link">Create Project</router-link>
+            <router-link to="/contracts/new" class="pz-shell-footer__link">Post Contract</router-link>
+            <router-link to="/vendors/register" class="pz-shell-footer__link">Vendor Onboarding</router-link>
+            <router-link to="/contractors/register" class="pz-shell-footer__link">Contractor Onboarding</router-link>
+            <router-link to="/property-manager/dashboard" class="pz-shell-footer__link">Property Workspace</router-link>
+          </div>
+
+          <div class="pz-shell-footer__column">
+            <h3 class="pz-shell-footer__heading">Account</h3>
+            <router-link v-if="!authStore.isAuthenticated" to="/login" class="pz-shell-footer__link">Login</router-link>
+            <router-link v-if="!authStore.isAuthenticated" to="/register" class="pz-shell-footer__link">Register</router-link>
+            <router-link v-if="authStore.isAuthenticated" to="/buyer/dashboard" class="pz-shell-footer__link">My Workspace</router-link>
+            <router-link v-if="authStore.hasRole('VENDOR')" to="/vendor/dashboard" class="pz-shell-footer__link">Vendor Dashboard</router-link>
+            <router-link v-if="authStore.hasRole('CONTRACTOR')" to="/contractor/dashboard" class="pz-shell-footer__link">Contractor Dashboard</router-link>
+            <router-link v-if="authStore.hasRole('PROPERTY_MANAGER')" to="/property-manager/dashboard" class="pz-shell-footer__link">Property Dashboard</router-link>
+            <router-link v-if="authStore.isAdmin" to="/admin" class="pz-shell-footer__link">Admin</router-link>
+          </div>
+        </div>
+
+        <div class="pz-shell-footer__bottom">
+          <span>Paanguzo Marketplace</span>
+          <span>Construction workflows across materials, property, contracts, and projects.</span>
         </div>
       </div>
     </footer>
 
     <!-- 4. Global Modals -->
-    <Modal :isOpen="showProfileModal" title="Sovereign Identity Settings" size="md" @close="showProfileModal = false">
+    <Modal :isOpen="showProfileModal" title="Profile Settings" size="md" @close="showProfileModal = false">
       <form id="profile-form" @submit.prevent="saveProfile" class="l-grid l-grid--cols-1 pz-u-mb-4">
         <div class="l-grid l-grid--cols-2 l-grid--gap-md">
           <PzInput v-model="userForm.first_name" label="First Name" required />
@@ -331,676 +289,286 @@
         </div>
 
         <div class="u-mt-4">
-          <PzInput v-model="userForm.email" label="Verified Email" disabled
-            hint="Email cannot be changed by the user" />
+          <PzInput v-model="userForm.email" label="Email Address" disabled
+            hint="Email cannot be changed" />
         </div>
 
         <div class="pz-input-wrapper u-mt-4">
-          <label class="pz-input__label u-mb-1">Primary Operational Role</label>
-          <select v-model="userForm.role" class="pz-input">
-            <option v-for="r in availableRoles" :key="r.code" :value="r.code">{{ r.label }}</option>
-          </select>
-          <span class="pz-input__hint">This determines your primary interface and workspace.</span>
+          <label class="pz-input__label u-mb-1">Approved Workspace Access</label>
+          <div class="pz-profile-role-panel">
+            <div class="pz-profile-role-panel__section">
+              <span class="pz-profile-role-panel__label">Primary</span>
+              <strong>{{ userForm.role || 'PROJECT_OWNER' }}</strong>
+            </div>
+            <div class="pz-profile-role-panel__section">
+              <span class="pz-profile-role-panel__label">Additional approved roles</span>
+              <span>{{ formattedApprovedRoles }}</span>
+            </div>
+          </div>
+          <span class="pz-input__hint">Admins grant specialized workspace access after the related onboarding workflow is reviewed.</span>
         </div>
       </form>
       <template #footer>
         <Button variant="ghost" @click="showProfileModal = false">Cancel</Button>
-        <Button type="submit" form="profile-form" variant="primary" :loading="loading">Synchronize Profile</Button>
+        <Button type="submit" form="profile-form" variant="primary" :loading="loading">Save Changes</Button>
       </template>
+    </Modal>
+    <!-- 5. Notification Center -->
+    <NotificationCenter />
+
+    <!-- 6. Global Chat Modal -->
+    <Modal :isOpen="uiStore.isChatOpen" title="Contact Support" size="lg" @close="uiStore.closeChat">
+      <ChatWindow v-if="uiStore.activeChatRoomId" :roomId="String(uiStore.activeChatRoomId)" />
     </Modal>
   </div>
 </template>
 
-<style>
+<script setup>
+  import { ref, onMounted, onUnmounted, provide, watch, computed } from 'vue';
+  import { useRouter, useRoute } from 'vue-router';
+  import { useAuthStore } from './stores/auth';
+  import { useNotificationStore } from './stores/notifications';
+  import { useUIStore } from './stores/ui';
+  import { useConfigStore } from './stores/config';
+  import Button from './components/ui/Button.vue';
+  import Modal from './components/ui/Modal.vue';
+  import PzInput from './components/PzInput.vue';
+  import NotificationCenter from './components/ui/NotificationCenter.vue';
+  import ChatWindow from './components/chat/ChatWindow.vue'; // Added ChatWindow
+  import api from './services/api';
+  import { useI18n } from 'vue-i18n';
 
-  /* 1. Main Navigation Styles (Premium Floating Glass) */
-  .pz-nav {
-    padding: var(--pz-space-2) var(--pz-space-4);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    background: transparent;
+  const { locale } = useI18n();
+
+  const authStore = useAuthStore();
+  const notificationStore = useNotificationStore();
+  const uiStore = useUIStore();
+  const configStore = useConfigStore();
+  const router = useRouter();
+  const route = useRoute();
+
+  const isScrolled = ref(false);
+  const mobileMenuOpen = ref(false);
+  const showProfileModal = ref(false);
+  const showSettingsDropdown = ref(false);
+  const loading = ref(false);
+
+  const userForm = ref({
+    first_name: '',
+    last_name: '',
+    email: '',
+    role: '',
+    roles: []
+  });
+  const formattedApprovedRoles = computed(() => {
+    if (userForm.value.role === 'ADMIN') return 'Admin accounts do not carry additional non-admin roles.';
+    const roles = userForm.value.roles || [];
+    return roles.length ? roles.join(', ') : 'No additional approved roles yet.';
+  });
+
+  // Workspace detection for nav indicator
+  const workspaceLabel = computed(() => {
+    const path = route.path;
+    if (path.startsWith('/buyer/dashboard')) return 'Buyer';
+    if (path.startsWith('/vendor/dashboard')) return 'Vendor';
+    if (path.startsWith('/contractor/dashboard')) return 'Contractor';
+    if (path.startsWith('/owner/dashboard')) return 'Owner';
+    if (path.startsWith('/property-manager/dashboard')) return 'Property';
+    if (path.startsWith('/investor/dashboard')) return 'Investor';
+    if (path.startsWith('/courier/dashboard')) return 'Courier';
+    if (path.startsWith('/government/dashboard')) return 'Government';
+    if (path.startsWith('/admin')) return 'Admin';
+    return null;
+  });
+
+  // Approved vs activatable workspaces
+  const activeWorkspaces = computed(() => {
+    const items = [];
+    // Base workspace is always available
+    items.push({ label: 'My Orders', path: '/buyer/dashboard', id: 'buyer' });
+    if (authStore.hasRole('VENDOR')) items.push({ label: 'Vendor', path: '/vendor/dashboard', id: 'vendor' });
+    if (authStore.hasRole('CONTRACTOR')) items.push({ label: 'Contractor', path: '/contractor/dashboard', id: 'contractor' });
+    if (authStore.hasRole('PROPERTY_MANAGER')) items.push({ label: 'Property', path: '/property-manager/dashboard', id: 'property' });
+    if (authStore.hasRole('INVESTOR')) items.push({ label: 'Investor', path: '/investor/dashboard', id: 'investor' });
+    if (authStore.hasRole('COURIER')) items.push({ label: 'Courier', path: '/courier/dashboard', id: 'courier' });
+    if (authStore.hasRole('GOVERNMENT')) items.push({ label: 'Government', path: '/government/dashboard', id: 'government' });
+    if (authStore.isAdmin) items.push({ label: 'Admin', path: '/admin', id: 'admin' });
+    return items;
+  });
+
+  const activationWorkspaces = computed(() => {
+    const items = [];
+    if (!authStore.hasRole('VENDOR')) items.push({ label: 'Vendor Workspace', path: '/vendor/dashboard' });
+    if (!authStore.hasRole('CONTRACTOR')) items.push({ label: 'Contractor Workspace', path: '/contractor/dashboard' });
+    if (!authStore.hasRole('PROPERTY_MANAGER')) items.push({ label: 'Property Workspace', path: '/property-manager/dashboard' });
+    if (!authStore.hasRole('INVESTOR')) items.push({ label: 'Investor Workspace', path: '/investor/dashboard' });
+    if (!authStore.hasRole('COURIER')) items.push({ label: 'Courier Workspace', path: '/courier/dashboard' });
+    if (!authStore.hasRole('GOVERNMENT')) items.push({ label: 'Government Workspace', path: '/government/dashboard' });
+    return items;
+  });
+
+  function handleScroll() {
+    isScrolled.value = window.scrollY > 20;
   }
 
-  @media (min-width: 1024px) {
-    .pz-nav {
-      padding: var(--pz-space-4) var(--pz-space-8);
+  function openAuthModal(mode = 'login') {
+    router.push(mode === 'register' ? '/register' : '/login');
+  }
+
+  function changeLanguage() {
+    // locale.value is already synced via v-model
+    localStorage.setItem('locale', locale.value);
+  }
+
+  function showAlert(message, type = 'info') {
+    notificationStore.addNotification({
+      message,
+      type: String(type || 'info').toUpperCase(),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  provide('showAlert', showAlert);
+
+  async function saveProfile() {
+    loading.value = true;
+    try {
+      const res = await api.patch('/accounts/profile/', {
+        first_name: userForm.value.first_name,
+        last_name: userForm.value.last_name
+      });
+      authStore.setUser(res.data);
+      userForm.value = {
+        first_name: res.data.first_name,
+        last_name: res.data.last_name,
+        email: res.data.email,
+        role: res.data.role,
+        roles: res.data.roles || []
+      };
+      showAlert("✅ Profile sync successful", 'payment');
+      showProfileModal.value = false;
+    } catch (err) {
+      showAlert("❌ Profile update failed", 'error');
+    } finally {
+      loading.value = false;
     }
+  }
 
-    .pz-nav--scrolled {
-      padding: var(--pz-space-2) var(--pz-space-8);
+  // Watch for auth state changes to connect/disconnect notifications
+  watch(() => authStore.isAuthenticated, (newVal) => {
+    if (newVal) {
+      notificationStore.connect();
+    } else {
+      notificationStore.disconnect();
     }
+  });
 
-    .pz-nav--scrolled .pz-nav__wrapper {
-      background: rgba(255, 255, 255, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.4);
+  onMounted(() => {
+    window.addEventListener('scroll', handleScroll);
+    configStore.fetchConfig();
+
+    // Restore locale if present
+    const savedLocale = localStorage.getItem('locale');
+    if (savedLocale) locale.value = savedLocale;
+
+    if (authStore.user) {
+      userForm.value = {
+        first_name: authStore.user.first_name,
+        last_name: authStore.user.last_name,
+        email: authStore.user.email,
+        role: authStore.user.role,
+        roles: authStore.user.roles || []
+      };
+      // Connect if already authenticated
+      if (authStore.isAuthenticated) {
+        notificationStore.connect();
+      }
     }
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('scroll', handleScroll);
+    notificationStore.disconnect();
+  });
+</script>
+
+<style scoped>
+  .pz-profile-role-panel {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.95rem 1rem;
+    border: 1px solid rgba(10, 10, 15, 0.12);
+    background: rgba(10, 10, 15, 0.03);
   }
 
-  .pz-nav__wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    margin: 0 auto;
-    padding: 8px 16px;
-    border-radius: var(--pz-border-radius-xl, 24px);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+  .pz-profile-role-panel__section {
+    display: grid;
+    gap: 0.2rem;
   }
 
-  @media (min-width: 1024px) {
-    .pz-nav__wrapper {
-      max-width: 1440px;
-      padding-inline: var(--pz-space-8);
-    }
-  }
-
-  .pz-nav__logo {
-    display: flex;
-    flex-direction: column;
-    text-decoration: none;
-    transition: transform var(--pz-transition-spring);
-    position: relative;
-  }
-
-  .pz-nav__logo:hover {
-    transform: scale(1.05);
+  .pz-profile-role-panel__label {
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pz-color-concrete-grey);
   }
 
   .pz-nav__logo-text {
     font-family: var(--pz-font-display);
-    font-size: var(--pz-text-h4);
-    font-weight: 800;
-    color: var(--pz-color-foundation-black);
-    letter-spacing: -0.02em;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.05em;
     text-transform: uppercase;
-    line-height: 1;
   }
 
   .pz-nav__logo-line {
-    display: block;
-    height: 4px;
-    width: 24px;
-    background-color: var(--pz-color-earth-orange);
-    margin-top: 4px;
-    transition: width var(--pz-transition-base);
-  }
-
-  .pz-nav__logo:hover .pz-nav__logo-line {
-    width: 100%;
-  }
-
-  .pz-nav__menu {
-    display: none;
-  }
-
-  @media (min-width: 1024px) {
-    .pz-nav__menu {
-      flex: 1;
-      margin-left: var(--pz-space-12);
-      display: flex;
-      gap: 4px;
-      justify-content: center;
-    }
+    display: inline-flex;
+    width: 26px;
+    height: 2px;
+    margin-left: 0.5rem;
+    background: var(--pz-color-earth-orange);
   }
 
   .pz-nav__link {
-    font-family: var(--pz-font-mono);
-    font-size: 0.70rem;
-    font-weight: 700;
-    color: var(--pz-color-text-secondary);
-    text-decoration: none;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    padding: 8px 16px;
-    border-radius: var(--pz-border-radius-full);
-    transition: all var(--pz-transition-spring);
-    display: flex;
-    align-items: center;
-    background: transparent;
-  }
-
-  @media (min-width: 1024px) {
-    .pz-nav__link:hover {
-      color: var(--pz-color-foundation-black);
-      background: rgba(0, 0, 0, 0.04);
-      transform: translateY(-1px);
-    }
-
-    .pz-nav__link--active {
-      color: var(--pz-color-earth-orange);
-      background: rgba(255, 107, 43, 0.06);
-      box-shadow: 0 4px 12px rgba(255, 107, 43, 0.08);
-    }
-  }
-
-  .pz-nav__actions {
-    display: flex;
-    align-items: center;
-    gap: var(--pz-space-1);
-  }
-
-  @media (min-width: 768px) {
-    .pz-nav__actions {
-      gap: var(--pz-space-3);
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .pz-nav__actions {
-      gap: var(--pz-space-6);
-    }
-  }
-
-  .pz-nav__panels {
-    display: none;
-  }
-
-  @media (min-width: 1024px) {
-    .pz-nav__panels {
-      display: flex;
-      gap: 2px;
-      align-items: center;
-      background: rgba(0, 0, 0, 0.03);
-      padding: 4px;
-      border-radius: var(--pz-border-radius-full);
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
-    }
-  }
-
-  .pz-nav__pill {
-    font-family: var(--pz-font-mono);
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    padding: 6px 14px;
-    color: var(--pz-color-concrete-grey);
-    text-decoration: none;
-    transition: all var(--pz-transition-base);
-    border-radius: var(--pz-border-radius-full);
-  }
-
-  .pz-nav__pill:hover,
-  .pz-nav__pill--active {
-    background: white;
-    color: var(--pz-color-earth-orange);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  }
-
-  /* Admin pill - visually distinct in the role panel */
-  .pz-nav__pill--admin {
-    background: linear-gradient(135deg, #FF6B2B, #e05520) !important;
-    color: white !important;
-    font-weight: 900 !important;
-    box-shadow: 0 4px 12px rgba(255, 107, 43, 0.3);
-    letter-spacing: 0.08em;
-  }
-
-  .pz-nav__pill--admin:hover {
-    background: linear-gradient(135deg, #e05520, #c04010) !important;
-    color: white !important;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(255, 107, 43, 0.4);
-  }
-
-  /* Admin quick-access button in the top-right action area */
-  .pz-nav__admin-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    background: linear-gradient(135deg, #FF6B2B, #e05520);
-    color: white;
-    border-radius: var(--pz-border-radius-full);
-    font-family: var(--pz-font-mono);
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-decoration: none;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    transition: all var(--pz-transition-base);
-    box-shadow: 0 4px 12px rgba(255, 107, 43, 0.3);
-  }
-
-  .pz-nav__admin-btn:hover {
-    background: linear-gradient(135deg, #e05520, #c04010);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(255, 107, 43, 0.45);
-  }
-
-  .pz-nav__profile-trigger {
-    display: flex;
-    align-items: center;
-    gap: var(--pz-space-3);
-    padding: 3px;
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: var(--pz-border-radius-full);
-    cursor: pointer;
-    transition: all var(--pz-transition-spring);
-  }
-
-  .pz-nav__profile-trigger:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--pz-shadow-md);
-    border-color: var(--pz-color-earth-orange);
-  }
-
-  @media (min-width: 768px) {
-    .pz-nav__profile-trigger {
-      padding-right: var(--pz-space-4);
-    }
-  }
-
-  .pz-nav__avatar {
-    width: 32px;
-    height: 32px;
-    background: var(--pz-gradient-premium);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9rem;
-    border-radius: var(--pz-border-radius-full);
-    box-shadow: var(--pz-shadow-sm);
-  }
-
-  .pz-nav__username {
-    display: none;
-  }
-
-  @media (min-width: 768px) {
-    .pz-nav__username {
-      display: inline;
-      font-size: 0.75rem;
-      font-weight: 800;
-      color: var(--pz-color-foundation-black);
-      letter-spacing: 0.02em;
-    }
-  }
-
-  .pz-nav__hamburger {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    padding: var(--pz-space-2);
-    cursor: pointer;
+    font-family: var(--pz-font-primary);
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
     color: var(--pz-color-foundation-black);
-    display: block;
   }
 
-  @media (min-width: 1024px) {
-    .pz-nav__hamburger {
-      display: none;
-    }
-  }
-
-  .pz-nav__logout-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: var(--pz-color-concrete-grey);
-    padding: 6px;
-    border-radius: var(--pz-border-radius-sm);
-    transition: all var(--pz-transition-fast);
-  }
-
-  .pz-nav__logout-icon:hover {
+  .pz-nav__link:hover,
+  .pz-nav__link--active {
     color: var(--pz-color-earth-orange);
-    background: rgba(255, 107, 43, 0.1);
   }
 
-  .pz-nav__mobile-overlay {
+  .l-app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .l-main {
+    flex: 1;
+    min-height: calc(100vh - 80px - 400px);
+    position: relative;
+  }
+
+  .l-main::before {
+    content: "";
     position: fixed;
     inset: 0;
-    background: rgba(10, 10, 15, 0.7);
-    backdrop-filter: blur(8px);
-    z-index: 2000;
-  }
-
-  .pz-nav__mobile-menu {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 320px;
-    background: var(--pz-color-foundation-black);
-    padding: var(--pz-space-12) var(--pz-space-8);
-    display: flex;
-    flex-direction: column;
-    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.4);
-    border-left: 1px solid rgba(255, 107, 43, 0.2);
-  }
-
-  .pz-nav__mobile-link {
-    font-family: var(--pz-font-mono);
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--pz-color-concrete-grey);
-    text-decoration: none;
-    padding: var(--pz-space-4) 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all var(--pz-transition-spring);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    display: flex;
-    align-items: center;
-    gap: var(--pz-space-3);
-  }
-
-  .pz-nav__mobile-link:hover {
-    color: white;
-    padding-left: var(--pz-space-4);
-  }
-
-  .pz-nav__mobile-link::before {
-    content: "↳";
-    color: var(--pz-color-earth-orange);
-    opacity: 0.5;
-  }
-
-  /* 2. Content & Footer */
-  .l-main {
-    min-height: calc(100vh - 80px - 400px);
-  }
-
-  /* 2. Premium Global Footer Styles */
-  .pz-footer {
-    position: relative;
-    background: #0D0D12;
-    color: white;
-    padding: var(--pz-space-12) 0;
-    overflow: hidden;
-    margin-top: var(--pz-space-20);
-    border-top: 1px solid rgba(255, 107, 43, 0.2);
-  }
-
-  @media (min-width: 1024px) {
-    .pz-footer {
-      padding: var(--pz-space-20) 0 var(--pz-space-12);
-    }
-  }
-
-  /* Cyber Industrial Background Overlay */
-  .pz-footer__mesh {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
     background:
-      radial-gradient(at 0% 100%, rgba(255, 107, 43, 0.12) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 50%);
+      radial-gradient(circle at top left, rgba(212, 101, 42, 0.06), transparent 22%),
+      radial-gradient(circle at 85% 15%, rgba(16, 185, 129, 0.05), transparent 18%),
+      linear-gradient(90deg, transparent 0, transparent calc(100% - 1px), rgba(10, 10, 15, 0.02) calc(100% - 1px)),
+      linear-gradient(0deg, transparent 0, transparent calc(100% - 1px), rgba(10, 10, 15, 0.016) calc(100% - 1px));
+    background-size: auto, auto, 112px 112px, 112px 112px;
     pointer-events: none;
-    z-index: 1;
+    z-index: -1;
   }
 
-  .pz-footer__mesh::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 80px 80px;
-    mask-image: radial-gradient(circle at center, black, transparent);
-    -webkit-mask-image: radial-gradient(circle at center, black, transparent);
-    opacity: 0.4;
-  }
-
-  /* Precision Terminal Status Bar */
-  .pz-footer__status {
-    position: relative;
-    z-index: 2;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: var(--pz-blur-sm);
-    -webkit-backdrop-filter: var(--pz-blur-sm);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding: var(--pz-space-4) 0;
-    margin-bottom: var(--pz-space-12);
-  }
-
-  @media (min-width: 1024px) {
-    .pz-footer__status {
-      margin-bottom: var(--pz-space-20);
-      padding: var(--pz-space-5) 0;
-    }
-  }
-
-  /* Scanline Effect */
-  .pz-footer__status::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(transparent 0%,
-        rgba(255, 107, 43, 0.08) 50%,
-        transparent 100%);
-    height: 400%;
-    animation: pz-scanline 10s linear infinite;
-    pointer-events: none;
-  }
-
-  @keyframes pz-scanline {
-    0% {
-      transform: translateY(-75%);
-    }
-
-    100% {
-      transform: translateY(0%);
-    }
-  }
-
-  .pz-status-indicator {
-    width: 12px;
-    height: 12px;
-    background: var(--pz-color-savanna-green);
-    border-radius: 50%;
-    display: inline-block;
-  }
-
-  .pz-status-indicator--pulse {
-    animation: pz-pulse 3s infinite;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
-  }
-
-  @keyframes pz-pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-    }
-
-    70% {
-      box-shadow: 0 0 0 15px rgba(16, 185, 129, 0);
-    }
-
-    100% {
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-    }
-  }
-
-  .pz-footer__main {
-    position: relative;
-    z-index: 2;
-  }
-
-  @media (min-width: 1024px) {
-    .pz-footer__main {
-      padding-inline: var(--pz-space-8);
-    }
-  }
-
-  .pz-footer__brand-lockup {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: var(--pz-space-12);
-    margin-bottom: var(--pz-space-12);
-  }
-
-  @media (min-width: 1024px) {
-    .pz-footer__brand-lockup {
-      padding-bottom: var(--pz-space-16);
-      margin-bottom: var(--pz-space-16);
-    }
-  }
-
-  .pz-footer__heading {
-    font-family: var(--pz-font-mono);
-    font-size: 0.8125rem;
-    font-weight: 800;
-    color: white;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    margin-bottom: var(--pz-space-6);
-    display: flex;
-    align-items: center;
-    gap: var(--pz-space-4);
-  }
-
-  .pz-footer__heading::before {
-    content: "";
-    width: 16px;
-    height: 2px;
-    background: var(--pz-color-earth-orange);
-  }
-
-  .pz-footer__list {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--pz-space-5);
-  }
-
-  .pz-footer__link {
-    font-family: var(--pz-font-mono);
-    font-size: 0.75rem;
-    color: var(--pz-color-concrete-grey);
-    text-decoration: none;
-    transition: all var(--pz-transition-spring);
-    display: inline-flex;
-    align-items: center;
-    letter-spacing: 0.05em;
-  }
-
-  .pz-footer__link:hover {
-    color: white;
-    transform: translateX(8px);
-  }
-
-  .pz-footer__link::before {
-    content: "↳";
-    margin-right: 12px;
-    color: var(--pz-color-earth-orange);
-    opacity: 0;
-    transition: opacity var(--pz-transition-fast);
-  }
-
-  .pz-footer__link:hover::before {
-    opacity: 1;
-  }
-
-  .pz-footer__link--dim {
-    color: rgba(113, 128, 150, 0.5);
-  }
-
-  .pz-footer__link--dim:hover {
-    color: white;
-    transform: none;
-  }
-
-  .pz-footer__input-wrapper {
-    display: flex;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    overflow: hidden;
-    transition: all var(--pz-transition-base);
-    width: 100%;
-  }
-
-  @media (min-width: 1024px) {
-    .pz-footer__input-wrapper {
-      max-width: 400px;
-    }
-  }
-
-  .pz-footer__input-wrapper:focus-within {
-    border-color: var(--pz-color-earth-orange);
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 30px rgba(255, 107, 43, 0.15);
-  }
-
-  .pz-footer__input {
-    background: transparent;
-    border: none;
-    color: white;
-    padding: var(--pz-space-4) var(--pz-space-5);
-    font-family: var(--pz-font-mono);
-    font-size: 0.8125rem;
-    flex: 1;
-    width: 100%;
-    outline: none;
-  }
-
-  .pz-footer__input-btn {
-    background: var(--pz-color-earth-orange);
-    color: white;
-    border: none;
-    padding: 0 var(--pz-space-6);
-    cursor: pointer;
-    font-weight: 800;
-    transition: all var(--pz-transition-spring);
-  }
-
-  .pz-footer__input-btn:hover {
-    background: white;
-    color: var(--pz-color-earth-orange);
-    transform: scale(1.05);
-  }
-
-  .pz-social-icon {
-    font-family: var(--pz-font-mono);
-    font-size: 0.6875rem;
-    font-weight: 800;
-    letter-spacing: 0.15em;
-    color: var(--pz-color-concrete-grey);
-    text-decoration: none;
-    transition: all var(--pz-transition-spring);
-    padding: var(--pz-space-3) var(--pz-space-5);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 4px;
-    text-transform: uppercase;
-  }
-
-  .pz-social-icon:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.06);
-    border-color: var(--pz-color-earth-orange);
-    box-shadow: var(--pz-shadow-focal);
-    transform: translateY(-4px);
-  }
-
-  .pz-footer__bottom {
-    margin-top: var(--pz-space-16);
-    padding-top: var(--pz-space-12);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  /* Transition & Utilities */
   .fade-enter-active,
   .fade-leave-active {
     transition: opacity 0.2s ease;
@@ -1011,6 +579,513 @@
     opacity: 0;
   }
 
+  /* Navbar Localization Cluster */
+  .pz-nav__localization {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 250, 243, 0.72));
+    padding: 2px 6px;
+    border: 1px solid rgba(10, 10, 15, 0.08);
+    margin-right: 8px;
+    box-shadow: 8px 8px 0 rgba(10, 10, 15, 0.04);
+    backdrop-filter: blur(12px);
+  }
+
+  .pz-nav__loc-item {
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+
+  .pz-nav__loc-item:not(:last-child)::after {
+    content: "";
+    height: 12px;
+    width: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    margin-left: 8px;
+  }
+
+  .pz-nav__loc-select {
+    background: transparent;
+    border: none;
+    font-family: var(--pz-font-mono);
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--pz-color-foundation-black);
+    cursor: pointer;
+    padding: 4px 12px 4px 4px;
+    outline: none;
+    text-align: left;
+    transition: color 0.2s;
+  }
+
+  .pz-nav__loc-select:hover {
+    color: var(--pz-color-earth-orange);
+  }
+
+  .pz-nav__loc-select--currency {
+    color: var(--pz-color-earth-orange);
+    letter-spacing: 0.05em;
+  }
+
+  /* Mobile Localization Styling */
+  .pz-nav__mobile-localization {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .pz-nav__mobile-loc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .pz-nav__mobile-loc-row label {
+    font-family: var(--pz-font-mono);
+    font-size: 0.6rem;
+    color: var(--pz-color-concrete-grey);
+    letter-spacing: 0.1em;
+  }
+
+  .pz-nav__mobile-loc-row select {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    font-family: var(--pz-font-mono);
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    outline: none;
+    min-width: 120px;
+    text-align: right;
+  }
+
+  /* Dropdown System */
+  .pz-nav__dropdown-wrapper {
+    position: relative;
+    box-sizing: border-box;
+  }
+
+  .pz-nav__profile-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--pz-space-3);
+    padding: var(--pz-space-1) var(--pz-space-3);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 250, 243, 0.72));
+    cursor: pointer;
+    transition: all var(--pz-transition-base);
+    border: 1px solid rgba(10, 10, 15, 0.08);
+    box-sizing: border-box;
+    box-shadow: 8px 8px 0 rgba(10, 10, 15, 0.04);
+    backdrop-filter: blur(12px);
+  }
+
+  .pz-nav__profile-trigger:hover {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(10, 10, 15, 0.12);
+  }
+
+  .pz-nav__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--pz-color-foundation-black);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-family: var(--pz-font-mono);
+    font-size: 0.8rem;
+    box-sizing: border-box;
+  }
+
+  .pz-nav__username {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--pz-color-foundation-black);
+    letter-spacing: -0.02em;
+  }
+
+  .pz-footer__heading {
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.68);
+    margin-bottom: 1rem;
+  }
+
+  .pz-nav__dropdown-icon {
+    font-size: 0.8rem;
+    opacity: 0.5;
+  }
+
+  .pz-nav__dropdown {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 280px;
+    background: rgba(248, 246, 240, 0.98);
+    border: 2px solid var(--pz-color-foundation-black);
+    box-shadow: 12px 12px 0 rgba(10, 10, 15, 0.1);
+    z-index: 1000;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .pz-nav__dropdown-header {
+    background: var(--pz-color-foundation-black);
+    color: white;
+    padding: var(--pz-space-3) var(--pz-space-6);
+  }
+
+  .pz-nav__dropdown-section {
+    padding: var(--pz-space-4) var(--pz-space-6);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .pz-nav__dropdown-label {
+    font-family: var(--pz-font-mono);
+    font-size: 0.65rem;
+    color: var(--pz-color-concrete-grey);
+    letter-spacing: 0.1em;
+    margin-bottom: var(--pz-space-4);
+    text-transform: uppercase;
+  }
+
+  /* Role Hub Pills inside Dropdown */
+  .pz-nav__dropdown-pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.03);
+    padding: 6px;
+    border-radius: 12px;
+  }
+
+  .pz-nav__dropdown-pill {
+    flex: 1;
+    min-width: calc(50% - 4px);
+    text-align: center;
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    font-family: var(--pz-font-mono);
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--pz-color-text-secondary);
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid transparent;
+  }
+
+  .pz-nav__dropdown-pill:hover {
+    transform: translateY(-1px);
+    background: #f8fafc;
+    color: var(--pz-color-foundation-black);
+  }
+
+  .pz-nav__dropdown-pill--active {
+    background: var(--pz-color-foundation-black);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .pz-nav__dropdown-pill--admin {
+    color: var(--pz-color-earth-orange);
+    border-color: rgba(234, 88, 12, 0.2);
+  }
+
+  .pz-nav__dropdown-pill--admin.pz-nav__dropdown-pill--active {
+    background: var(--pz-color-earth-orange);
+    color: white;
+  }
+
+  .pz-nav__dropdown-section-links {
+    margin-top: var(--pz-space-4);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .pz-nav__dropdown-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: var(--pz-space-2) 0;
+    font-size: 0.85rem;
+    color: var(--pz-color-text-secondary);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .pz-nav__dropdown-item:hover {
+    color: var(--pz-color-earth-orange);
+  }
+
+  .pz-nav__dropdown-item--admin {
+    color: var(--pz-color-earth-orange);
+    font-weight: bold;
+  }
+
+  .pz-nav__dropdown-item--danger {
+    color: #e53e3e;
+    font-weight: var(--pz-weight-bold);
+    font-family: var(--pz-font-mono);
+    font-size: 0.75rem;
+    margin-top: var(--pz-space-2);
+  }
+
+  .pz-nav__dropdown-field {
+    margin-bottom: var(--pz-space-4);
+    box-sizing: border-box;
+  }
+
+  .pz-nav__dropdown-field label {
+    display: block;
+    font-family: var(--pz-font-mono);
+    font-size: 0.6rem;
+    color: var(--pz-color-foundation-black);
+    margin-bottom: 4px;
+    font-weight: bold;
+  }
+
+  .pz-nav__select {
+    width: 100%;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .pz-nav__select:focus {
+    outline: none;
+    border-color: var(--pz-color-earth-orange);
+  }
+
+  .pz-nav__dropdown-footer {
+    padding: var(--pz-space-4) var(--pz-space-6);
+    background: #f8fafc;
+  }
+
+  /* Animations */
+  .dropdown-slide-enter-active,
+  .dropdown-slide-leave-active {
+    transition: all 0.2s ease-out;
+  }
+
+  .dropdown-slide-enter-from,
+  .dropdown-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  .pz-nav__workspace {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(10, 10, 15, 0.08);
+    font-family: var(--pz-font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--pz-color-structural-steel);
+    margin-right: 8px;
+  }
+
+  .pz-nav__workspace-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--pz-color-earth-orange);
+    border-radius: 50%;
+  }
+
+  .pz-shell-footer {
+    margin-top: var(--pz-space-16);
+    padding: var(--pz-space-10) 0 var(--pz-space-8);
+    background:
+      linear-gradient(180deg, rgba(10, 10, 15, 0.98), rgba(18, 18, 24, 0.98)),
+      radial-gradient(circle at top right, rgba(212, 101, 42, 0.18), transparent 24%),
+      radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.1), transparent 20%);
+    color: white;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .pz-shell-footer__container {
+    display: grid;
+    gap: var(--pz-space-8);
+  }
+
+  .pz-shell-footer__cta {
+    display: grid;
+    gap: var(--pz-space-5);
+    padding: var(--pz-space-6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.26);
+  }
+
+  .pz-shell-footer__eyebrow {
+    margin: 0 0 0.75rem;
+    font-family: var(--pz-font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--pz-color-earth-orange);
+  }
+
+  .pz-shell-footer__title {
+    margin: 0;
+    font-family: var(--pz-font-display);
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    line-height: 1.04;
+    letter-spacing: -0.04em;
+  }
+
+  .pz-shell-footer__body {
+    max-width: 44rem;
+    margin: 0.85rem 0 0;
+    color: rgba(255, 255, 255, 0.72);
+    line-height: 1.7;
+  }
+
+  .pz-shell-footer__cta-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--pz-space-3);
+  }
+
+  .pz-shell-footer__button,
+  .pz-shell-footer__link {
+    text-decoration: none;
+  }
+
+  .pz-shell-footer__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: white;
+    font-family: var(--pz-font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: transform var(--pz-transition-spring), border-color var(--pz-transition-base), background var(--pz-transition-base);
+  }
+
+  .pz-shell-footer__button:hover {
+    transform: translate(-2px, -2px);
+    border-color: var(--pz-color-earth-orange);
+    background: rgba(255, 107, 43, 0.16);
+    box-shadow: 10px 10px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .pz-shell-footer__grid {
+    display: grid;
+    gap: var(--pz-space-6);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .pz-shell-footer__column {
+    display: grid;
+    gap: 0.85rem;
+    align-content: start;
+  }
+
+  .pz-shell-footer__heading {
+    margin: 0;
+    font-family: var(--pz-font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.54);
+  }
+
+  .pz-shell-footer__link {
+    color: white;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    opacity: 0.86;
+    transition: opacity var(--pz-transition-base), transform var(--pz-transition-spring);
+  }
+
+  .pz-shell-footer__link:hover {
+    opacity: 1;
+    transform: translateX(4px);
+    color: var(--pz-color-earth-orange);
+  }
+
+  .pz-shell-footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--pz-space-3);
+    padding-top: var(--pz-space-5);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.46);
+  }
+
+  @media (min-width: 960px) {
+    .pz-shell-footer__cta {
+      grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 0.9fr);
+      align-items: end;
+    }
+
+    .pz-shell-footer__cta-links {
+      justify-content: flex-end;
+    }
+  }
+
+  .pz-nav__dropdown-item--activate {
+    opacity: 0.7;
+    font-size: 0.8rem;
+  }
+
+  .pz-nav__dropdown-item--activate:hover {
+    opacity: 1;
+  }
+
+  .pz-nav__mobile-section-label {
+    font-family: var(--pz-font-mono);
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .pz-nav__mobile-link--dim {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+  }
+
   .u-hide-tablet {
     display: none !important;
   }
@@ -1018,21 +1093,6 @@
   @media (min-width: 1024px) {
     .u-hide-tablet {
       display: flex !important;
-    }
-
-    /* Special case for nav menu which is center display */
-    .u-hide-tablet.pz-nav__menu {
-      display: flex !important;
-    }
-  }
-
-  .u-show-tablet {
-    display: block !important;
-  }
-
-  @media (min-width: 1024px) {
-    .u-show-tablet {
-      display: none !important;
     }
   }
 
@@ -1043,11 +1103,6 @@
   @media (min-width: 768px) {
     .u-hide-mobile {
       display: flex !important;
-    }
-
-    /* Ensure span inside block displays correctly */
-    .u-hide-mobile.pz-nav__username {
-      display: inline !important;
     }
   }
 </style>

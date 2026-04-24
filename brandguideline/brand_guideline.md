@@ -18,6 +18,9 @@ src/
 │   ├── PzInput.vue
 │   ├── PzBadge.vue
 │   ├── PzDataTable.vue
+│   ├── PzSectionHeader.vue
+│   ├── PzEmptyState.vue
+│   ├── PzLoadingState.vue
 │   ├── PzNavigation.vue
 │   └── PzPhaseIndicator.vue
 └── main.js
@@ -25,7 +28,56 @@ src/
 
 ---
 
-## 2. Global Styles
+## 2A. Brand UX System
+
+The Paanguzo brand should not stop at color and typography. It should also define how the product behaves.
+
+### Canonical product patterns
+
+- `dashboard shell`
+  dark structural side rail, instrument header, quick-stat strip, framed workspace
+- `section shell`
+  eyebrow, display title, short operational meta line, action zone
+- `empty state`
+  mono eyebrow, compact glyph, direct title, one practical explanation
+- `loading state`
+  restrained structural indicator, mono status label, no playful spinner language
+- `data table`
+  dark head, mono labels, quiet rows, strong numeric alignment
+- `notification toast`
+  framed card, colored left rail, mono time stamp, short operational message
+
+### Voice rules
+
+- prefer clear action verbs over generic software phrasing
+- keep system-like labels readable by normal users
+- use operational language in dashboards and workflow tools
+- use warmer, more expansive language on public discovery pages
+
+### Color discipline
+
+- black and limestone should carry most surfaces
+- orange is directional and should mark priority actions, active edges, and key signals
+- copper is reserved for finance or commercial meaning
+- blue is reserved for system/info states
+- green is reserved for healthy/success states
+- decorative color use should be minimal
+
+### Motion rules
+
+- motion should support structure, not decorate emptiness
+- prefer stagger, reveal, and panel shift over floaty bounce
+- if motion is removed, the screen should still feel premium
+
+### Brand rejection test
+
+If a screen feels like a generic SaaS admin after removing gradients and shadows, it is not branded enough.
+If a screen needs orange everywhere to feel branded, it is over-styled.
+If a workflow changes voice halfway through, it is under-systematized.
+
+---
+
+## 3. Global Styles
 
 ### `src/styles/variables.css`
 
@@ -57,9 +109,9 @@ src/
   --pz-color-accent-innovation: var(--pz-color-african-violet);
   
   /* Typography */
-  --pz-font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --pz-font-display: 'Space Grotesk', sans-serif;
-  --pz-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --pz-font-primary: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --pz-font-display: 'Sora', 'IBM Plex Sans', sans-serif;
+  --pz-font-mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
   
   /* Type Scale */
   --pz-text-display: 4rem;
@@ -121,7 +173,7 @@ src/
 ### `src/styles/base.css`
 
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@700&family=JetBrains+Mono:wght@400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@600;700;800&display=swap');
 
 *,
 *::before,
@@ -226,7 +278,7 @@ a:hover {
 
 ---
 
-## 3. Vue Components
+## 4. Vue Components
 
 ### `PzButton.vue`
 
@@ -978,7 +1030,7 @@ const indicatorClasses = computed(() => ({
     <title>Paanguzo - Global Construction Marketplace OS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="app"></div>

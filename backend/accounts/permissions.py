@@ -1,40 +1,50 @@
 from rest_framework import permissions
 
+def user_has_role(user, role):
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, 'role', None) == 'ADMIN':
+        return True
+    if getattr(user, 'role', None) == role:
+        return True
+    return role in (getattr(user, 'roles', None) or [])
+
+
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'ADMIN'
+        return user_has_role(request.user, 'ADMIN')
 
 class IsProjectOwner(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'PROJECT_OWNER'
+        return user_has_role(request.user, 'PROJECT_OWNER')
 
 class IsContractor(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'CONTRACTOR'
+        return user_has_role(request.user, 'CONTRACTOR')
 
 class IsVendorOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user and request.user.is_authenticated and request.user.role == 'VENDOR'
+        return user_has_role(request.user, 'VENDOR')
 
 class IsProjectOwnerOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user and request.user.is_authenticated and request.user.role == 'PROJECT_OWNER'
+        return user_has_role(request.user, 'PROJECT_OWNER')
 
 class IsVendor(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'VENDOR'
+        return user_has_role(request.user, 'VENDOR')
 
 class IsInvestor(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'INVESTOR'
+        return user_has_role(request.user, 'INVESTOR')
 
 class IsGovernment(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'GOVERNMENT'
+        return user_has_role(request.user, 'GOVERNMENT')
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -42,6 +52,9 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     Assumes the model instance has an `owner` or `user` attribute.
     """
     def has_object_permission(self, request, view, obj):
+        if user_has_role(request.user, 'ADMIN'):
+            return True
+            
         if request.method in permissions.SAFE_METHODS:
             return True
         

@@ -11,7 +11,7 @@
         variant: {
             type: String,
             default: 'default',
-            validator: (v) => ['default', 'secondary', 'primary', 'success', 'warning', 'danger', 'error', 'info', 'finance'].includes(v)
+            validator: (v) => ['default', 'secondary', 'primary', 'success', 'warning', 'danger', 'error', 'info', 'finance', 'ghost', 'earth', 'savanna'].includes(v)
         },
         size: {
             type: String,
@@ -24,10 +24,14 @@
         if (v === 'secondary') v = 'default';
         if (v === 'danger') v = 'error';
         if (v === 'primary') v = 'info';
+        if (v === 'earth') v = 'warning';
+        if (v === 'savanna') v = 'success';
 
         let s = props.size;
+        if (s === 'xs') s = 'small';
         if (s === 'md') s = 'medium';
         if (s === 'sm') s = 'small';
+        if (s === 'lg' || s === 'large') s = 'large';
 
         return {
             'pz-badge': true,
@@ -41,21 +45,28 @@
     .pz-badge {
         display: inline-flex;
         align-items: center;
-        font-family: var(--pz-font-primary);
-        font-weight: var(--pz-weight-medium);
+        font-family: var(--pz-font-mono);
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border-radius: var(--pz-border-radius);
+        letter-spacing: 0.12em;
+        border-radius: var(--pz-border-radius-sm);
+        border: 1px solid currentColor;
+        line-height: 1;
     }
 
     .pz-badge--small {
-        padding: 0.25rem 0.5rem;
-        font-size: var(--pz-text-caption);
+        padding: 0.28rem 0.52rem;
+        font-size: 0.62rem;
     }
 
     .pz-badge--medium {
-        padding: 0.5rem 0.75rem;
-        font-size: var(--pz-text-small);
+        padding: 0.42rem 0.7rem;
+        font-size: 0.68rem;
+    }
+
+    .pz-badge--large {
+        padding: 0.55rem 0.9rem;
+        font-size: 0.72rem;
     }
 
     .pz-badge--default {
@@ -84,7 +95,12 @@
     }
 
     .pz-badge--error {
-        background-color: rgba(212, 101, 42, 0.15);
-        color: #B8531F;
+        background-color: var(--pz-color-danger-soft);
+        color: var(--pz-color-danger);
+    }
+
+    .pz-badge--ghost {
+        background-color: transparent;
+        color: var(--pz-color-structural-steel);
     }
 </style>

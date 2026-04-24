@@ -21,6 +21,7 @@ class Notification(models.Model):
         ESCROW = 'ESCROW', 'Escrow Status'
         DISPUTE = 'DISPUTE', 'Dispute Update'
         SYSTEM = 'SYSTEM', 'System Alert'
+        CHAT = 'CHAT', 'New Message'
 
     class Status(models.TextChoices):
         PENDING = 'PENDING', 'Pending'

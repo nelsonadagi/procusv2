@@ -1,5 +1,7 @@
 from rest_framework import permissions
 from django.contrib.auth.models import Group
+from logistics.models import CourierProfile # Import here for type checking
+from accounts.permissions import user_has_role
 
 class HasRequiredPermission(permissions.BasePermission):
     """
@@ -16,8 +18,8 @@ class HasRequiredPermission(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         
-        # Superuser has all permissions
-        if request.user.is_superuser:
+        # Superuser or ADMIN has all permissions
+        if request.user.is_superuser or user_has_role(request.user, 'ADMIN'):
             return True
 
         permission_map = getattr(view, 'permission_map', {})
@@ -53,6 +55,9 @@ class IsVendorOwner(permissions.BasePermission):
     Works for Product and Order models.
     """
     def has_object_permission(self, request, view, obj):
+        if user_has_role(request.user, 'ADMIN'):
+            return True
+            
         if not hasattr(request.user, 'vendor_profile'):
             return False
         
@@ -60,9 +65,35 @@ class IsVendorOwner(permissions.BasePermission):
         # If object is a Product
         if hasattr(obj, 'vendor'):
             return obj.vendor == vendor
+        # If object is a ProductImage
+        if hasattr(obj, 'product'):
+            return obj.product.vendor == vendor
         # If object is a Vendor profile itself
         if hasattr(obj, 'user'):
             return obj.user == request.user
+            
+        return False
+
+class IsCourierOwner(permissions.BasePermission):
+    """
+    Checks if the user is the owner of the courier profile for the object.
+    """
+    def has_object_permission(self, request, view, obj):
+        if user_has_role(request.user, 'ADMIN'):
+            return True
+            
+        if not hasattr(request.user, 'courier_profile'):
+            return False
+        
+        courier = request.user.courier_profile
+        
+        # If object is a CourierProfile
+        if isinstance(obj, CourierProfile):
+            return obj == courier
+            
+        # If object is linked to a courier (e.g. Shipment, PricingZone)
+        if hasattr(obj, 'courier'):
+            return obj.courier == courier
             
         return False
 
@@ -71,6 +102,8 @@ class VendorApprovedOnly(permissions.BasePermission):
     Checks if the vendor is approved.
     """
     def has_permission(self, request, view):
+        if user_has_role(request.user, 'ADMIN'):
+            return True
         if not hasattr(request.user, 'vendor_profile'):
             return False
         return request.user.vendor_profile.verified_status == 'APPROVED'
@@ -83,13 +116,15 @@ class IsBuyer(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return request.user.role in ['PROJECT_OWNER', 'CONTRACTOR', 'ADMIN']
+        return user_has_role(request.user, 'PROJECT_OWNER') or user_has_role(request.user, 'CONTRACTOR')
 
 class IsOrderOwner(permissions.BasePermission):
     """
     Checks if the user is the buyer or the vendor of the order.
     """
     def has_object_permission(self, request, view, obj):
+        if user_has_role(request.user, 'ADMIN'):
+            return True
         if obj.buyer == request.user:
             return True
         if hasattr(request.user, 'vendor_profile') and obj.vendor == request.user.vendor_profile:
@@ -101,11 +136,11 @@ class IsQuoteOwner(permissions.BasePermission):
     Checks if the user is the buyer who requested the quote or the vendor responding.
     """
     def has_object_permission(self, request, view, obj):
+        if user_has_role(request.user, 'ADMIN'):
+            return True
         # QuoteRequest has a buyer
         if hasattr(obj, 'buyer') and obj.buyer == request.user:
             return True
-        # QuoteRequest items? (not usually checked per item but per request)
-        
         # Responses?
         if hasattr(obj, 'quote_request') and obj.quote_request.buyer == request.user:
             return True

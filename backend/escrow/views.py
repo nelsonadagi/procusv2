@@ -6,12 +6,21 @@ from .models import EscrowAccount, EscrowTransaction, EscrowRelease
 from .serializers import EscrowAccountSerializer, EscrowReleaseSerializer
 from contracts.models import Contract
 from milestones.models import Milestone
+from rbac.permissions import HasRequiredPermission
 
 class EscrowViewSet(viewsets.ModelViewSet):
     # This viewset might handle funding and checking status
     queryset = EscrowAccount.objects.all()
     serializer_class = EscrowAccountSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
+    required_permission = 'escrow:view'
+    permission_map = {
+        'create': 'escrow:deposit_funds',
+        'deposit': 'escrow:deposit_funds',
+        'update': 'escrow:deposit_funds',
+        'partial_update': 'escrow:deposit_funds',
+    }
+    throttle_scope = 'payment_gateway'
 
     # Only owner should see their escrow? For MVP admin sees all.
     # In URL structure /contracts/{id}/escrow, so maybe we need a dedicated view method.
@@ -47,7 +56,15 @@ class EscrowViewSet(viewsets.ModelViewSet):
 class EscrowReleaseViewSet(viewsets.ModelViewSet):
     queryset = EscrowRelease.objects.all()
     serializer_class = EscrowReleaseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
+    required_permission = 'escrow:view'
+    permission_map = {
+        'create': 'escrow:release_funds',
+        'trigger': 'escrow:release_funds',
+        'update': 'escrow:release_funds',
+        'partial_update': 'escrow:release_funds',
+    }
+    throttle_scope = 'payment_gateway'
     
     @action(detail=False, methods=['post'], url_path='trigger')
     def trigger(self, request):

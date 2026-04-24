@@ -4,13 +4,16 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     volumes:
       - ./backend:/app
+      - media-data:/app/media # Volume for media files
     ports:
-      - "8000:8000"
+      - "8007:8000"
     env_file:
       - .env
+    environment:
+      - RUN_BOOTSTRAP_TASKS=1
     depends_on:
       - postgres
       - redis
@@ -28,14 +31,14 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000/api
+      - VITE_API_URL=http://localhost:8007/api
     networks:
       - marketplace-net
     depends_on:
       - backend
 
   postgres:
-    image: postgres:15
+    image: postgis/postgis:15-3.3
     environment:
       - POSTGRES_DB=marketplace
       - POSTGRES_USER=postgres
@@ -64,6 +67,8 @@ services:
       - ./backend:/app
     env_file:
       - .env
+    environment:
+      - RUN_BOOTSTRAP_TASKS=0
     depends_on:
       - backend
       - redis
@@ -79,6 +84,8 @@ services:
       - ./backend:/app
     env_file:
       - .env
+    environment:
+      - RUN_BOOTSTRAP_TASKS=0
     depends_on:
       - backend
       - redis
@@ -90,3 +97,4 @@ networks:
 
 volumes:
   postgres-data:
+  media-data:

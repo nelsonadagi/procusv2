@@ -4,11 +4,21 @@ from rest_framework.decorators import action
 from .models import Bid
 from .serializers import BidSerializer
 from contracts.models import Contract
+from rbac.permissions import HasRequiredPermission
 
 class BidViewSet(viewsets.ModelViewSet):
     queryset = Bid.objects.all()
     serializer_class = BidSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
+    required_permission = 'bids:view'
+    permission_map = {
+        'create': 'bids:submit_bid',
+        'update': 'bids:submit_bid',
+        'partial_update': 'bids:submit_bid',
+        'destroy': 'bids:withdraw_bid',
+        'shortlist': 'bids:view',
+        'award': 'bids:award_bid',
+    }
 
     def get_queryset(self):
         user = self.request.user
@@ -22,8 +32,8 @@ class BidViewSet(viewsets.ModelViewSet):
         if hasattr(user, 'contractor_profile'):
             serializer.save(contractor=user.contractor_profile)
         else:
-            # Fallback or error if not contractor
-            pass
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Only users with a contractor profile can submit bids.")
 
     @action(detail=True, methods=['post'], url_path='shortlist')
     def shortlist(self, request, pk=None):

@@ -4,8 +4,7 @@
             <template #header>
                 <div class="pz-u-text-center">
                     <h2 class="pz-u-text-display text-2xl u-mb-2">Contractor Registration</h2>
-                    <p class="pz-u-text-mono text-xs pz-u-color-steel">Expand your business by accessing exclusive
-                        construction tenders.</p>
+                    <p class="pz-u-text-mono text-xs pz-u-color-steel">Join our network to access exclusive construction tenders and expand your business.</p>
                 </div>
             </template>
 
@@ -15,13 +14,10 @@
                     <PzInput v-model="form.company_name" label="Company Name" placeholder="e.g. Apex Builders Ltd"
                         required />
 
-                    <div class="pz-input-wrapper">
-                        <label class="pz-input__label">Operating Region</label>
-                        <select v-model="form.operating_region" class="pz-input" required>
-                            <option value="" disabled>Select Region</option>
-                            <option v-for="region in regions" :key="region" :value="region">{{ region }}</option>
-                        </select>
-                    </div>
+                <div class="pz-location-section">
+                    <label class="pz-input__label u-mb-2">Business Location</label>
+                    <LocationInterface v-model="locationState" @change="handleLocationChange" />
+                </div>
                 </div>
 
                 <!-- Service Categories -->
@@ -38,9 +34,9 @@
                             <span v-if="form.service_categories.includes(category.name)">✓</span>
                         </div>
                     </div>
-                    <p class="pz-u-text-mono text-xs pz-u-color-concrete u-mt-2">SELECTED: {{
+                    <p class="pz-u-text-mono text-xs pz-u-color-concrete u-mt-2">Selected: {{
                         form.service_categories.length }}
-                        SERVICES</p>
+                        services</p>
                 </div>
 
                 <!-- Terms -->
@@ -48,15 +44,15 @@
                     <label
                         class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-3 pz-u-text-mono text-sm cursor-pointer">
                         <input type="checkbox" v-model="agreedToTerms" required />
-                        <span>I VERIFY THAT MY COMPANY IS LEGALLY REGISTERED AND I AGREE TO THE <a href="#"
-                                class="pz-u-color-earth hover:underline">TERMS OF SERVICE</a>.</span>
+                        <span>I verify that my company is legally registered and I agree to the <a href="#"
+                                class="pz-u-color-earth hover:underline">Terms of Service</a>.</span>
                     </label>
                 </div>
 
                 <div class="u-mt-4">
                     <Button type="submit" variant="primary" size="lg" fullWidth :loading="submitting"
                         :disabled="!isFormValid">
-                        SUBMIT APPLICATION
+                        Submit Application
                     </Button>
                 </div>
             </form>
@@ -65,25 +61,45 @@
 </template>
 
 <script setup>
-    import { ref, onMounted, computed } from 'vue';
+    import { ref, onMounted, computed, inject } from 'vue';
     import { useRouter } from 'vue-router';
     import api from '../services/api';
     import Card from '../components/ui/Card.vue';
     import Button from '../components/ui/Button.vue';
     import PzInput from '../components/PzInput.vue';
+    import LocationInterface from '../components/ui/LocationInterface.vue';
 
     const router = useRouter();
+    const showAlert = inject('showAlert');
     const submitting = ref(false);
     const loadingCategories = ref(true);
     const agreedToTerms = ref(false);
 
     const form = ref({
         company_name: '',
-        operating_region: '',
+        location_text: '',
+        latitude: null,
+        longitude: null,
+        formatted_address: '',
+        country: null,
         service_categories: [] // Stores 'name' strings
     });
 
-    const regions = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika', 'Machakos'];
+    const locationState = ref({
+        lat: -1.2921,
+        lng: 36.8219,
+        address: '',
+        city: '',
+        country_id: null
+    });
+
+    function handleLocationChange(loc) {
+        form.value.latitude = loc.lat;
+        form.value.longitude = loc.lng;
+        form.value.formatted_address = loc.address;
+        form.value.location_text = loc.city;
+        form.value.country = loc.country_id;
+    }
     const categories = ref([]);
 
     onMounted(async () => {
@@ -109,7 +125,7 @@
 
     const isFormValid = computed(() => {
         return form.value.company_name &&
-            form.value.operating_region &&
+            form.value.location_text &&
             form.value.service_categories.length > 0 &&
             agreedToTerms.value;
     });
@@ -118,12 +134,12 @@
         submitting.value = true;
         try {
             await api.post('/contractors/register/', form.value);
-            alert('Application Submitted! Pending Admin Approval.');
-            router.push('/contractor-dashboard');
+            showAlert('Application submitted successfully. Pending admin approval.', 'success');
+            router.push('/contractor/dashboard');
         } catch (err) {
             console.error('Registration failed:', err);
             const msg = err.response?.data?.detail || err.response?.data?.error || 'Registration failed.';
-            alert(msg);
+            showAlert(msg, 'error');
         } finally {
             submitting.value = false;
         }

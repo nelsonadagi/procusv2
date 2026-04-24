@@ -7,6 +7,16 @@ from contracts.models import Contract
 from escrow.models import EscrowAccount
 from milestones.models import Milestone
 
+from django.core.management import call_command
+import pytest
+
+@pytest.fixture(scope='session', autouse=True)
+def seed_rbac(django_db_setup, django_db_blocker):
+    from django.conf import settings
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    with django_db_blocker.unblock():
+        call_command('seed_roles')
+
 User = get_user_model()
 
 class OrganizationFactory(DjangoModelFactory):
@@ -81,3 +91,7 @@ def vendor(db):
 @pytest.fixture
 def admin_user(db):
     return UserFactory(role=User.Role.ADMIN, is_staff=True, is_superuser=True)
+
+@pytest.fixture
+def investor(db):
+    return UserFactory(role=User.Role.INVESTOR)
