@@ -430,7 +430,7 @@ The Vue SPA provides role-specific dashboards and shared views:
 | `ContractorDashboard.vue` | `/contractor` | Contractor |
 | `ContractorRegistration.vue` | `/contractor/register` | Public |
 | `InvestorDashboard.vue` | `/investor` | Investor |
-| `OwnerDashboard.vue` | `/owner` | Project Owner |
+| `OwnerDashboard.vue` | `/owner/dashboard` | Project Owner |
 | `ProductList.vue` | `/products` | Buyer / All |
 | `ProductDetail.vue` | `/products/:id` | Buyer / All |
 | `ProjectList.vue` | `/projects` | All |
@@ -438,7 +438,7 @@ The Vue SPA provides role-specific dashboards and shared views:
 | `CreateProject.vue` | `/projects/new` | Owner |
 | `ContractList.vue` | `/contracts` | All |
 | `ContractDetail.vue` | `/contracts/:id` | All |
-| `PostContract.vue` | `/contracts/new` | Owner / Admin |
+| `PostContract.vue` | `/contracts/new` | Project Owner / Admin |
 | `ViewTenders.vue` | `/tenders` | Contractor |
 | `SecondaryMarket.vue` | `/market` | Investor |
 | `RegulatoryReports.vue` | `/reports` | Admin / Staff |

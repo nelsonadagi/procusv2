@@ -101,9 +101,16 @@ Owner shortlists bid.
 
 Owner awards contract to contractor.
 
+Side effects:
+
+* Awarded bid status → `AWARDED`
+* All other bids on this contract → auto-rejected (`REJECTED`)
+* Contract status → `AWARDED`
+
 Response:
 
-* contract_status = AWARDED
+* status = "Bid awarded"
+* contract_status = "AWARDED"
 
 ---
 
@@ -121,13 +128,54 @@ Request:
 
 ---
 
+### POST `/milestones/{id}/complete`
+
+Contractor marks milestone as completed.
+
+* Only the awarded contractor can complete milestones.
+* Milestone must be in `PENDING` state.
+* Side effect: if contract status is `AWARDED`, it auto-progresses to `IN_PROGRESS`.
+
+Response:
+
+* status = "Milestone marked complete"
+* contract_status (may be "IN_PROGRESS" if first completion)
+
+---
+
 ### POST `/milestones/{id}/approve`
 
 Owner approves milestone completion.
 
+* Milestone must be in `COMPLETED` state.
+* Side effect: if all milestones on the contract are `APPROVED`, contract auto-progresses to `COMPLETED`.
+
+Response:
+
+* status = "Milestone approved"
+* payment_status = "PENDING_RELEASE"
+* contract_status (may be "COMPLETED" if final milestone)
+
 ---
 
-## 5. Reviews
+## 5. Contract Status Lifecycle
+
+```
+PENDING → POSTED → BIDDING → AWARDED → IN_PROGRESS → COMPLETED
+   ↑         ↑         ↑          ↑            ↑
+  draft   publish   1st bid   bid award   1st milestone
+                               (auto-reject   complete
+                                others)
+```
+
+* `PENDING` — Owner draft, not visible to public
+* `POSTED` — Published to marketplace, accepting bids
+* `BIDDING` — Bids received (set manually or via first bid)
+* `AWARDED` — Contractor selected, owner defines milestones
+* `IN_PROGRESS` — Contractor marked first milestone complete
+* `COMPLETED` — All milestones approved by owner
+
+## 6. Reviews
 
 ### POST `/contracts/{id}/review`
 
@@ -140,11 +188,13 @@ Request:
 
 ---
 
-## 6. Permissions
+## 7. Permissions
 
-* Only owners can post contracts
+* Only owners can post, publish, and manage their contracts
 * Only contractors can bid
 * Only owners can shortlist/award
+* Only the awarded contractor can complete milestones
+* Only the contract owner can approve milestones
 
 ---
 

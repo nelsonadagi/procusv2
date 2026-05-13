@@ -17,7 +17,8 @@ class BidViewSet(viewsets.ModelViewSet):
         'partial_update': 'bids:submit_bid',
         'destroy': 'bids:withdraw_bid',
         'shortlist': 'bids:view',
-        'award': 'bids:award_bid',
+        # Awarding a bid is part of the contract lifecycle, so reuse the contract-award permission.
+        'award': 'contracts:award_contract',
     }
 
     def get_queryset(self):
@@ -50,14 +51,16 @@ class BidViewSet(viewsets.ModelViewSet):
         bid = self.get_object()
         if bid.contract.owner != request.user:
             return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
-            
-        # Reject others? 
-        # Update Contract status
+
+        contract = bid.contract
+
+        # Auto-reject all other bids on this contract
+        contract.bids.exclude(pk=bid.pk).update(status=Bid.Status.REJECTED)
+
         bid.status = Bid.Status.AWARDED
         bid.save()
-        
-        contract = bid.contract
-        contract.status = 'AWARDED' # Or Contract.Status.AWARDED
+
+        contract.status = contract.Status.AWARDED
         contract.save()
-        
-        return Response({"status": "Bid awarded", "contract_status": "AWARDED"})
+
+        return Response({"status": "Bid awarded", "contract_status": contract.status})

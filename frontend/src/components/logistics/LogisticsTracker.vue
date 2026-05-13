@@ -131,10 +131,12 @@
 <script setup>
     import { ref, onMounted, onUnmounted, watch, nextTick, inject } from 'vue';
     import api from '../../services/api';
+    import { useConfigStore } from '../../stores/config';
     import Badge from '../ui/Badge.vue';
     import Button from '../ui/Button.vue';
 
     const showAlert = inject('showAlert');
+    const configStore = useConfigStore();
     const props = defineProps({
         trackingNumber: {
             type: String,
@@ -262,7 +264,7 @@
     }
     
     function formatCurrency(val) {
-        return new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(val);
+        return configStore.formatPrice ? configStore.formatPrice(Number(val || 0), 'KES') : new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(val);
     }
 
     onMounted(() => {

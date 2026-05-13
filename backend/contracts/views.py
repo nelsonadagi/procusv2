@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status, permissions
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from accounts.permissions import IsProjectOwnerOrReadOnly, IsContractor
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -10,9 +11,11 @@ from bids.models import Bid
 from bids.serializers import BidSerializer
 from milestones.models import Milestone
 from milestones.serializers import MilestoneSerializer
+from projects.models import ProjectContractLink
 from reviews.models import ContractorReview
 from reviews.serializers import ContractorReviewSerializer
 from contractors.models import ContractorProfile
+from platform_settings.utils import resolve_request_country_code
 
 from rbac.permissions import HasRequiredPermission
 from rbac.utils import log_action
@@ -20,6 +23,7 @@ from rbac.utils import log_action
 class ContractViewSet(viewsets.ModelViewSet):
     queryset = Contract.objects.all().order_by('-created_at')
     serializer_class = ContractSerializer
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
     permission_classes = [HasRequiredPermission]
     required_permission = 'contracts:view'
     permission_map = {
@@ -27,6 +31,7 @@ class ContractViewSet(viewsets.ModelViewSet):
         'update': 'contracts:post_contract',
         'partial_update': 'contracts:post_contract',
         'destroy': 'contracts:post_contract',
+        'publish': 'contracts:post_contract',
         'bids': 'bids:view', # Post bid handled inside
         'milestones': 'milestones:manage_milestones',
     }
@@ -35,9 +40,29 @@ class ContractViewSet(viewsets.ModelViewSet):
         contract = serializer.save(owner=self.request.user)
         log_action(self.request.user, 'POST_CONTRACT', 'contract', contract.id)
 
+    @action(detail=True, methods=['post'], url_path='publish')
+    def publish(self, request, pk=None):
+        """Owner publishes a PENDING contract to the marketplace (POSTED)."""
+        contract = self.get_object()
+        if contract.owner != request.user:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        if contract.status != Contract.Status.PENDING:
+            return Response({"error": f"Contract is already {contract.status}."}, status=status.HTTP_400_BAD_REQUEST)
+
+        contract.status = Contract.Status.POSTED
+        contract.save()
+        log_action(request.user, 'PUBLISH_CONTRACT', 'contract', contract.id)
+        return Response({"status": "Contract published", "contract_status": contract.status})
+
     def get_queryset(self):
         try:
-            qs = super().get_queryset()
+            qs = (
+                super()
+                .get_queryset()
+                .select_related('owner', 'category')
+                .prefetch_related('attachments', 'milestones', 'bids__contractor')
+            )
             
             # If user is not admin and didn't specify a status, default to POSTED (Public Tenders)
             # This ensures regular users don't see 'PENDING' moderation queue contracts.
@@ -59,6 +84,13 @@ class ContractViewSet(viewsets.ModelViewSet):
             location = self.request.query_params.get('location')
             if location:
                 qs = qs.filter(location__icontains=location)
+
+            country_code = resolve_request_country_code(self.request)
+            if country_code:
+                country_filter = Q(country__iso_code__iexact=country_code)
+                if str(country_code).isdigit():
+                    country_filter |= Q(country_id=country_code)
+                qs = qs.filter(country_filter)
                 
             search = self.request.query_params.get('search')
             if search:
@@ -117,18 +149,23 @@ class ContractViewSet(viewsets.ModelViewSet):
     def milestones(self, request, pk=None):
         contract = self.get_object()
         awarded_bid = contract.bids.filter(status='AWARDED').select_related('contractor__user').first()
+        linked_project = ProjectContractLink.objects.select_related('project', 'project__owner').filter(contract=contract).first()
+        can_manage_milestones = bool(
+            contract.owner == request.user
+            or (linked_project and request.user.is_authenticated and linked_project.project.owner == request.user)
+        )
 
         if request.method == 'GET':
             is_awarded_contractor = bool(
                 awarded_bid and request.user.is_authenticated and request.user == awarded_bid.contractor.user
             )
-            if contract.owner != request.user and not is_awarded_contractor:
+            if not can_manage_milestones and not is_awarded_contractor:
                 return Response({"error": "Not authorized to view milestones"}, status=status.HTTP_403_FORBIDDEN)
 
             serializer = MilestoneSerializer(contract.milestones.all().order_by('due_date', 'id'), many=True)
             return Response(serializer.data)
 
-        if contract.owner != request.user:
+        if not can_manage_milestones:
             return Response({"error": "Only owner can define milestones"}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = MilestoneSerializer(data=request.data)

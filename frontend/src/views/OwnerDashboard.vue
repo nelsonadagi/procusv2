@@ -18,6 +18,7 @@
         title: 'Quick Actions',
         items: [
           { id: 'new-project', label: 'Start New Project', icon: '+', action: () => $router.push('/projects/new') },
+          { id: 'new-contract', label: 'Post a Tender', icon: '⊕', action: () => $router.push('/contracts/new') },
           { id: 'exit', label: 'Exit Dashboard', icon: '⇚', action: () => $router.push('/') }
         ]
       }
@@ -35,7 +36,7 @@
       <div class="pz-l-grid pz-l-grid--md-cols-3 pz-l-grid--gap-6 u-mb-12">
         <div class="pz-command-node pz-card--interactive u-hover-spring pz-glass-surface">
           <div class="pz-command-node__label">Total Investment</div>
-          <div class="pz-command-node__value pz-u-color-savanna">{{ configStore.formatPrice(totalBudget) }}</div>
+          <div class="pz-command-node__value pz-u-color-savanna">{{ configStore.formatPrice(totalBudget, 'KES') }}</div>
           <div class="pz-command-node__accent"></div>
         </div>
         <div class="pz-command-node pz-card--interactive u-hover-spring pz-glass-surface">
@@ -142,21 +143,21 @@
           <div class="pz-finance-card__icon pz-u-bg-savanna-soft">◈</div>
           <div class="pz-finance-card__content">
             <div class="pz-finance-card__label">Total Escrow Balance</div>
-            <div class="pz-finance-card__value">KSh 12,450,000</div>
+            <div class="pz-finance-card__value">{{ formatMoney(12450000) }}</div>
           </div>
         </div>
         <div class="pz-finance-card pz-glass-surface">
           <div class="pz-finance-card__icon pz-u-bg-copper-soft">◷</div>
           <div class="pz-finance-card__content">
             <div class="pz-finance-card__label">Pending Releases</div>
-            <div class="pz-finance-card__value">KSh 3,250,000</div>
+            <div class="pz-finance-card__value">{{ formatMoney(3250000) }}</div>
           </div>
         </div>
         <div class="pz-finance-card pz-glass-surface">
           <div class="pz-finance-card__icon pz-u-bg-steel-soft">✓</div>
           <div class="pz-finance-card__content">
             <div class="pz-finance-card__label">Completed Payments</div>
-            <div class="pz-finance-card__value">KSh 45,800,000</div>
+            <div class="pz-finance-card__value">{{ formatMoney(45800000) }}</div>
           </div>
         </div>
       </div>
@@ -246,10 +247,14 @@ const configStore = useConfigStore();
 const activeTab = ref('projects');
 const projects = ref([]);
 
+function formatMoney(value) {
+  return configStore.formatPrice(Number(value || 0), 'KES');
+}
+
 const escrowTransactions = ref([
-  { id: 'TRX-9982', project: 'Nairobi Heights', amount: 'KSh 2,500,000', status: 'Released', date: 'Oct 12, 2025' },
-  { id: 'TRX-9981', project: 'Lavington Villas', amount: 'KSh 850,000', status: 'In Escrow', date: 'Oct 10, 2025' },
-  { id: 'TRX-9980', project: 'Westlands Commercial', amount: 'KSh 4,200,000', status: 'Pending Approval', date: 'Oct 05, 2025' }
+  { id: 'TRX-9982', project: 'Nairobi Heights', amount: formatMoney(2500000), status: 'Released', date: 'Oct 12, 2025' },
+  { id: 'TRX-9981', project: 'Lavington Villas', amount: formatMoney(850000), status: 'In Escrow', date: 'Oct 10, 2025' },
+  { id: 'TRX-9980', project: 'Westlands Commercial', amount: formatMoney(4200000), status: 'Pending Approval', date: 'Oct 05, 2025' }
 ]);
 
 const activityLogs = ref([

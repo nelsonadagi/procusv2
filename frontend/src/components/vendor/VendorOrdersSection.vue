@@ -48,12 +48,12 @@
             <div v-for="item in order.items" :key="item.id"
               class="pz-l-flex pz-l-flex--justify-between u-py-2 pz-u-border-b" style="border-bottom-style: dashed;">
               <span class="pz-u-text-mono text-xs">{{ item.quantity }}x {{ item.product_name_snapshot }}</span>
-              <span class="pz-u-text-mono text-xs font-bold">{{ configStore.formatPrice(item.unit_price_snapshot)
+              <span class="pz-u-text-mono text-xs font-bold">{{ configStore.formatPrice(item.unit_price_snapshot, order.currency || 'KES')
                 }}</span>
             </div>
             <div class="u-mt-6 pz-l-flex pz-l-flex--justify-between pz-l-flex--align-end">
               <span class="pz-u-text-mono text-xs font-bold">TOTAL_VALUATION</span>
-              <span class="pz-u-text-display text-xl pz-u-color-savanna">{{ configStore.formatPrice(order.total_amount)
+              <span class="pz-u-text-display text-xl pz-u-color-savanna">{{ configStore.formatPrice(order.total_amount, order.currency || 'KES')
                 }}</span>
             </div>
           </div>

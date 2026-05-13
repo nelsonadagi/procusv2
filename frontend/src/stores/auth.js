@@ -21,6 +21,30 @@ export const useAuthStore = defineStore('auth', {
             if (state.user?.role === 'ADMIN') return true;
             if (state.user?.role === role) return true;
             return state.user?.roles?.includes(role) || false;
+        },
+        hasPermission: (state) => (permission) => {
+            if (state.user?.role === 'ADMIN' || state.user?.is_staff) return true;
+            const userRole = state.user?.role;
+            const userRoles = state.user?.roles || [];
+            // Check primary role permissions from backend
+            const rolePerms = state.user?.role_permissions || {};
+            if (rolePerms[permission]) return true;
+            // Fallback to role list check for frontend guards
+            const allRoles = [userRole, ...userRoles];
+            const rolePermissionMap = {
+                'PROPERTY_MANAGER': ['property:view', 'property:list_property', 'property:update_property', 'property:delete_property', 'property:manage_inquiries', 'property:manage_appointments'],
+                'REAL_ESTATE_AGENT': ['property:view', 'property:list_property', 'property:update_property', 'property:manage_inquiries', 'property:manage_appointments'],
+                'SURVEYOR': ['property:view', 'property:update_property', 'property:verify_property'],
+                'PROJECT_OWNER': ['property:view', 'property:list_property', 'property:update_property', 'property:delete_property', 'property:manage_inquiries', 'property:manage_appointments'],
+                'GOVERNMENT': ['property:view'],
+                'GOVERNMENT_OWNER': ['property:view', 'property:verify_property'],
+                'GOVERNMENT_AUDITOR': ['property:view', 'property:verify_property'],
+            };
+            for (const r of allRoles) {
+                const perms = rolePermissionMap[r] || [];
+                if (perms.includes(permission)) return true;
+            }
+            return false;
         }
     },
 

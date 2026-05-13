@@ -46,8 +46,9 @@ class PaymentGatewayConfigForm(forms.ModelForm):
 
 class PaymentGatewayConfigAdmin(admin.ModelAdmin):
     form = PaymentGatewayConfigForm
-    list_display = ('label', 'provider', 'active', 'is_test_mode')
-    list_filter = ('provider', 'active', 'is_test_mode')
+    list_display = ('label', 'provider', 'active', 'is_default', 'is_test_mode', 'display_order')
+    list_filter = ('provider', 'active', 'is_default', 'is_test_mode')
+    search_fields = ('label', 'provider', 'instructions')
 
 class ExchangeRateConfigForm(forms.ModelForm):
     api_key = forms.CharField(widget=forms.PasswordInput(), required=False, help_text="Encrypted API key if required")
@@ -72,8 +73,8 @@ class ExchangeRateConfigForm(forms.ModelForm):
 
 class ExchangeRateConfigAdmin(admin.ModelAdmin):
     form = ExchangeRateConfigForm
-    list_display = ('label', 'provider', 'active', 'last_sync')
-    list_filter = ('provider', 'active')
+    list_display = ('label', 'provider', 'active', 'is_default', 'last_sync')
+    list_filter = ('provider', 'active', 'is_default')
     actions = ['sync_rates_action']
 
     def sync_rates_action(self, request, queryset):

@@ -37,7 +37,7 @@
                                 class="pz-l-flex pz-l-flex--justify-between text-xs u-mb-1">
                                 <span>{{ item.quantity }}x {{ item.product_details?.name || 'Unknown Item' }}</span>
                                 <span class="pz-u-text-mono font-bold">{{
-                                    configStore.formatPrice(item.product_details?.base_price) }} (Base)</span>
+                                    configStore.formatPrice(item.product_details?.base_price, item.product_details?.effective_currency || item.product_details?.currency) }} (Base)</span>
                             </div>
                         </div>
 

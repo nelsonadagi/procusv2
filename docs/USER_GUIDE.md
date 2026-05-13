@@ -40,7 +40,7 @@ Every normal account starts in the shared `PROJECT_OWNER` workspace. In practice
 
 ### 🛒 Browsing and Ordering
 1. **Explore Catalogue**: Use the "Materials" section to browse products. Use filters to find exactly what you need (e.g., Cement, Steel, Timber).
-2. **View Details**: Click on a product to see description, base price, and availability.
+2. **View Details**: Click on a product to see description, base price, currency, and availability. The price is shown in your selected country currency, converted from the product's stored source currency.
 3. **Add to Order**: Enter the quantity and click **Order Now**.
 4. **Checkout**: Review your order summary and confirm the delivery address.
 
@@ -72,7 +72,7 @@ Vendor access is a specialized approved workflow layered onto the base account.
    - categories served
 3. **Wait for Approval**: Your supplier profile remains `PENDING` until an admin approves it. Vendor access should be treated as an approved specialization, not just a self-declared role.
 4. **Approved Access**: Once approved, your account can operate the vendor workspace without losing the base buyer-owner workspace.
-5. **List Products**: Use the **Inventory** tab to add new materials. Select a real material category, set unit price, stock quantity, reorder threshold, and publish status.
+5. **List Products**: Use the **Inventory** tab to add new materials. Select a real material category, choose the product currency, set unit price, stock quantity, reorder threshold, and publish status.
 6. **Bulk Import**: Use **Download Template** to get the CSV format, then use **Import CSV** to bulk-create products and initial stock.
 7. **Inventory Ledger**: The inventory view only shows products owned by your vendor profile. Use **Adjust** to add or remove stock with a note and reference.
 8. **Movement History**: Use **History** to review inventory commits, restocks, imports, and manual adjustments for each product.
@@ -109,7 +109,7 @@ Property managers operate standalone property assets inside the platform while p
 
 ### 🏢 Property Operations
 1. **Activate Property Manager Onboarding**: Open the property workspace and complete the onboarding flow to be approved as a `PROPERTY_MANAGER`.
-2. **List Properties**: Create and manage listings for land, residential, commercial, industrial, mixed-use, hospitality, renovation, and completed-project assets.
+2. **List Properties**: Create and manage listings for land, residential, commercial, industrial, mixed-use, hospitality, renovation, and completed-project assets. Set the pricing currency on the listing so the platform can convert the displayed price into the selected country currency.
 3. **Define Availability**: Configure viewing slots so visitors can book visits from the property calendar.
 4. **Handle Inquiries**: Respond to public and authenticated inquiries from the property detail page.
 5. **Enable Finance**: Mark properties as financing-eligible where acquisition, renovation, or completion finance should be offered.
@@ -118,6 +118,12 @@ Property managers operate standalone property assets inside the platform while p
 ## 6. Core Role: Project Owner
 
 `PROJECT_OWNER` is the base role for new normal users and remains the anchor workspace even when the user later gains more approved roles.
+
+### 🧭 Owner Workspace
+1. Open `/owner/dashboard` to reach the Project Control Center.
+2. Use **Start New Project** to open `/projects/new`.
+3. Use **Post a Tender** to open `/contracts/new`.
+4. Keep projects and contracts separate in the UI: projects are the execution record, contracts are the procurement record.
 
 ### 🏗️ Creating a Project
 1. **Set Up Project**: Define your project (name, location, budget).
@@ -135,17 +141,63 @@ Property managers operate standalone property assets inside the platform while p
 
 ## 7. Specialized Role: Investor
 
-Investors provide capital to projects in exchange for stakes or returns.
+Investors provide capital to construction projects, material orders, and property developments in exchange for structured returns or equity stakes.
+
+> **Full Reference**: See [`INVESTOR_GUIDE.md`](./INVESTOR_GUIDE.md) for the complete investor documentation.
 
 ### 📈 Investing
-1. **Activate Investor Onboarding**: Open the investor workspace and complete identity verification (Upload ID/Passport) to become an approved investor.
-2. **Project Discovery**: Browse "Investment Opportunities" to find high-potential construction projects.
-3. **Pledge Capital**: Submit a pledge amount.
-4. **Sign Agreement**: Review and sign the legally binding investment agreement for the project.
+
+1. **Activate Investor Onboarding**
+   - Open the investor workspace and request the `INVESTOR` role.
+   - Complete KYC verification: upload government-issued ID and proof of address.
+   - Wait for admin review. Status: `PENDING → VERIFIED`.
+   - (Optional) Apply for accredited investor status for large commitments.
+
+2. **Project Discovery**
+   - Browse **Projects** (`/projects`) and filter by **"Seeking Investment"**.
+   - Evaluate projects using the funding progress bar, budget gap, requirements list, and linked contracts.
+   - Review owner track record, timeline, and location risk before pledging.
+
+3. **Pledge Capital**
+   - Open a fundable project detail page.
+   - Enter your pledge amount in the **Funding & Investment** sidebar.
+   - Click **Pledge Commitment**.
+   - Your pledge is non-binding at this stage (`PLEDGED` status).
+
+4. **Confirm Commitment**
+   - After discussing terms with the project owner, confirm your pledge.
+   - Funds transfer to a dedicated escrow account.
+   - Status moves: `PLEDGED → CONFIRMED`.
+
+5. **Sign Agreement**
+   - Review the legally binding `InvestmentAgreement` generated by the platform.
+   - Click **Execute Sign** in your Investor Dashboard.
+   - Agreement status: `DRAFT → SIGNED → FUNDED`.
 
 ### 🔄 Secondary Market
-1. **Manage Stakes**: View your investment portfolio.
-2. **Trade**: Use the "Secondary Market" to sell your stakes to other investors or buy into existing projects for immediate liquidity.
+
+1. **Manage Stakes**: View your portfolio at `/investor/dashboard` under **Portfolio Vital**.
+2. **List for Sale**: Go to `/market/secondary`, select a stake, set asking price and yield.
+3. **Buy Stakes**: Browse listings, review project status and seller history, confirm purchase.
+4. **Settlement**: Platform validates compliance, executes transfer, and releases funds.
+
+> **Limitation**: No open public trading. All transfers are OTC with platform oversight.
+
+### 💰 Returns & Distributions
+
+- **Milestone-linked**: Receive distributions as project milestones are approved.
+- **Completion-based**: Full payout when project reaches `COMPLETED` status.
+- **Revenue share**: Periodic distributions based on project revenue.
+- Distributions flow from escrow → your linked bank account via `SettlementTransaction`.
+
+### ⚠️ Risk Summary
+
+- Construction projects carry inherent cost overrun, delay, and contractor failure risks.
+- The platform facilitates escrow but does not guarantee returns.
+- Investments are illiquid until project completion or secondary market sale.
+- Diversify across multiple projects and start with smaller commitments.
+
+> **See [`INVESTOR_GUIDE.md`](./INVESTOR_GUIDE.md) for full risk disclosure, FAQ, and detailed workflows.**
 
 ---
 
@@ -161,8 +213,9 @@ Admins oversee the health and regulatory compliance of the entire ecosystem.
 
 ### ⚙️ System Configuration
 1. **Platform Identity**: Update branding, contact info, and default regions.
-2. **Currencies**: Manage exchange rates and active currencies (KES, USD, etc.).
-3. **Countries**: Manage active operating countries and choose the default country.
+2. **Currencies**: Manage exchange rates and active currencies relative to KES as the platform reference currency. The UI converts displayed money into the selected country's currency using the stored source currency on each record.
+   The default rate sync provider is Frankfurter, with ExchangeRate-API available as a fallback that admins can switch to in settings.
+3. **Countries**: Manage active operating countries and choose the default country. Selecting a country should automatically resolve its local currency in the UI and drive currency selection in create forms.
 4. **Roles and Users**: Activate users, reassign roles, and manage Django groups through settings tools.
    Treat specialized roles as approval outcomes where possible, rather than arbitrary self-service profile values.
 5. **Approval Discipline**: Normal users may hold multiple approved non-admin roles. `ADMIN` should remain a separate operator identity.

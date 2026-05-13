@@ -271,6 +271,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import api from '../../services/api';
+import { useConfigStore } from '../../stores/config';
 import RegulatoryReports from '../../views/RegulatoryReports.vue';
 
 const days = ref(30);
@@ -301,6 +302,7 @@ const reportTabs = [
 
 const loading = ref(false);
 const error = ref('');
+const configStore = useConfigStore();
 
 const summaryData = ref(null);
 const financialData = ref(null);
@@ -346,7 +348,7 @@ const areaChartOptions = computed(() => ({
 
 const areaChartOptionsCurrency = computed(() => ({
   ...areaChartOptions.value,
-  yaxis: { ...baseChartOptions.yaxis, labels: { formatter: (v) => `KES ${Math.round(v).toLocaleString()}` } },
+  yaxis: { ...baseChartOptions.yaxis, labels: { formatter: (v) => formatCurrency(v) } },
 }));
 
 const barChartOptions = computed(() => ({
@@ -539,7 +541,7 @@ function refreshAll() {
 
 function formatCurrency(val) {
   const n = Number(val) || 0;
-  return 'KES ' + n.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return configStore.formatPrice ? configStore.formatPrice(n, 'KES') : `KES ${n.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 function formatRole(role) {

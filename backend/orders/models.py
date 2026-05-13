@@ -186,6 +186,10 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.id} - {self.buyer.username}"
 
+    @property
+    def latest_payment(self):
+        return self.payments.order_by('-id').first()
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(

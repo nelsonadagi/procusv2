@@ -12,9 +12,10 @@ Primary flow:
 6. vendors enrich products with certifications, technical attributes, documents, reorder thresholds, and stock state
 7. vendors adjust on-hand stock through the inventory workspace and can review product movement history
 8. buyer filters by category, region, certification, and availability before requesting quotes or placing orders
-9. checkout validates stock and records an inventory commit
-10. vendor confirms with an estimated delivery date
-11. cancellation of eligible orders restores stock, then fulfillment, delivery, review, or dispute follows
+9. buyer selects one of the active payment methods configured by admin and checkout validates stock and records an inventory commit
+10. payment is simulated or processed through the selected gateway and the payment record updates
+11. vendor confirms with an estimated delivery date
+12. cancellation of eligible orders restores stock, then fulfillment, delivery, review, or dispute follows
 
 ## Contracting workflow
 
@@ -33,6 +34,7 @@ Primary flow:
 2. milestones trigger release candidates
 3. disputes can freeze or hold funds
 4. operator or policy logic determines release or refund path
+5. payment operations use the same configurable gateway catalog exposed in platform settings
 
 ## Project and capital workflow
 
@@ -41,21 +43,45 @@ Primary flow:
 3. contracts can be linked to projects
 4. updates are posted
 5. investors pledge commitments
-6. property and investment modules extend capital visibility
+6. financing applications can target either the project or a related property
+7. owners, investors, and approved operators can submit and review finance applications in the finance workspace
+8. approved financing can support project execution, property acquisition, completion, or renovation
+9. property and investment modules extend capital visibility
 
 ## Property workflow
 
-1. property owner or approved `PROPERTY_MANAGER` creates a standalone property listing
-2. listing operators can enrich the asset with structured specifications, features, pricing, ownership context, media, and showing schedules
-3. development metadata captures zoning, readiness, and operating context
-4. public or authenticated users discover the property through search and filters
-5. users may submit inquiries anonymously if callback phone or email is provided
-6. inquiry creation should trigger notifications and a communication thread
-7. owner or manager defines calendar availability for visits
-8. users book appointment slots from the property calendar
-9. the property may remain standalone or be linked to a project
-10. financing may target either the property itself or a linked project
-11. when linked to a project, formal materials and service demand should flow through project requirements
+### Actor entry points
+
+| Actor | Entry Point | Capabilities |
+|-------|-------------|--------------|
+| **Guest / Public** | `/properties`, `/properties/:id` | browse, search, filter, submit anonymous inquiries, book appointments |
+| **Buyer** | `/properties`, `/properties/:id` | same as public, plus authenticated inquiry tracking |
+| **Project Owner** | `/properties`, `/properties/:id`, `/owner/dashboard` | create listings, edit own listings, link to projects, manage inquiries/appointments |
+| **Property Manager** | `/property-manager/dashboard` | create listings, manage assigned listings, publish availability, handle inquiries/appointments |
+| **Investor** | `/properties`, `/properties/:id` | browse and evaluate; finance applications can target properties |
+| **Admin** | `/admin`, `/properties/:id` | full CRUD on all properties, manage all inquiries/appointments, view reports |
+
+### Workflow steps
+
+1. **Property Owner** or approved **Property Manager** creates a standalone property listing
+2. Listing operators enrich the asset with:
+   - structured specifications, features, pricing, ownership context
+   - media, floor plans, virtual tours
+   - showing schedules and availability windows
+3. Development metadata captures zoning, readiness, utilities, and operating context
+4. **Public** and **authenticated** users discover the property through search and filters
+5. Users submit inquiries (anonymous allowed if phone/email provided)
+6. Inquiry creation triggers:
+   - notifications to owner/manager
+   - a chat thread for follow-up communication
+7. Owner or manager defines calendar availability for visits
+8. Users book appointment slots from the property calendar
+9. The property may remain **standalone** or be **linked to a project**
+10. Financing may target either:
+    - the property itself (acquisition, renovation, completion)
+    - a linked project (structured budget, milestones, execution cash flow)
+11. When linked to a project, formal materials and service demand flows through `ProjectRequirement`
+12. **Admin** can moderate, verify ownership, or manage any listing across the platform
 
 ## Compliance workflow
 

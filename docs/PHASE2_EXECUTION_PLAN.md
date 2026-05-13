@@ -42,6 +42,10 @@ Deliverable:
 
 * Owners can post tenders
 
+Note:
+
+* The owner workspace is the entry point for posting contracts. Projects remain a separate entity and can link to an awarded contract later.
+
 ---
 
 ### Week 3 — Bidding System
@@ -128,4 +132,3 @@ Phase 2 is complete when:
 ---
 
 **Phase 2 execution plan is now complete.**
-

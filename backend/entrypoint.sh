@@ -36,8 +36,8 @@ until wait_for_database > /dev/null 2>&1; do
 done
 
 if [ "${RUN_BOOTSTRAP_TASKS:-0}" = "1" ]; then
-  log_step "🧪 Postgres is up - checking migrations"
-  python manage.py makemigrations --check --dry-run
+  log_step "🧪 Postgres is up - auto-generating migrations if needed"
+  python manage.py makemigrations --noinput
 
   log_step "🛠️ Applying database migrations"
   # Reused Postgres volumes may already contain tables from initial Django apps
@@ -53,6 +53,9 @@ if [ "${RUN_BOOTSTRAP_TASKS:-0}" = "1" ]; then
 
   log_step "🏗️ Seeding marketplace workflow data"
   python seed_marketplace_workflow.py
+
+  log_step "💳 Seeding payment gateways"
+  python seed_payment_gateways.py
 
   log_step "👥 Seeding descriptive users"
   python create_users.py

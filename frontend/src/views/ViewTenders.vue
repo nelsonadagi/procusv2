@@ -82,8 +82,8 @@
             <div class="pz-premium-card__pricing">
               <div class="pz-price-display">
                 <span class="pz-price-display__unit">BUDGET RANGE</span>
-                <div class="pz-price-display__val">{{ configStore.formatPrice(tender.budget_min) }} - {{
-                  configStore.formatPrice(tender.budget_max) }}</div>
+                <div class="pz-price-display__val">{{ configStore.formatPrice(tender.budget_min, tender.currency || 'KES') }} - {{
+                  configStore.formatPrice(tender.budget_max, tender.currency || 'KES') }}</div>
               </div>
               <Button @click="bid(tender.id)" variant="primary" size="sm">EXECUTE BID</Button>
             </div>

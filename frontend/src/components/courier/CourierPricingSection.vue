@@ -33,8 +33,8 @@
 
             <div class="pz-zone-rules">
               <div v-for="rule in zone.rules" :key="rule.id" class="pz-rule-display">
-                <span class="pz-u-text-mono text-xs">Base: {{ configStore.formatPrice(rule.base_cost) }}</span>
-                <span class="pz-u-text-mono text-xs">+ {{ configStore.formatPrice(rule.per_kg_cost) }}/kg</span>
+                <span class="pz-u-text-mono text-xs">Base: {{ configStore.formatPrice(rule.base_cost, rule.currency || 'KES') }}</span>
+                <span class="pz-u-text-mono text-xs">+ {{ configStore.formatPrice(rule.per_kg_cost, rule.currency || 'KES') }}/kg</span>
               </div>
             </div>
 

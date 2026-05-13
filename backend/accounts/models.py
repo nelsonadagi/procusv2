@@ -24,6 +24,8 @@ class User(AbstractUser):
         CONTRACTOR = 'CONTRACTOR', _('Construction Professional')
         INVESTOR = 'INVESTOR', _('Project Investor')
         PROPERTY_MANAGER = 'PROPERTY_MANAGER', _('Property Manager')
+        REAL_ESTATE_AGENT = 'REAL_ESTATE_AGENT', _('Real Estate Agent')
+        SURVEYOR = 'SURVEYOR', _('Surveyor / Valuer')
         GOVERNMENT = 'GOVERNMENT', _('Government Agency')
         COURIER = 'COURIER', _('Logistics Partner')
         ADMIN = 'ADMIN', _('System Administrator')
@@ -134,6 +136,8 @@ class User(AbstractUser):
             'VENDOR': 'VENDOR',
             'INVESTOR': 'INVESTOR',
             'PROPERTY_MANAGER': 'PROPERTY_MANAGER',
+            'REAL_ESTATE_AGENT': 'REAL_ESTATE_AGENT',
+            'SURVEYOR': 'SURVEYOR',
             'GOVERNMENT': 'GOVERNMENT',
             'COURIER': 'COURIER',
             'ADMIN': 'ADMIN'

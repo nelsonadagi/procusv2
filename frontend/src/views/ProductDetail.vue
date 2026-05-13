@@ -11,10 +11,13 @@
     </div>
 
     <div v-else-if="product" class="pz-l-container u-py-8">
-      <nav class="pz-breadcrumb u-mb-8 pz-u-text-mono text-xs">
-        <router-link to="/products" class="pz-breadcrumb__item">MATERIALS</router-link>
-        <span class="pz-breadcrumb__separator">//</span>
-        <span class="pz-breadcrumb__current pz-u-color-steel">{{ product.name }}</span>
+      <nav class="pz-breadcrumb u-mb-8">
+        <router-link to="/products" class="pz-breadcrumb__item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:0.85rem;height:0.85rem"><path d="m15 18-6-6 6-6"/></svg>
+          Materials
+        </router-link>
+        <span class="pz-breadcrumb__separator">/</span>
+        <span class="pz-breadcrumb__current">{{ product.name }}</span>
       </nav>
 
       <section class="pz-detail-hero">
@@ -61,11 +64,12 @@
 
           <div class="pz-detail-price">
             <div>
-              <div class="pz-detail-price__amount">{{ configStore.formatPrice(product.base_price) }}</div>
+              <div class="pz-detail-price__amount">{{ configStore.formatPrice(product.base_price, product.effective_currency || product.currency, targetCurrencyCode) }}</div>
               <div class="pz-detail-price__unit">per {{ product.unit }}</div>
+              <div class="pz-detail-price__unit">Stored in {{ product.effective_currency || product.currency || 'KES' }}</div>
             </div>
             <div v-if="product.bulk_price" class="pz-detail-price__bulk">
-              <div>Bulk: {{ configStore.formatPrice(product.bulk_price) }}</div>
+              <div>Bulk: {{ configStore.formatPrice(product.bulk_price, product.effective_currency || product.currency, targetCurrencyCode) }}</div>
               <small>{{ product.bulk_threshold }}+ {{ product.unit }}</small>
             </div>
           </div>
@@ -247,6 +251,10 @@ const product = ref(null);
 const loading = ref(true);
 const error = ref(null);
 const selectedImage = ref(null);
+const targetCurrencyCode = computed(() => {
+  const routeCurrency = (route.query.currency || route.query.target_currency || '').toString().trim().toUpperCase();
+  return routeCurrency || configStore.activeCurrencyCode || 'KES';
+});
 
 const certificationHighlights = computed(() =>
   (product.value?.certification_entries || [])
@@ -368,13 +376,24 @@ onMounted(fetchProduct);
 .pz-detail-gallery__main {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(10, 10, 15, 0.12);
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 16px 16px 0 rgba(10, 10, 15, 0.05);
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow:
+    0 1px 2px rgba(10, 10, 15, 0.02),
+    0 8px 24px rgba(10, 10, 15, 0.06);
   aspect-ratio: 1 / 1;
 }
 
-.pz-detail-gallery__main img,
+.pz-detail-gallery__main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.pz-detail-gallery__main:hover img {
+  transform: scale(1.03);
+}
 .pz-detail-gallery__thumb img {
   width: 100%;
   height: 100%;
@@ -398,11 +417,17 @@ onMounted(fetchProduct);
 }
 
 .pz-detail-gallery__thumb {
-  border: 1px solid rgba(10, 10, 15, 0.12);
+  border: 1px solid rgba(10, 10, 15, 0.08);
   background: white;
   aspect-ratio: 1 / 1;
   overflow: hidden;
   cursor: pointer;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.pz-detail-gallery__thumb:hover {
+  border-color: rgba(212, 101, 42, 0.3);
+  box-shadow: 0 4px 12px rgba(10, 10, 15, 0.08);
 }
 
 .pz-detail-gallery__thumb--active {
@@ -411,13 +436,34 @@ onMounted(fetchProduct);
 
 .pz-detail-summary,
 .pz-detail-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(10, 10, 15, 0.1);
-  box-shadow: 12px 12px 0 rgba(10, 10, 15, 0.05);
+  background: #ffffff;
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  border-radius: 20px;
+  box-shadow:
+    0 1px 2px rgba(10, 10, 15, 0.02),
+    0 4px 16px rgba(10, 10, 15, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+.pz-detail-summary::before,
+.pz-detail-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(212, 101, 42, 0), rgba(212, 101, 42, 0.7), rgba(212, 101, 42, 0));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.pz-detail-summary:hover::before,
+.pz-detail-card:hover::before {
+  opacity: 1;
 }
 
 .pz-detail-summary {
-  padding: 1.5rem;
+  padding: 1.75rem;
 }
 
 .pz-detail-meta {
@@ -473,8 +519,12 @@ onMounted(fetchProduct);
 }
 
 .pz-detail-panel {
-  padding: 0.9rem;
-  background: rgba(245, 241, 235, 0.9);
+  padding: 1rem;
+  background: rgba(250, 249, 245, 0.8);
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.25rem;
 }
 
 .pz-detail-grid {
@@ -491,7 +541,7 @@ onMounted(fetchProduct);
 }
 
 .pz-detail-card {
-  padding: 1.2rem;
+  padding: 1.5rem;
 }
 
 .pz-detail-card__header {
@@ -518,8 +568,14 @@ onMounted(fetchProduct);
   display: grid;
   gap: 0.2rem;
   padding: 0.9rem;
-  background: rgba(246, 242, 236, 0.88);
-  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(250, 249, 245, 0.7);
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.pz-detail-doc:hover {
+  background: rgba(250, 249, 245, 0.9);
+  border-color: rgba(212, 101, 42, 0.2);
 }
 
 .pz-detail-doc {
@@ -564,19 +620,41 @@ onMounted(fetchProduct);
 }
 
 .pz-detail-tag-list li {
-  padding: 0.7rem 0.8rem;
-  background: rgba(246, 242, 236, 0.88);
-  border: 1px solid rgba(10, 10, 15, 0.08);
-  font-size: 0.92rem;
-}
-
-.pz-breadcrumb__item {
+  padding: 0.5rem 0.75rem;
+  background: rgba(212, 101, 42, 0.05);
+  border: 1px solid rgba(212, 101, 42, 0.1);
+  border-radius: 10px;
+  font-size: 0.85rem;
   color: var(--pz-color-earth-orange);
-  text-decoration: none;
+  font-weight: 500;
+  text-align: center;
 }
 
-.pz-breadcrumb__separator {
+.pz-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--pz-font-mono);
+  font-size: 0.78rem;
+}
+.pz-breadcrumb__item {
   color: var(--pz-color-concrete-grey);
+  text-decoration: none;
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.pz-breadcrumb__item:hover {
+  color: var(--pz-color-earth-orange);
+}
+.pz-breadcrumb__separator {
+  color: rgba(10, 10, 15, 0.15);
+  font-size: 0.65rem;
+}
+.pz-breadcrumb__current {
+  color: var(--pz-color-structural-steel);
+  font-weight: 500;
 }
 
 @media (max-width: 980px) {

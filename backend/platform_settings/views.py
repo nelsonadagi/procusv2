@@ -4,8 +4,16 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from rbac.permission_catalog import get_permission_catalog
-from .models import PlatformSettings, FeatureFlag, CurrencyRate, Country
-from .serializers import PlatformSettingsSerializer, FeatureFlagSerializer, CurrencyRateSerializer, CountrySerializer
+from .models import PlatformSettings, FeatureFlag, CurrencyRate, Country, PaymentGatewayConfig, ExchangeRateConfig
+from .serializers import (
+    PlatformSettingsSerializer,
+    FeatureFlagSerializer,
+    CurrencyRateSerializer,
+    CountrySerializer,
+    PaymentGatewayConfigSerializer,
+    PaymentGatewayPublicSerializer,
+    ExchangeRateConfigSerializer,
+)
 from .services import ensure_default_countries
 
 User = get_user_model()
@@ -84,6 +92,27 @@ class FeatureFlagViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = FeatureFlagSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = 'key'
+
+
+class PaymentGatewayConfigViewSet(viewsets.ModelViewSet):
+    queryset = PaymentGatewayConfig.objects.all().order_by('display_order', 'label')
+    serializer_class = PaymentGatewayConfigSerializer
+    permission_classes = [AdminOnly]
+
+
+class PaymentMethodCatalogView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        methods = PaymentGatewayConfig.objects.filter(active=True).order_by('display_order', 'label')
+        serializer = PaymentGatewayPublicSerializer(methods, many=True)
+        return Response(serializer.data)
+
+
+class ExchangeRateConfigViewSet(viewsets.ModelViewSet):
+    queryset = ExchangeRateConfig.objects.all().order_by('-active', 'label')
+    serializer_class = ExchangeRateConfigSerializer
+    permission_classes = [AdminOnly]
 
 
 # ── User Management (admin read-all) ──

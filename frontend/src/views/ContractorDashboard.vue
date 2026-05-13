@@ -95,7 +95,7 @@
                     <div class="font-bold">{{ bid.contract_title || 'NODE_#00' + bid.contract }}</div>
                   </td>
                   <td class="pz-u-text-mono text-xs">{{ new Date(bid.created_at).toLocaleDateString() }}</td>
-                  <td class="pz-u-text-mono font-bold">{{ configStore.formatPrice(bid.proposed_cost) }}</td>
+                  <td class="pz-u-text-mono font-bold">{{ configStore.formatPrice(bid.proposed_cost, bid.contract_currency || 'KES') }}</td>
                   <td>
                     <Badge :variant="getBidStatusVariant(bid.status)">{{ bid.status }}</Badge>
                   </td>
@@ -125,7 +125,7 @@
                 <div class="pz-l-flex pz-l-flex--column pz-l-flex--gap-4">
                   <div class="pz-l-flex pz-l-flex--justify-between">
                     <span class="pz-u-text-mono text-xs">Value:</span>
-                    <span class="pz-u-text-mono text-xs font-bold">{{ configStore.formatPrice(job.proposed_cost) }}</span>
+                    <span class="pz-u-text-mono text-xs font-bold">{{ configStore.formatPrice(job.proposed_cost, job.contract_currency || 'KES') }}</span>
                   </div>
                   <div class="pz-l-flex pz-l-flex--justify-between">
                     <span class="pz-u-text-mono text-xs">Timeline:</span>
@@ -158,7 +158,6 @@
         <div class="pz-admin-card">
           <div class="pz-admin-card__header">
             <h3 class="pz-admin-card__title">Posted Tenders</h3>
-            <Button size="sm" variant="primary" @click="$router.push('/contracts/new')">+ Post a Tender</Button>
           </div>
           <div class="pz-table-wrapper">
             <table class="pz-admin-table">
@@ -174,7 +173,7 @@
                 <tr v-for="c in myContracts" :key="c.id" class="u-cursor-pointer" @click="$router.push(`/contracts/${c.id}`)">
                   <td class="font-bold">{{ c.title }}</td>
                   <td class="pz-u-text-mono text-xs">{{ c.location }}</td>
-                  <td class="pz-u-text-mono text-xs">{{ configStore.formatPrice(c.budget_min) }} - {{ configStore.formatPrice(c.budget_max) }}</td>
+                  <td class="pz-u-text-mono text-xs">{{ configStore.formatPrice(c.budget_min, c.currency || 'KES') }} - {{ configStore.formatPrice(c.budget_max, c.currency || 'KES') }}</td>
                   <td>
                     <Badge :variant="c.status === 'POSTED' ? 'success' : 'warning'">{{ c.status }}</Badge>
                   </td>

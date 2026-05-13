@@ -83,6 +83,12 @@ class Project(models.Model):
         default=Status.LISTED,
         verbose_name="Project Status"
     )
+    cover_photo = models.ImageField(
+        upload_to='project_covers/%Y/%m/',
+        null=True,
+        blank=True,
+        verbose_name="Cover Photo"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created On")
 
     class Meta:

@@ -29,7 +29,7 @@
               <span class="pz-filter-bar__label">Country</span>
               <select v-model="filters.country" class="pz-filter-bar__control">
                 <option value="">All countries</option>
-                <option v-for="country in configStore.countries" :key="country.id" :value="country.id">
+                <option v-for="country in configStore.countries" :key="country.id" :value="country.iso_code">
                   {{ country.flag_emoji }} {{ country.name }}
                 </option>
               </select>
@@ -117,7 +117,7 @@
 
           <div class="pz-filter-section">
             <div class="pz-filter-bar__item">
-              <span class="pz-filter-bar__label">Budget Range</span>
+              <span class="pz-filter-bar__label">Budget Range ({{ configStore.activeCurrencyCode || 'KES' }})</span>
               <div class="pz-filter-range">
                 <input v-model.number="filters.min_price" type="number" placeholder="Min" class="pz-filter-bar__input">
                 <input v-model.number="filters.max_price" type="number" placeholder="Max" class="pz-filter-bar__input">
@@ -181,6 +181,9 @@
             <div class="pz-u-text-mono text-xs pz-u-color-concrete">
               {{ filteredProperties.length }} listings • {{ activeFiltersCount }} active filters
             </div>
+            <div class="pz-u-text-mono text-[10px] pz-u-color-steel">
+              Prices are shown in {{ configStore.activeCurrencyCode || 'KES' }} for the selected country.
+            </div>
           </div>
           <div class="pz-results-header__actions">
             <Button class="u-show-mobile" variant="outline" size="sm" @click="mobileFiltersOpen = true">Filters</Button>
@@ -221,60 +224,96 @@
           <div
             v-for="prop in filteredProperties"
             :key="prop.id"
-            class="pz-admin-card pz-u-transition-spring u-hover-spring"
+            class="pz-property-card"
             @click="viewProperty(prop.id)"
           >
-            <div class="pz-admin-card__media">
+            <!-- Image Section -->
+            <div class="pz-property-card__image-wrap">
               <img
                 v-if="prop.primary_media?.media_url || prop.primary_media?.external_url"
                 :src="prop.primary_media?.media_url || prop.primary_media?.external_url"
                 :alt="prop.primary_media?.alt_text || prop.title"
+                class="pz-property-card__image"
+                loading="lazy"
               >
-              <div v-else class="pz-admin-card__media-fallback">
-                <span>{{ prop.asset_type }}</span>
+              <div v-else class="pz-property-card__image-fallback">
+                <span>{{ readableValue(prop.asset_type) }}</span>
               </div>
+
+              <!-- Image Overlays -->
+              <div class="pz-property-card__image-badges">
+                <span class="pz-property-card__badge pz-property-card__badge--type">{{ readableValue(prop.asset_type) }}</span>
+                <span
+                  class="pz-property-card__badge"
+                  :class="prop.status === 'ACTIVE' ? 'pz-property-card__badge--active' : 'pz-property-card__badge--status'"
+                >
+                  {{ readableValue(prop.status) }}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                class="pz-property-card__fav"
+                @click.stop
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </button>
             </div>
 
-            <div class="pz-admin-card__header">
-              <Badge variant="ghost" size="sm" class="pz-u-text-mono">{{ readableValue(prop.asset_type) }}</Badge>
-              <Badge :variant="prop.status === 'ACTIVE' ? 'success' : 'secondary'">{{ readableValue(prop.status) }}</Badge>
-            </div>
-
-            <div class="pz-p-8">
-              <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--gap-3 pz-l-flex--align-start">
-                <h3 class="pz-u-text-display pz-property-card__title">{{ prop.title }}</h3>
-                <span v-if="prop.financing_allowed" class="pz-property-card__finance">Finance Ready</span>
+            <!-- Content Section -->
+            <div class="pz-property-card__body">
+              <!-- Price Row -->
+              <div class="pz-property-card__price-row">
+                <div class="pz-property-card__price">
+                  {{ formatNumber(prop.pricing_profile?.asking_price || prop.price_estimate, prop.pricing_profile?.currency || prop.country?.default_currency || 'KES') }}
+                </div>
+                <span v-if="prop.financing_allowed" class="pz-property-card__finance-tag">Finance Ready</span>
               </div>
 
-              <div class="pz-u-text-mono text-xs pz-u-color-concrete u-mb-5">
-                {{ prop.location_display || prop.location_text || prop.formatted_address || 'Location pending' }}
+              <!-- Title -->
+              <h3 class="pz-property-card__title">{{ prop.title }}</h3>
+
+              <!-- Location -->
+              <div class="pz-property-card__location">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>{{ prop.location_display || prop.location_text || prop.formatted_address || 'Location pending' }}</span>
               </div>
 
-              <div v-if="prop.purpose_name" class="pz-u-text-mono text-xs pz-u-color-earth u-mb-4">
+              <!-- Purpose -->
+              <div v-if="prop.purpose_name" class="pz-property-card__purpose">
                 {{ prop.purpose_name }}
               </div>
 
-              <div class="pz-property-card__price">
-                <div class="pz-u-text-mono text-xs pz-u-color-concrete">Commercial Terms</div>
-                <div class="pz-u-text-display text-xl">{{ formatNumber(prop.pricing_profile?.asking_price || prop.price_estimate) }}</div>
-                <div class="pz-u-text-mono text-xs pz-u-color-steel">
-                  {{ readableValue(prop.pricing_profile?.pricing_strategy || 'FIXED') }}
+              <!-- Specs Row -->
+              <div class="pz-property-card__specs">
+                <div class="pz-property-card__spec">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>
+                  <span>{{ prop.specification?.bedrooms || 0 }} <span class="pz-property-card__spec-label">bed</span></span>
+                </div>
+                <div class="pz-property-card__spec">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21h6"/><path d="M12 21v-7"/><path d="M8 14a4 4 0 0 1 8 0v7H8z"/><path d="M4 14h16"/></svg>
+                  <span>{{ prop.specification?.bathrooms || 0 }} <span class="pz-property-card__spec-label">bath</span></span>
+                </div>
+                <div class="pz-property-card__spec">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                  <span>{{ readableValue(prop.development_metadata?.development_stage || 'NO_STAGE') }}</span>
                 </div>
               </div>
 
-              <div class="pz-property-card__specs">
-                <span>{{ prop.specification?.bedrooms || 0 }} bed</span>
-                <span>{{ prop.specification?.bathrooms || 0 }} bath</span>
-                <span>{{ readableValue(prop.development_metadata?.development_stage || 'NO_STAGE') }}</span>
-              </div>
-
+              <!-- Features -->
               <div v-if="prop.highlighted_features?.length" class="pz-property-card__features">
                 <span v-for="feature in prop.highlighted_features.slice(0, 3)" :key="feature.id">{{ feature.name }}</span>
               </div>
 
+              <!-- Footer -->
               <div class="pz-property-card__footer">
-                <span class="pz-u-text-mono text-xs pz-u-color-savanna">{{ prop.manager_name || prop.owner_name }}</span>
-                <Button size="sm" variant="ghost">View Details</Button>
+                <div class="pz-property-card__agent">
+                  <div class="pz-property-card__agent-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+                  <span class="pz-property-card__agent-name">{{ prop.manager_name || prop.owner_name }}</span>
+                </div>
+                <Button size="sm" variant="outline">View Details</Button>
               </div>
             </div>
           </div>
@@ -292,7 +331,7 @@
           <span class="pz-filter-bar__label">Country</span>
           <select v-model="filters.country" class="pz-filter-bar__control">
             <option value="">All countries</option>
-            <option v-for="country in configStore.countries" :key="country.id" :value="country.id">
+            <option v-for="country in configStore.countries" :key="country.id" :value="country.iso_code">
               {{ country.flag_emoji }} {{ country.name }}
             </option>
           </select>
@@ -330,7 +369,7 @@
           </select>
         </div>
         <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Budget Range</span>
+          <span class="pz-filter-bar__label">Budget Range ({{ configStore.activeCurrencyCode || 'KES' }})</span>
           <div class="pz-filter-range">
             <input v-model.number="filters.min_price" type="number" placeholder="Min" class="pz-filter-bar__input">
             <input v-model.number="filters.max_price" type="number" placeholder="Max" class="pz-filter-bar__input">
@@ -531,8 +570,8 @@ const activeFiltersCount = computed(() => {
   return count;
 });
 
-function formatNumber(num) {
-  return configStore.formatPrice(num);
+function formatNumber(num, sourceCurrency = 'KES') {
+  return configStore.formatPrice(num, sourceCurrency);
 }
 
 function readableValue(value) {
@@ -542,7 +581,11 @@ function readableValue(value) {
 function buildParams() {
   const params = {};
   if (searchQuery.value) params.search = searchQuery.value;
+  // Always include country so the backend knows the filter was explicitly set
+  // (even when empty, meaning "show all countries" instead of falling back to header)
+  params.country = filters.value.country || '';
   Object.entries(filters.value).forEach(([key, value]) => {
+    if (key === 'country') return; // already handled above
     if (value !== '' && value !== null && value !== undefined) {
       params[key] = value;
     }
@@ -556,12 +599,26 @@ function buildParams() {
   return params;
 }
 
+function syncCountryFilterFromStore() {
+  filters.value.country = configStore.activeCountryCode || '';
+}
+
+function syncStoreFromCountryFilter() {
+  if (!filters.value.country) return;
+  if (filters.value.country !== configStore.activeCountryCode) {
+    configStore.setCountry(filters.value.country);
+  }
+}
+
 async function fetchProperties() {
   const requestId = ++lastRequestId.value;
   loading.value = true;
   try {
-    const response = await api.get('/property/', { params: buildParams() });
+    const builtParams = buildParams();
+    console.log('[PropertyListing] fetching with params:', JSON.stringify(builtParams));
+    const response = await api.get('/property/', { params: builtParams });
     if (requestId !== lastRequestId.value) return;
+    console.log('[PropertyListing] received', (response.data.results || response.data || []).length, 'properties');
     properties.value = response.data.results || response.data;
   } catch (err) {
     console.error('Failed to fetch properties', err);
@@ -591,7 +648,7 @@ function clearFilters() {
   filters.value = {
     asset_type: '',
     purpose: '',
-    country: '',
+    country: configStore.activeCountryCode || '',
     location: '',
     listing_type: '',
     development_stage: '',
@@ -652,8 +709,24 @@ onMounted(async () => {
   if (!configStore.countries.length) {
     await configStore.fetchConfig();
   }
+  syncCountryFilterFromStore();
   await Promise.all([fetchPurposes(), fetchProperties()]);
 });
+
+watch(
+  () => configStore.activeCountryCode,
+  () => {
+    syncCountryFilterFromStore();
+    fetchProperties();
+  }
+);
+
+watch(
+  () => filters.value.country,
+  () => {
+    syncStoreFromCountryFilter();
+  }
+);
 </script>
 
 <style scoped>
@@ -780,40 +853,59 @@ onMounted(async () => {
 
 .pz-results-grid {
   display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
 }
 
-.pz-admin-card {
-  background: white;
-  border: 1px solid var(--pz-color-foundation-black);
+/* Modern Property Card */
+.pz-property-card {
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
   cursor: pointer;
   position: relative;
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  box-shadow:
+    0 1px 2px rgba(10, 10, 15, 0.02),
+    0 4px 12px rgba(10, 10, 15, 0.04);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.pz-property-card:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 8px 24px rgba(10, 10, 15, 0.06),
+    0 24px 48px rgba(10, 10, 15, 0.08);
+}
+
+.pz-property-card:hover .pz-property-card__image {
+  transform: scale(1.05);
+}
+
+/* Image Area */
+.pz-property-card__image-wrap {
+  position: relative;
+  aspect-ratio: 3 / 2;
   overflow: hidden;
+  background: linear-gradient(135deg, #e8e4db, #d4cfc5);
 }
 
-.pz-admin-card:hover {
-  box-shadow: 12px 12px 0 var(--pz-color-foundation-black);
-  transform: translate(-4px, -4px);
-}
-
-.pz-admin-card__media {
-  height: 13rem;
-  background: #ece7de;
-}
-
-.pz-admin-card__media img {
+.pz-property-card__image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.pz-admin-card__media-fallback {
+.pz-property-card__image-fallback {
+  width: 100%;
   height: 100%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #1f1f1c, #5b5148);
+  background: linear-gradient(135deg, #2a2825, #5b5148);
   color: white;
   font-family: var(--pz-font-mono);
   font-size: 0.75rem;
@@ -821,64 +913,249 @@ onMounted(async () => {
   text-transform: uppercase;
 }
 
-.pz-admin-card__header {
-  padding: var(--pz-space-4) var(--pz-space-6);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+/* Image Badges */
+.pz-property-card__image-badges {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.85rem;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
-.pz-property-card__title {
-  font-size: 1.3rem;
-  line-height: 1.1;
-  margin: 0 0 0.25rem;
-}
-
-.pz-property-card__finance {
-  padding: 0.35rem 0.5rem;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+.pz-property-card__badge {
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
   font-family: var(--pz-font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.08em;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.pz-property-card__badge--type {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--pz-color-foundation-black);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.pz-property-card__badge--active {
+  background: rgba(34, 139, 34, 0.9);
+  color: white;
+  border: 1px solid rgba(34, 139, 34, 0.3);
+}
+
+.pz-property-card__badge--status {
+  background: rgba(10, 10, 15, 0.75);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Favorite Button */
+.pz-property-card__fav {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  color: var(--pz-color-concrete-grey);
+  z-index: 2;
+}
+
+.pz-property-card__fav:hover {
+  background: white;
+  color: var(--pz-color-earth-orange);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(10, 10, 15, 0.15);
+}
+
+.pz-property-card__fav svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+/* Card Body */
+.pz-property-card__body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+/* Price Row */
+.pz-property-card__price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .pz-property-card__price {
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.9rem 1rem;
-  background: var(--pz-color-limestone-white);
-  border-left: 3px solid var(--pz-color-earth-orange);
-  margin-bottom: 1rem;
+  font-family: var(--pz-font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--pz-color-foundation-black);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
-.pz-property-card__features,
-.pz-property-card__specs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.pz-property-card__features span,
-.pz-property-card__specs span {
-  padding: 0.35rem 0.55rem;
-  background: rgba(199, 134, 74, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+.pz-property-card__finance-tag {
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  color: #15803d;
   font-family: var(--pz-font-mono);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Title */
+.pz-property-card__title {
+  font-family: var(--pz-font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--pz-color-foundation-black);
+  margin: 0;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Location */
+.pz-property-card__location {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--pz-color-concrete-grey);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.pz-property-card__location svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex-shrink: 0;
+  color: var(--pz-color-earth-orange);
+}
+
+/* Purpose */
+.pz-property-card__purpose {
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+  font-weight: 600;
 }
 
+/* Specs Row */
+.pz-property-card__specs {
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid rgba(10, 10, 15, 0.06);
+  border-bottom: 1px solid rgba(10, 10, 15, 0.06);
+  margin-top: 0.2rem;
+}
+
+.pz-property-card__spec {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--pz-color-structural-steel);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.pz-property-card__spec svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-property-card__spec-label {
+  color: var(--pz-color-concrete-grey);
+  font-weight: 400;
+}
+
+/* Features */
+.pz-property-card__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pz-property-card__features span {
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(212, 101, 42, 0.06);
+  border: 1px solid rgba(212, 101, 42, 0.12);
+  color: var(--pz-color-earth-orange);
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* Footer */
 .pz-property-card__footer {
   display: flex;
   justify-content: space-between;
-  gap: 0.75rem;
   align-items: center;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+}
+
+.pz-property-card__agent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.pz-property-card__agent-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: rgba(10, 10, 15, 0.06);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.pz-property-card__agent-avatar svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-property-card__agent-name {
+  font-size: 0.85rem;
+  color: var(--pz-color-structural-steel);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pz-empty-state {
@@ -902,6 +1179,9 @@ onMounted(async () => {
   .pz-market-shell {
     grid-template-columns: 1fr;
   }
+  .pz-results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
@@ -913,6 +1193,10 @@ onMounted(async () => {
   }
 
   .pz-filter-range {
+    grid-template-columns: 1fr;
+  }
+
+  .pz-results-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -67,7 +67,7 @@
               <tr v-for="order in orders" :key="order.id" class="c-table__tr c-table__tr--hover">
                 <td class="c-table__td c-table__td--mono">#{{ order.id }}</td>
                 <td class="c-table__td">{{ order.vendor_name }}</td>
-                <td class="c-table__td c-table__td--bold">{{ configStore.formatPrice(order.total_amount) }}</td>
+                <td class="c-table__td c-table__td--bold">{{ configStore.formatPrice(order.total_amount, order.currency || 'KES') }}</td>
                 <td class="c-table__td">
                   <div class="l-flex l-flex--gap-2">
                     <Badge :variant="getPaymentBadgeVariant(order.payment_status)">{{ order.payment_status }}</Badge>
@@ -79,6 +79,7 @@
                     <Button v-if="order.status === 'DELIVERED'" variant="success" size="sm" @click="confirmDelivery(order.id)">Confirm</Button>
                     <Button v-if="order.status === 'COMPLETED'" variant="secondary" size="sm" @click="openRateModal(order)">Rate</Button>
                     <Button v-if="['PLACED', 'CONFIRMED'].includes(order.status)" variant="danger" size="sm" @click="cancelOrder(order.id)">Cancel</Button>
+                    <Button v-if="order.payment_status !== 'PAID' && order.status !== 'CANCELLED'" variant="primary" size="sm" @click="simulatePayment(order)">Simulate Payment</Button>
                     <Button v-if="order.status === 'SHIPPED' || (order.tracking_number && order.tracking_number !== '')" variant="primary" size="sm" @click="openTracking(order.tracking_number)">Track Delivery</Button>
                     <Button variant="outline" size="sm" @click="openChat('order', order.id)">Chat</Button>
                     <Button variant="outline" size="sm" @click="openDisputeModal(order)">Dispute</Button>
@@ -122,13 +123,13 @@
                 <div v-for="resp in quote.responses" :key="resp.id" class="pz-quote-response" :class="{ 'pz-quote-response--ordered': resp.has_order }">
                   <div>
                     <div class="pz-quote-response__vendor">{{ resp.vendor_name || `Vendor #${resp.vendor}` }}</div>
-                    <div class="pz-quote-response__price">{{ configStore.formatPrice(resp.confirmed_price) }} + {{ configStore.formatPrice(resp.delivery_fee) }} delivery</div>
+                    <div class="pz-quote-response__price">{{ configStore.formatPrice(resp.confirmed_price, resp.quote_currency || resp.currency || 'KES') }} + {{ configStore.formatPrice(resp.delivery_fee, resp.quote_currency || resp.currency || 'KES') }} delivery</div>
                   </div>
                   <div v-if="resp.has_order" class="pz-quote-response__ordered">
                     <Badge variant="success">✓ Order #{{ resp.order_id }} Placed</Badge>
                     <Button size="sm" variant="outline" @click="activeSection = 'orders'">View Order</Button>
                   </div>
-                  <Button v-else size="sm" variant="primary" @click="checkout(quote.id, resp.id)">Accept & Checkout</Button>
+                  <Button v-else size="sm" variant="primary" @click="openCheckoutModal(quote, resp)">Accept & Checkout</Button>
                 </div>
               </div>
             </div>
@@ -297,6 +298,54 @@
       <Button variant="primary" :loading="confirmActionLoading" @click="confirmAction">Continue</Button>
     </template>
   </Modal>
+
+  <!-- Checkout Modal -->
+  <Modal :isOpen="showCheckoutModal" title="Choose Payment Method" size="lg" @close="closeCheckoutModal">
+    <div class="pz-checkout-modal">
+      <div class="pz-checkout-modal__summary">
+        <div>
+          <div class="pz-checkout-modal__eyebrow">Quote Response</div>
+          <h3>Accept and place the order</h3>
+          <p>Choose a configured gateway. This demo creates a simulated payment record for the selected method.</p>
+        </div>
+        <div class="pz-checkout-modal__amount">
+          <span>Total</span>
+          <strong>{{ selectedCheckoutResponse ? configStore.formatPrice(Number(selectedCheckoutResponse.confirmed_price || 0) + Number(selectedCheckoutResponse.delivery_fee || 0), selectedCheckoutResponse.quote_currency || selectedCheckoutResponse.currency || 'KES') : '—' }}</strong>
+        </div>
+      </div>
+
+      <div class="pz-checkout-methods">
+        <div v-if="paymentMethods.length === 0" class="pz-checkout-methods__empty">
+          No active payment methods configured yet.
+        </div>
+        <button
+          v-for="method in paymentMethods"
+          :key="method.id"
+          type="button"
+          class="pz-checkout-method"
+          :class="{ 'pz-checkout-method--active': selectedPaymentProvider === method.provider }"
+          @click="selectedPaymentProvider = method.provider"
+        >
+          <div class="pz-checkout-method__top">
+            <strong>{{ method.label }}</strong>
+            <Badge :variant="method.is_test_mode ? 'warning' : 'success'">{{ method.is_test_mode ? 'Test' : 'Live' }}</Badge>
+          </div>
+          <div class="pz-checkout-method__meta">{{ method.provider }}</div>
+          <div class="pz-checkout-method__copy">{{ method.instructions || 'No instructions configured.' }}</div>
+          <div class="pz-checkout-method__meta">{{ (method.enabled_regions || []).join(', ') || 'All regions' }}</div>
+        </button>
+      </div>
+
+      <div class="pz-checkout-modal__footnote">
+        <span>Default method:</span>
+        <strong>{{ defaultPaymentLabel || 'No default configured' }}</strong>
+      </div>
+    </div>
+    <template #footer>
+      <Button variant="outline" @click="closeCheckoutModal">Cancel</Button>
+      <Button variant="primary" :loading="checkoutLoading" :disabled="!selectedPaymentProvider || paymentMethods.length === 0" @click="confirmCheckout">Place Order</Button>
+    </template>
+  </Modal>
 </template>
 
 <script setup>
@@ -326,9 +375,15 @@ const notificationStore = useNotificationStore();
 const activeSection = ref('orders');
 const orders = ref([]);
 const quotes = ref([]);
+const paymentMethods = ref([]);
 const addresses = ref([]);
 const profile = ref({ profile: {} });
 const loading = ref(true);
+const checkoutLoading = ref(false);
+const showCheckoutModal = ref(false);
+const selectedCheckoutQuote = ref(null);
+const selectedCheckoutResponse = ref(null);
+const selectedPaymentProvider = ref('');
 
 const userRole = computed(() => authStore.user?.role || 'User');
 const approvedRoleSummary = computed(() => {
@@ -336,12 +391,21 @@ const approvedRoleSummary = computed(() => {
   const roles = profile.value.roles || [];
   return roles.length ? roles.join(', ') : 'No additional approved roles yet.';
 });
+const defaultPaymentLabel = computed(() => {
+  const method = paymentMethods.value.find((item) => item.provider === selectedPaymentProvider.value)
+    || paymentMethods.value.find((item) => item.is_default)
+    || paymentMethods.value[0];
+  return method ? method.label : '';
+});
 
 const onboardingHubs = [
   { label: 'Owner Workspace', path: '/owner/dashboard', kicker: 'PROJECT_OWNER', body: 'Create projects, track updates, and manage owner-side execution.' },
   { label: 'Vendor Workspace', path: '/vendor/dashboard', kicker: 'VENDOR', body: 'Complete supplier onboarding, then manage inventory, quotes, and orders.' },
   { label: 'Contractor Workspace', path: '/contractor/dashboard', kicker: 'CONTRACTOR', body: 'Submit your contractor profile, then bid on tenders and track jobs.' },
   { label: 'Investor Workspace', path: '/investor/dashboard', kicker: 'INVESTOR', body: 'Initialize investor compliance onboarding and review agreements.' },
+  { label: 'Property Manager Workspace', path: '/property-manager/dashboard', kicker: 'PROPERTY_MANAGER', body: 'Manage property listings, availability, and visitor appointments.' },
+  { label: 'Agent Workspace', path: '/agent/dashboard', kicker: 'REAL_ESTATE_AGENT', body: 'List and sell properties, manage inquiries, and coordinate viewings.' },
+  { label: 'Surveyor Workspace', path: '/surveyor/dashboard', kicker: 'SURVEYOR', body: 'Conduct property valuations, verify ownership, and assess condition.' },
   { label: 'Courier Workspace', path: '/courier/dashboard', kicker: 'COURIER', body: 'Register your courier company profile and activate logistics operations.' },
   { label: 'Government Workspace', path: '/government/dashboard', kicker: 'GOVERNMENT', body: 'Review public tender access and government procurement guidance.' }
 ];
@@ -411,17 +475,23 @@ const confirmAction = async () => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [ordRes, quoteRes, addrRes, profRes] = await Promise.all([
+    const [ordRes, quoteRes, addrRes, profRes, paymentMethodsRes] = await Promise.all([
       api.get('/orders/'),
       api.get('/orders/quote-requests/'),
       api.get('/accounts/addresses/'),
-      api.get('/accounts/profile/')
+      api.get('/accounts/profile/'),
+      api.get('/platform_settings/payment-methods/')
     ]);
     orders.value = ordRes.data.results || ordRes.data;
     quotes.value = quoteRes.data.results || quoteRes.data;
     addresses.value = addrRes.data.results || addrRes.data;
     profile.value = profRes.data || { profile: {} };
     if (!profile.value.profile) profile.value.profile = {};
+    paymentMethods.value = paymentMethodsRes.data.results || paymentMethodsRes.data || [];
+    if (!selectedPaymentProvider.value) {
+      const defaultMethod = paymentMethods.value.find((item) => item.is_default && item.active) || paymentMethods.value[0];
+      selectedPaymentProvider.value = defaultMethod?.provider || '';
+    }
   } catch (err) {
     console.error('Failed to fetch dashboard data', err);
     showAlert('Failed to synchronize dashboard data', 'error');
@@ -464,15 +534,49 @@ const cancelOrder = async (id) => {
   });
 };
 
-const checkout = async (quoteId, responseId) => {
+const openCheckoutModal = (quote, response) => {
+  selectedCheckoutQuote.value = quote;
+  selectedCheckoutResponse.value = response;
+  if (!selectedPaymentProvider.value) {
+    const defaultMethod = paymentMethods.value.find((item) => item.is_default && item.active) || paymentMethods.value[0];
+    selectedPaymentProvider.value = defaultMethod?.provider || '';
+  }
+  showCheckoutModal.value = true;
+};
+
+const closeCheckoutModal = () => {
+  showCheckoutModal.value = false;
+  selectedCheckoutQuote.value = null;
+  selectedCheckoutResponse.value = null;
+};
+
+const confirmCheckout = async () => {
+  if (!selectedCheckoutQuote.value || !selectedCheckoutResponse.value) return;
+  checkoutLoading.value = true;
   try {
-    await api.post(`/orders/quote-requests/${quoteId}/checkout/`, { response_id: responseId });
+    await api.post(`/orders/quote-requests/${selectedCheckoutQuote.value.id}/checkout/`, {
+      response_id: selectedCheckoutResponse.value.id,
+      payment_provider: selectedPaymentProvider.value
+    });
     showAlert('Checkout successful! Order placed.', 'success');
+    closeCheckoutModal();
     activeSection.value = 'orders';
     fetchData();
   } catch (err) {
     const msg = err.response?.data?.error || 'Checkout failed';
     showAlert(msg, 'error');
+  } finally {
+    checkoutLoading.value = false;
+  }
+};
+
+const simulatePayment = async (order) => {
+  try {
+    await api.post(`/orders/${order.id}/simulate_payment/`, {});
+    showAlert(`Payment simulated for order #${order.id}.`, 'success');
+    fetchData();
+  } catch (err) {
+    showAlert(err.response?.data?.error || 'Failed to simulate payment', 'error');
   }
 };
 
@@ -763,6 +867,118 @@ onMounted(fetchData);
   display: flex;
   align-items: center;
   gap: var(--pz-space-2);
+}
+
+.pz-checkout-modal {
+  display: grid;
+  gap: 1rem;
+}
+
+.pz-checkout-modal__summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(10, 10, 15, 0.02);
+}
+
+.pz-checkout-modal__eyebrow {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+  margin-bottom: 0.35rem;
+}
+
+.pz-checkout-modal__summary h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.pz-checkout-modal__summary p {
+  margin: 0;
+  color: var(--pz-color-steel-grey);
+  max-width: 56ch;
+}
+
+.pz-checkout-modal__amount {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: end;
+  align-content: start;
+}
+
+.pz-checkout-modal__amount span,
+.pz-checkout-modal__footnote span,
+.pz-checkout-method__meta {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-checkout-modal__amount strong {
+  font-size: 1.5rem;
+}
+
+.pz-checkout-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.pz-checkout-methods__empty {
+  grid-column: 1 / -1;
+  padding: 1rem;
+  border: 1px dashed rgba(10, 10, 15, 0.16);
+  background: rgba(10, 10, 15, 0.02);
+  color: var(--pz-color-steel-grey);
+}
+
+.pz-checkout-method {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.1);
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pz-checkout-method:hover {
+  transform: translateY(-1px);
+  border-color: rgba(212, 101, 42, 0.35);
+  box-shadow: 0 10px 30px rgba(10, 10, 15, 0.06);
+}
+
+.pz-checkout-method--active {
+  border-color: rgba(212, 101, 42, 0.55);
+  box-shadow: 0 0 0 2px rgba(212, 101, 42, 0.08);
+}
+
+.pz-checkout-method__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.pz-checkout-method__copy {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--pz-color-slate-grey);
+}
+
+.pz-checkout-modal__footnote {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(10, 10, 15, 0.08);
 }
 
 .pz-role-launcher {

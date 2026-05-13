@@ -62,7 +62,7 @@
                 <Badge variant="secondary" size="sm">{{ prop.asset_type }}</Badge>
               </td>
               <td class="pz-u-text-mono text-xs">{{ prop.location_display || prop.location_text || prop.formatted_address || 'Location pending' }}</td>
-              <td class="pz-u-text-mono font-bold">{{ configStore.formatPrice(prop.price_estimate) }}</td>
+              <td class="pz-u-text-mono font-bold">{{ configStore.formatPrice(prop.price_estimate, prop.pricing_profile?.currency || prop.country?.default_currency || 'KES') }}</td>
               <td>
                 <Badge :variant="getStatusVariant(prop.status)" size="sm">{{ prop.status }}</Badge>
               </td>
@@ -141,7 +141,7 @@ function calculateStats() {
   stats.value[0].value = properties.value.length.toString();
   stats.value[1].value = land.toString();
   stats.value[2].value = commercial.toString();
-  stats.value[3].value = configStore.formatPrice(totalVal);
+  stats.value[3].value = configStore.formatPrice(totalVal, 'KES');
 }
 
 function getStatusVariant(status) {

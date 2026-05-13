@@ -118,6 +118,28 @@ Impact:
 
 - subtle behavior differences across Django or plugin versions are possible
 
+## Property module gaps
+
+### 1. No dedicated `property:delete` permission
+The `destroy` action in `PropertyViewSet` maps to `property:update_property`. This means anyone who can edit a property can also delete it. If you ever want managers to edit but **not** delete listings, a separate `property:delete` permission must be added to `backend/rbac/permission_catalog.py` and the view permission map.
+
+### 2. No inquiry/appointment-specific permissions
+`PropertyInquiryViewSet` and `PropertyAppointmentViewSet` use `IsPropertyOperator` (owner + manager + admin). There is no fine-grained permission like `property:manage_inquiries` or `property:manage_appointments`. A front-desk assistant cannot be granted booking-only access without full property edit rights.
+
+### 3. Government role has zero property access
+`GOVERNMENT`, `GOVERNMENT_OWNER`, and `GOVERNMENT_AUDITOR` have no `property:*` permissions. If the platform needs land registry verification, building permit audits, or zoning compliance checks, these roles must be granted `property:view` (and possibly `property:update_property` for auditors).
+
+### 4. Missing real estate professional roles
+The `asset_type` includes `RENOVATION`, `COMMERCIAL`, `MIXED_USE`, etc., but there is no dedicated role for:
+- **Real Estate Agent / Broker** — distinct from Property Manager (agents sell/lease; managers operate)
+- **Surveyor / Valuer** — updates `price_estimate`, `ownership_profile.verification_status`, or `specification.condition_rating`
+- **Architect / Developer** — edits `development_metadata`
+
+Currently these workflows are handled by `PROJECT_OWNER` or `PROPERTY_MANAGER`, which may not reflect real-world separation of duties.
+
+### 5. Organization-level property access is unused
+The `User` model has an `organization` FK, but `IsPropertyOperator` only checks `owner == user` or `manager == user`. It never checks organization membership. Multi-employee real estate firms cannot share a portfolio without individually assigning each user as owner or manager.
+
 ## Data and workflow gaps to treat carefully
 
 - advanced compliance workflows need end-to-end validation

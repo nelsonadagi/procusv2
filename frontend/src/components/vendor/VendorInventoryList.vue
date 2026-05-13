@@ -20,7 +20,7 @@
 
         <template #cell-pricing="{ row }">
           <div class="pz-inventory-list__stack">
-            <strong>{{ formatPrice(row.base_price) }}</strong>
+            <strong>{{ formatPrice(row.base_price, row.effective_currency || row.currency) }}</strong>
             <span>Unit: {{ row.unit || 'unit' }}</span>
           </div>
         </template>
@@ -95,7 +95,7 @@
         <div class="pz-inventory-list__meta-grid">
           <div class="pz-inventory-list__meta-cell">
             <span class="pz-inventory-list__meta-label">Price</span>
-            <strong>{{ formatPrice(product.base_price) }}</strong>
+            <strong>{{ formatPrice(product.base_price, product.effective_currency || product.currency) }}</strong>
           </div>
           <div class="pz-inventory-list__meta-cell">
             <span class="pz-inventory-list__meta-label">Inventory</span>

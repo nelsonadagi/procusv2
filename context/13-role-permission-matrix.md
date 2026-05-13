@@ -166,6 +166,57 @@ Seeded permission bundle:
 - `property:update_property`
 - `reports:view`
 
+### BUYER
+
+Typical access:
+
+- browse public property listings
+- submit inquiries and book appointments
+- no explicit `property:*` permissions in RBAC, but interacts via public AllowAny endpoints
+
+### INVESTOR / VERIFIED_INVESTOR
+
+Typical access:
+
+- browse properties via public routes only
+- evaluate properties as acquisition or development opportunities
+- no explicit `property:*` permissions in RBAC
+
+### GUEST
+
+Typical access:
+
+- browse public property listings
+- view property details
+- submit anonymous inquiries (with callback details)
+- book appointments against public availability
+- no authenticated permissions
+
+## Property Permission Detail
+
+### Seeded property namespace permissions
+
+- `property:view` — browse and retrieve property records
+- `property:list_property` — create new property listings
+- `property:update_property` — edit, update, or delete property listings (ownership checks apply)
+
+### Role-to-permission mapping for property
+
+| Permission | GUEST | BUYER | PROJECT_OWNER | PROPERTY_MANAGER | ADMIN |
+|------------|-------|-------|---------------|------------------|-------|
+| `property:view` | via public routes | via public routes | ✅ | ✅ | ✅ |
+| `property:list_property` | ❌ | ❌ | ✅ | ✅ | ✅ |
+| `property:update_property` | ❌ | ❌ | own only | managed only | ✅ |
+
+### Ownership enforcement
+
+- `IsPropertyOperator` — owner, manager, admin, staff, or superuser
+- `IsPropertyOwner` — owner, admin, staff, or superuser only
+- `list` / `retrieve` / `availability` — no auth required (`AllowAny`)
+- `mine` — authenticated user sees own + managed properties
+- `create` — any authenticated user with `property:list_property`
+- `update` / `destroy` / `link_project` — owner + `property:update_property`
+
 ### COURIER
 
 Typical access in practice:

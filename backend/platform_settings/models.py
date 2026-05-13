@@ -70,7 +70,7 @@ class CurrencyRate(models.Model):
     currency_name = models.CharField(max_length=100, help_text="e.g. US Dollar")
     symbol = models.CharField(max_length=10, help_text="e.g. $, €, KSh")
     rate_to_default = models.DecimalField(max_digits=18, decimal_places=6,
-        help_text="How many units of this currency equal 1 unit of the default currency")
+        help_text="How many units of the default currency equal 1 unit of this currency")
     is_active = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -104,6 +104,9 @@ class PaymentGatewayConfig(models.Model):
     public_key = models.CharField(max_length=255)
     _secret_key = models.TextField(db_column='secret_key') # Encrypted
     webhook_secret = models.CharField(max_length=255, blank=True, null=True)
+    instructions = models.TextField(blank=True, help_text="Short customer-facing instructions for this payment method")
+    display_order = models.PositiveIntegerField(default=0, help_text="Lower values appear first")
+    is_default = models.BooleanField(default=False, help_text="Use as the default payment method where applicable")
     
     enabled_regions = models.JSONField(default=list, help_text="List of region codes e.g. ['KE', 'UG']")
     active = models.BooleanField(default=True)
@@ -119,6 +122,11 @@ class PaymentGatewayConfig(models.Model):
 
     def __str__(self):
         return f"{self.label} ({self.provider})"
+
+    def save(self, *args, **kwargs):
+        if self.is_default and self.active:
+            PaymentGatewayConfig.objects.exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
 
 class MessagingGatewayConfig(models.Model):
     class Provider(models.TextChoices):
@@ -175,15 +183,15 @@ class Country(models.Model):
 
 class ExchangeRateConfig(models.Model):
     class Provider(models.TextChoices):
+        FRANKFURTER = "FRANKFURTER", "Frankfurter"
         EXCHANGE_RATE_API = "EXCHANGE_RATE_API", "ExchangeRate-API"
-        EXCHANGERATE_HOST = "EXCHANGERATE_HOST", "Exchangerate.host"
-        OPEN_EXCHANGE_RATES = "OPEN_EXCHANGE_RATES", "Open Exchange Rates"
         CUSTOM = "CUSTOM", "Custom API"
 
-    provider = models.CharField(max_length=32, choices=Provider.choices, default=Provider.EXCHANGE_RATE_API)
-    label = models.CharField(max_length=100, default="Primary Exchange Rate API")
-    base_url = models.URLField(help_text="The API endpoint URL (e.g. https://v6.exchangerate-api.com/v6/KEY/latest/USD)")
+    provider = models.CharField(max_length=32, choices=Provider.choices, default=Provider.FRANKFURTER)
+    label = models.CharField(max_length=100, default="Primary Exchange Rate Provider")
+    base_url = models.URLField(help_text="The API endpoint URL (e.g. https://api.frankfurter.dev/v1/latest?base=BASE)")
     _api_key = models.TextField(db_column='api_key', blank=True, null=True) # Encrypted
+    is_default = models.BooleanField(default=False, help_text="Use this provider as the default sync source")
     
     # Mapping configuration
     mapping_config = models.JSONField(
@@ -209,6 +217,15 @@ class ExchangeRateConfig(models.Model):
 
     def __str__(self):
         return f"{self.label} ({self.provider})"
+
+    @property
+    def uses_api_key(self):
+        return self.provider in {self.Provider.EXCHANGE_RATE_API, self.Provider.CUSTOM}
+
+    def save(self, *args, **kwargs):
+        if self.is_default and self.active:
+            ExchangeRateConfig.objects.exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
 
 
 class Location(gis_models.Model):
@@ -244,5 +261,3 @@ class Location(gis_models.Model):
         if self.point:
             return f"Point({self.point.x}, {self.point.y})"
         return f"Location {self.id}"
-
-

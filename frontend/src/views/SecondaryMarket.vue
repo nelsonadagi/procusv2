@@ -99,14 +99,14 @@
             <h4 class="pz-premium-card__title">Operational Equity Share</h4>
 
             <div class="pz-premium-card__specs">
-              <span class="pz-spec-dot">VOLUME: {{ configStore.formatPrice(trade.amount) }}</span>
-              <span class="pz-spec-dot">VALUATION: {{ configStore.formatPrice(trade.price) }}</span>
+              <span class="pz-spec-dot">VOLUME: {{ configStore.formatPrice(trade.amount, trade.currency || 'KES') }}</span>
+              <span class="pz-spec-dot">VALUATION: {{ configStore.formatPrice(trade.price, trade.currency || 'KES') }}</span>
             </div>
 
             <div class="pz-premium-card__pricing">
               <div class="pz-price-display">
                 <span class="pz-price-display__unit">ASK PRICE</span>
-                <span class="pz-price-display__val">{{ configStore.formatPrice(trade.price) }}</span>
+                <span class="pz-price-display__val">{{ configStore.formatPrice(trade.price, trade.currency || 'KES') }}</span>
               </div>
               <Button variant="primary" size="sm" @click="buy(trade.id)">BUY STAKE</Button>
             </div>
@@ -195,7 +195,7 @@
     loading.value = true;
     try {
       const params = {
-        country: selectedCountry.value || undefined
+        country: selectedCountry.value || ''
       };
       const res = await api.get('/v6/secondary-trades/', { params });
       trades.value = res.data.results || res.data;

@@ -20,6 +20,14 @@ class Product(models.Model):
         related_name='products',
         verbose_name="Sold By"
     )
+    country = models.ForeignKey(
+        'platform_settings.Country',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products',
+        verbose_name="Product Country"
+    )
     category = models.ForeignKey(
         'taxonomy.Category',
         on_delete=models.PROTECT,
@@ -61,6 +69,12 @@ class Product(models.Model):
         decimal_places=2,
         help_text="Regular price per unit",
         verbose_name="Standard Price"
+    )
+    currency = models.CharField(
+        max_length=10,
+        default='KES',
+        help_text="ISO 4217 currency code for all listed prices",
+        verbose_name="Currency"
     )
     bulk_price = models.DecimalField(
         max_digits=12,

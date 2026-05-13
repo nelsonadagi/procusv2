@@ -139,7 +139,209 @@
         </div>
       </section>
 
-      <!-- ➌ Users -->
+      <!-- ➌ Exchange Rate Provider -->
+      <section v-if="activeConfigSection === 'exchangeRates'" class="pz-config-section">
+        <div class="pz-config-section__header">
+          <div class="pz-config-section__icon">📈</div>
+          <div>
+            <h2 class="pz-config-section__title">Exchange Rate Providers</h2>
+            <p class="pz-config-section__sub">Configure the live FX sync source. Frankfurter is the default provider and ExchangeRate-API is available as fallback.</p>
+          </div>
+        </div>
+
+        <form @submit.prevent="saveExchangeRateConfig" class="pz-config-form">
+          <div class="pz-config-form__grid">
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Provider</label>
+              <select v-model="exchangeRateForm.provider" class="pz-config-field__input">
+                <option value="FRANKFURTER">Frankfurter</option>
+                <option value="EXCHANGE_RATE_API">ExchangeRate-API</option>
+              </select>
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Label</label>
+              <input v-model="exchangeRateForm.label" class="pz-config-field__input" placeholder="Primary FX Sync" />
+            </div>
+            <div class="pz-config-field pz-config-field--full">
+              <label class="pz-config-field__label">Base URL</label>
+              <input v-model="exchangeRateForm.base_url" class="pz-config-field__input"
+                placeholder="https://api.frankfurter.dev/v1/latest?base=BASE" />
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">API Key</label>
+              <input v-model="exchangeRateForm.api_key" type="password" class="pz-config-field__input"
+                placeholder="Leave blank to keep existing key" />
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Default Source</label>
+              <div class="pz-config-flag-row">
+                <label><input v-model="exchangeRateForm.is_default" type="checkbox" /> Default</label>
+                <label><input v-model="exchangeRateForm.active" type="checkbox" /> Active</label>
+              </div>
+            </div>
+            <div class="pz-config-field pz-config-field--full">
+              <label class="pz-config-field__label">Mapping Config</label>
+              <textarea v-model="exchangeRateForm.mapping_config" class="pz-config-field__input" rows="2"
+                placeholder='{"rates_key":"rates"}'></textarea>
+            </div>
+          </div>
+          <div class="pz-config-form__footer">
+            <Button v-if="editingExchangeRateConfigId" variant="outline" @click="resetExchangeRateForm" type="button">Cancel Edit</Button>
+            <Button type="submit" variant="primary">{{ editingExchangeRateConfigId ? 'Update Source' : 'Add Source' }}</Button>
+          </div>
+        </form>
+
+        <div class="pz-config-table-wrap u-mt-6">
+          <table class="pz-config-table">
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Provider</th>
+                <th>Base URL</th>
+                <th>Default</th>
+                <th>Status</th>
+                <th>Last Sync</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="exchangeRateConfigs.length === 0">
+                <td colspan="7" class="pz-config-table__empty">No exchange rate providers configured yet.</td>
+              </tr>
+              <tr v-for="cfg in exchangeRateConfigs" :key="cfg.id" :class="{ 'pz-config-table__row--inactive': !cfg.active }">
+                <td><strong>{{ cfg.label }}</strong></td>
+                <td><Badge variant="primary">{{ cfg.provider }}</Badge></td>
+                <td class="pz-config-table__mono">{{ cfg.base_url }}</td>
+                <td><Badge v-if="cfg.is_default" variant="success">Default</Badge><span v-else class="pz-config-table__mono">-</span></td>
+                <td><Badge :variant="cfg.active ? 'success' : 'warning'">{{ cfg.active ? 'Active' : 'Off' }}</Badge></td>
+                <td>{{ cfg.last_sync ? new Date(cfg.last_sync).toLocaleString() : 'Never' }}</td>
+                <td class="pz-config-table__actions">
+                  <Button size="sm" variant="outline" @click="editExchangeRateConfig(cfg)">Edit</Button>
+                  <Button size="sm" :variant="cfg.active ? 'outline' : 'primary'" @click="toggleExchangeRateConfig(cfg)">
+                    {{ cfg.active ? 'Disable' : 'Enable' }}
+                  </Button>
+                  <Button v-if="!cfg.is_default" size="sm" variant="secondary" @click="setDefaultExchangeRateConfig(cfg)">Default</Button>
+                  <Button size="sm" variant="danger" @click="deleteExchangeRateConfig(cfg.id)">Del</Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ➌ Payment Methods -->
+      <section v-if="activeConfigSection === 'payments'" class="pz-config-section">
+        <div class="pz-config-section__header">
+          <div class="pz-config-section__icon">💳</div>
+          <div>
+            <h2 class="pz-config-section__title">Payment Methods</h2>
+            <p class="pz-config-section__sub">Customize the simulated and live gateway methods exposed at checkout. Active gateways drive buyer payment options.</p>
+          </div>
+        </div>
+
+        <form @submit.prevent="savePaymentGateway" class="pz-config-form">
+          <div class="pz-config-form__grid">
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Gateway Provider</label>
+              <select v-model="paymentGatewayForm.provider" class="pz-config-field__input">
+                <option value="">Select provider</option>
+                <option value="MPESA">M-Pesa</option>
+                <option value="STRIPE">Stripe</option>
+                <option value="FLUTTERWAVE">Flutterwave</option>
+                <option value="PAYPAL">PayPal</option>
+              </select>
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Display Label</label>
+              <input v-model="paymentGatewayForm.label" class="pz-config-field__input" placeholder="M-Pesa Sandbox" />
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Public Key</label>
+              <input v-model="paymentGatewayForm.public_key" class="pz-config-field__input" placeholder="Public key or client id" />
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Secret Key</label>
+              <input v-model="paymentGatewayForm.secret_key" type="password" class="pz-config-field__input" placeholder="Leave blank to keep existing secret" />
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Webhook Secret</label>
+              <input v-model="paymentGatewayForm.webhook_secret" class="pz-config-field__input" placeholder="Webhook signing secret" />
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Display Order</label>
+              <input v-model="paymentGatewayForm.display_order" type="number" min="0" class="pz-config-field__input" />
+            </div>
+            <div class="pz-config-field pz-config-field--full">
+              <label class="pz-config-field__label">Instructions</label>
+              <textarea v-model="paymentGatewayForm.instructions" class="pz-config-field__input" rows="2"
+                placeholder="Short customer-facing instructions shown at checkout."></textarea>
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Enabled Regions</label>
+              <input v-model="paymentGatewayForm.enabled_regions_text" class="pz-config-field__input" placeholder="KE, UG, TZ" />
+            </div>
+            <div class="pz-config-field">
+              <label class="pz-config-field__label">Flags</label>
+              <div class="pz-config-flag-row">
+                <label><input v-model="paymentGatewayForm.is_default" type="checkbox" /> Default</label>
+                <label><input v-model="paymentGatewayForm.active" type="checkbox" /> Active</label>
+                <label><input v-model="paymentGatewayForm.is_test_mode" type="checkbox" /> Test Mode</label>
+              </div>
+            </div>
+          </div>
+          <div class="pz-config-form__footer">
+            <Button v-if="editingPaymentGatewayId" variant="outline" @click="resetPaymentGatewayForm" type="button">Cancel Edit</Button>
+            <Button type="submit" variant="primary">{{ editingPaymentGatewayId ? 'Update Method' : 'Add Method' }}</Button>
+          </div>
+        </form>
+
+        <div class="pz-config-table-wrap u-mt-6">
+          <table class="pz-config-table">
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Provider</th>
+                <th>Regions</th>
+                <th>Status</th>
+                <th>Default</th>
+                <th>Mode</th>
+                <th>Order</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="paymentGateways.length === 0">
+                <td colspan="8" class="pz-config-table__empty">No payment methods configured yet.</td>
+              </tr>
+              <tr v-for="gw in paymentGateways" :key="gw.id" :class="{ 'pz-config-table__row--inactive': !gw.active }">
+                <td>
+                  <strong>{{ gw.label }}</strong>
+                  <div class="pz-config-table__mono" v-if="gw.instructions">{{ gw.instructions }}</div>
+                </td>
+                <td><Badge variant="primary">{{ gw.provider }}</Badge></td>
+                <td>{{ (gw.enabled_regions || []).join(', ') || 'All' }}</td>
+                <td><Badge :variant="gw.active ? 'success' : 'warning'">{{ gw.active ? 'Active' : 'Off' }}</Badge></td>
+                <td>
+                  <Badge v-if="gw.is_default" variant="success">Default</Badge>
+                  <span v-else class="pz-config-table__mono">-</span>
+                </td>
+                <td><Badge :variant="gw.is_test_mode ? 'warning' : 'primary'">{{ gw.is_test_mode ? 'Test' : 'Live' }}</Badge></td>
+                <td>{{ gw.display_order }}</td>
+                <td class="pz-config-table__actions">
+                  <Button size="sm" variant="outline" @click="editPaymentGateway(gw)">Edit</Button>
+                  <Button size="sm" :variant="gw.active ? 'outline' : 'primary'" @click="togglePaymentGateway(gw)">
+                    {{ gw.active ? 'Disable' : 'Enable' }}
+                  </Button>
+                  <Button v-if="!gw.is_default" size="sm" variant="secondary" @click="setDefaultGateway(gw)">Default</Button>
+                  <Button size="sm" variant="danger" @click="deletePaymentGateway(gw.id)">Del</Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ➍ Users -->
       <section v-if="activeConfigSection === 'users'" class="pz-config-section">
         <div class="pz-config-section__header">
           <div class="pz-config-section__icon">👥</div>
@@ -199,7 +401,7 @@
         </div>
       </section>
 
-      <!-- ➍ Roles -->
+      <!-- ➎ Roles -->
       <section v-if="activeConfigSection === 'roles'" class="pz-config-section">
         <div class="pz-config-section__header">
           <div class="pz-config-section__icon">🔐</div>
@@ -250,7 +452,7 @@
         </div>
       </section>
 
-      <!-- ➎ Countries -->
+      <!-- ➏ Countries -->
       <section v-if="activeConfigSection === 'countries'" class="pz-config-section">
         <div class="pz-config-section__header">
           <div class="pz-config-section__icon">🌍</div>
@@ -315,7 +517,7 @@
         </div>
       </section>
 
-      <!-- ➏ Master Data -->
+      <!-- ➐ Master Data -->
       <section v-if="activeConfigSection === 'masterdata'" class="pz-config-section">
         <div class="pz-config-section__header">
           <div class="pz-config-section__icon">🗂</div>
@@ -441,6 +643,8 @@
   const configSections = [
     { id: 'platform', label: 'Platform', icon: '🏛' },
     { id: 'currency', label: 'Currency', icon: '💱' },
+    { id: 'exchangeRates', label: 'FX Sync', icon: '📈' },
+    { id: 'payments', label: 'Payments', icon: '💳' },
     { id: 'users', label: 'Users', icon: '👥' },
     { id: 'roles', label: 'Roles', icon: '🔐' },
     { id: 'countries', label: 'Countries', icon: '🌍' },
@@ -455,6 +659,8 @@
     primary_color: '#FF6B2B', secondary_color: '#1A1A2E',
   });
   const currencies = ref([]);
+  const exchangeRateConfigs = ref([]);
+  const paymentGateways = ref([]);
   const allUsers = ref([]);
   const roles = ref([]);
   const permissionCatalog = ref([]);
@@ -462,6 +668,30 @@
   const categories = ref([]);
 
   const newCurrency = ref({ currency_code: '', currency_name: '', symbol: '', rate_to_default: '' });
+  const exchangeRateForm = ref({
+    provider: 'FRANKFURTER',
+    label: '',
+    base_url: '',
+    api_key: '',
+    mapping_config: '',
+    is_default: true,
+    active: true,
+  });
+  const editingExchangeRateConfigId = ref(null);
+  const paymentGatewayForm = ref({
+    provider: '',
+    label: '',
+    public_key: '',
+    secret_key: '',
+    webhook_secret: '',
+    instructions: '',
+    enabled_regions_text: '',
+    display_order: 0,
+    is_default: false,
+    active: true,
+    is_test_mode: true,
+  });
+  const editingPaymentGatewayId = ref(null);
   const newRoleName = ref('');
   const newCountry = ref({ iso_code: '', name: '', flag_emoji: '', phone_prefix: '', default_currency: '' });
   const newCategory = ref({ name: '', slug: '', taxonomy_type: '' });
@@ -525,9 +755,11 @@
 
   async function fetchConfigData() {
     try {
-      const [configRes, currenciesRes, allUsersRes, rolesRes, permissionCatalogRes, countriesRes, catRes] = await Promise.all([
+      const [configRes, currenciesRes, exchangeRateRes, paymentGatewaysRes, allUsersRes, rolesRes, permissionCatalogRes, countriesRes, catRes] = await Promise.all([
         api.get('/platform_settings/platform/'),
         api.get('/platform_settings/currencies/'),
+        api.get('/platform_settings/exchange-rate-configs/'),
+        api.get('/platform_settings/payment-gateways/'),
         api.get('/platform_settings/admin-users/'),
         api.get('/platform_settings/roles/'),
         api.get('/platform_settings/roles/permission_catalog/'),
@@ -536,6 +768,8 @@
       ]);
       if (configRes.data) Object.assign(platformConfig.value, configRes.data);
       currencies.value = currenciesRes.data.results || currenciesRes.data;
+      exchangeRateConfigs.value = exchangeRateRes.data.results || exchangeRateRes.data;
+      paymentGateways.value = paymentGatewaysRes.data.results || paymentGatewaysRes.data;
       allUsers.value = allUsersRes.data.results || allUsersRes.data;
       roles.value = rolesRes.data.results || rolesRes.data;
       permissionCatalog.value = permissionCatalogRes.data.results || permissionCatalogRes.data || [];
@@ -568,6 +802,206 @@
       newCurrency.value = { currency_code: '', currency_name: '', symbol: '', rate_to_default: '' };
       showAlert('Currency added successfully.', 'success');
     } catch (err) { showAlert(err.response?.data?.detail || 'Failed to add currency.', 'error'); }
+  }
+
+  function resetExchangeRateForm() {
+    editingExchangeRateConfigId.value = null;
+    exchangeRateForm.value = {
+      provider: 'FRANKFURTER',
+      label: '',
+      base_url: 'https://api.frankfurter.dev/v1/latest?base=BASE',
+      api_key: '',
+      mapping_config: '',
+      is_default: true,
+      active: true,
+    };
+  }
+
+  function editExchangeRateConfig(cfg) {
+    editingExchangeRateConfigId.value = cfg.id;
+    exchangeRateForm.value = {
+      provider: cfg.provider,
+      label: cfg.label,
+      base_url: cfg.base_url || '',
+      api_key: '',
+      mapping_config: cfg.mapping_config ? JSON.stringify(cfg.mapping_config) : '',
+      is_default: Boolean(cfg.is_default),
+      active: Boolean(cfg.active),
+    };
+  }
+
+  async function saveExchangeRateConfig() {
+    if (!exchangeRateForm.value.provider || !exchangeRateForm.value.label) return;
+    const payload = {
+      provider: exchangeRateForm.value.provider,
+      label: exchangeRateForm.value.label,
+      base_url: exchangeRateForm.value.base_url || (
+        exchangeRateForm.value.provider === 'FRANKFURTER'
+          ? 'https://api.frankfurter.dev/v1/latest?base=BASE'
+          : 'https://v6.exchangerate-api.com/v6/KEY/latest/BASE'
+      ),
+      is_default: Boolean(exchangeRateForm.value.is_default),
+      active: Boolean(exchangeRateForm.value.active),
+    };
+    if (exchangeRateForm.value.api_key) payload.api_key = exchangeRateForm.value.api_key;
+    if (exchangeRateForm.value.mapping_config) {
+      try {
+        payload.mapping_config = JSON.parse(exchangeRateForm.value.mapping_config);
+      } catch (e) {
+        showAlert('Mapping config must be valid JSON.', 'error');
+        return;
+      }
+    }
+    try {
+      let res;
+      if (editingExchangeRateConfigId.value) {
+        res = await api.patch(`/platform_settings/exchange-rate-configs/${editingExchangeRateConfigId.value}/`, payload);
+        exchangeRateConfigs.value = exchangeRateConfigs.value.map((item) => item.id === res.data.id ? res.data : item);
+      } else {
+        res = await api.post('/platform_settings/exchange-rate-configs/', payload);
+        exchangeRateConfigs.value.push(res.data);
+      }
+      exchangeRateConfigs.value = [...exchangeRateConfigs.value].sort((a, b) => (a.is_default === b.is_default ? 0 : a.is_default ? -1 : 1) || String(a.label).localeCompare(String(b.label)));
+      resetExchangeRateForm();
+      showAlert('Exchange rate source saved successfully.', 'success');
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to save exchange rate source.', 'error');
+    }
+  }
+
+  async function toggleExchangeRateConfig(cfg) {
+    try {
+      const res = await api.patch(`/platform_settings/exchange-rate-configs/${cfg.id}/`, { active: !cfg.active });
+      exchangeRateConfigs.value = exchangeRateConfigs.value.map((item) => item.id === cfg.id ? res.data : item);
+      showAlert(`Exchange rate source ${res.data.active ? 'enabled' : 'disabled'} successfully.`, 'success');
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to toggle exchange rate source.', 'error');
+    }
+  }
+
+  async function setDefaultExchangeRateConfig(cfg) {
+    try {
+      const res = await api.patch(`/platform_settings/exchange-rate-configs/${cfg.id}/`, { is_default: true, active: true });
+      exchangeRateConfigs.value = exchangeRateConfigs.value.map((item) => item.id === cfg.id ? res.data : { ...item, is_default: false });
+      showAlert('Default exchange rate source updated successfully.', 'success');
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to set default exchange rate source.', 'error');
+    }
+  }
+
+  async function deleteExchangeRateConfig(id) {
+    openDeleteConfirm({
+      title: 'DELETE_EXCHANGE_RATE_SOURCE',
+      message: 'Delete this exchange rate source from the platform?',
+      action: async () => {
+        await api.delete(`/platform_settings/exchange-rate-configs/${id}/`);
+        exchangeRateConfigs.value = exchangeRateConfigs.value.filter((cfg) => cfg.id !== id);
+        showAlert('Exchange rate source deleted successfully.', 'success');
+      }
+    });
+  }
+
+  function resetPaymentGatewayForm() {
+    editingPaymentGatewayId.value = null;
+    paymentGatewayForm.value = {
+      provider: '',
+      label: '',
+      public_key: '',
+      secret_key: '',
+      webhook_secret: '',
+      instructions: '',
+      enabled_regions_text: '',
+      display_order: 0,
+      is_default: false,
+      active: true,
+      is_test_mode: true,
+    };
+  }
+
+  function editPaymentGateway(gateway) {
+    editingPaymentGatewayId.value = gateway.id;
+    paymentGatewayForm.value = {
+      provider: gateway.provider,
+      label: gateway.label,
+      public_key: gateway.public_key || '',
+      secret_key: '',
+      webhook_secret: gateway.webhook_secret || '',
+      instructions: gateway.instructions || '',
+      enabled_regions_text: (gateway.enabled_regions || []).join(', '),
+      display_order: gateway.display_order || 0,
+      is_default: Boolean(gateway.is_default),
+      active: Boolean(gateway.active),
+      is_test_mode: Boolean(gateway.is_test_mode),
+    };
+  }
+
+  async function savePaymentGateway() {
+    if (!paymentGatewayForm.value.provider || !paymentGatewayForm.value.label || !paymentGatewayForm.value.public_key) return;
+    const payload = {
+      provider: paymentGatewayForm.value.provider,
+      label: paymentGatewayForm.value.label,
+      public_key: paymentGatewayForm.value.public_key,
+      webhook_secret: paymentGatewayForm.value.webhook_secret,
+      instructions: paymentGatewayForm.value.instructions,
+      enabled_regions: paymentGatewayForm.value.enabled_regions_text
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+      display_order: Number(paymentGatewayForm.value.display_order || 0),
+      is_default: Boolean(paymentGatewayForm.value.is_default),
+      active: Boolean(paymentGatewayForm.value.active),
+      is_test_mode: Boolean(paymentGatewayForm.value.is_test_mode),
+    };
+    if (paymentGatewayForm.value.secret_key) {
+      payload.secret_key = paymentGatewayForm.value.secret_key;
+    }
+    try {
+      let res;
+      if (editingPaymentGatewayId.value) {
+        res = await api.patch(`/platform_settings/payment-gateways/${editingPaymentGatewayId.value}/`, payload);
+        paymentGateways.value = paymentGateways.value.map((gw) => gw.id === res.data.id ? res.data : gw);
+      } else {
+        res = await api.post('/platform_settings/payment-gateways/', payload);
+        paymentGateways.value.push(res.data);
+      }
+      paymentGateways.value = [...paymentGateways.value].sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || String(a.label).localeCompare(String(b.label)));
+      resetPaymentGatewayForm();
+      showAlert('Payment method saved successfully.', 'success');
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to save payment method.', 'error');
+    }
+  }
+
+  async function togglePaymentGateway(gw) {
+    try {
+      const res = await api.patch(`/platform_settings/payment-gateways/${gw.id}/`, { active: !gw.active });
+      paymentGateways.value = paymentGateways.value.map((item) => item.id === gw.id ? res.data : item);
+      showAlert(`Payment method ${res.data.active ? 'enabled' : 'disabled'} successfully.`, 'success');
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to toggle payment method.', 'error');
+    }
+  }
+
+  async function setDefaultGateway(gw) {
+    try {
+      const res = await api.patch(`/platform_settings/payment-gateways/${gw.id}/`, { is_default: true, active: true });
+      paymentGateways.value = paymentGateways.value.map((item) => item.id === gw.id ? res.data : { ...item, is_default: false });
+      showAlert('Default payment method updated successfully.', 'success');
+    } catch (err) {
+      showAlert(err.response?.data?.detail || 'Failed to set default payment method.', 'error');
+    }
+  }
+
+  async function deletePaymentGateway(id) {
+    openDeleteConfirm({
+      title: 'DELETE_PAYMENT_METHOD',
+      message: 'Delete this payment method from the platform?',
+      action: async () => {
+        await api.delete(`/platform_settings/payment-gateways/${id}/`);
+        paymentGateways.value = paymentGateways.value.filter((gw) => gw.id !== id);
+        showAlert('Payment method deleted successfully.', 'success');
+      }
+    });
   }
 
   async function updateCurrency(c) {
@@ -743,6 +1177,7 @@
   }
 
   onMounted(() => {
+    resetExchangeRateForm();
     fetchConfigData();
   });
 </script>
@@ -926,6 +1361,18 @@
     font-size: 0.72rem;
     font-family: monospace;
     color: #999;
+  }
+
+  .pz-config-flag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    background: #F8FAFC;
+    font-size: 0.8rem;
+    color: #444;
   }
 
   .pz-config-form__footer {

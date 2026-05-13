@@ -102,6 +102,14 @@
             </div>
             <PzInput v-model="productForm.unit" label="Unit of Sale" required />
             <PzInput v-model.number="productForm.base_price" label="Base Price" type="number" required />
+            <div class="pz-input-wrapper">
+              <label class="pz-input__label">Currency</label>
+              <select v-model="productForm.currency" class="pz-input" required>
+                <option v-for="currency in supportedCurrencies" :key="currency.currency_code" :value="currency.currency_code">
+                  {{ currency.currency_code }}{{ currency.symbol ? ` (${currency.symbol})` : '' }}
+                </option>
+              </select>
+            </div>
             <PzInput v-model.number="productForm.bulk_price" label="Bulk Price" type="number" />
             <PzInput v-model.number="productForm.bulk_threshold" label="Bulk Threshold" type="number" />
             <PzInput v-model.number="productForm.stock_quantity" label="Stock Quantity" type="number" required />
@@ -373,6 +381,7 @@ const emptyProductForm = () => ({
   category: '',
   unit: 'bag',
   base_price: 0,
+  currency: 'KES',
   bulk_price: null,
   bulk_threshold: null,
   stock_quantity: 0,
@@ -398,6 +407,7 @@ const emptyProductForm = () => ({
 });
 
 const productForm = ref(emptyProductForm());
+const supportedCurrencies = computed(() => configStore.availableCurrencies);
 
 const lowStockCount = computed(() => products.value.filter((entry) => entry.inventory_signal === 'LOW_STOCK').length);
 const featuredCount = computed(() => products.value.filter((entry) => entry.is_featured).length);
@@ -535,7 +545,10 @@ function removeDocument(index) {
 
 function openCreateModal() {
   editingProductId.value = null;
-  productForm.value = emptyProductForm();
+  productForm.value = {
+    ...emptyProductForm(),
+    currency: configStore.activeCurrencyCode || 'KES',
+  };
   showProductModal.value = true;
 }
 
@@ -546,6 +559,7 @@ function openEditModal(product) {
     category: product.category?.id || product.category_id || '',
     unit: product.unit || 'unit',
     base_price: Number(product.base_price || 0),
+    currency: product.currency || configStore.activeCurrencyCode || 'KES',
     bulk_price: product.bulk_price ? Number(product.bulk_price) : null,
     bulk_threshold: product.bulk_threshold ?? null,
     stock_quantity: Number(product.stock_quantity || 0),
@@ -594,7 +608,10 @@ function openEditModal(product) {
 function closeProductModal() {
   showProductModal.value = false;
   editingProductId.value = null;
-  productForm.value = emptyProductForm();
+  productForm.value = {
+    ...emptyProductForm(),
+    currency: configStore.activeCurrencyCode || 'KES',
+  };
 }
 
 function openAdjustmentModal(product) {
@@ -671,6 +688,7 @@ function buildPayload() {
     category: productForm.value.category,
     unit: productForm.value.unit,
     base_price: productForm.value.base_price,
+    currency: productForm.value.currency || configStore.activeCurrencyCode || 'KES',
     bulk_price: productForm.value.bulk_price || null,
     bulk_threshold: productForm.value.bulk_threshold || null,
     stock_quantity: productForm.value.stock_quantity,

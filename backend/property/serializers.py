@@ -1,6 +1,8 @@
 from rest_framework import serializers
 
+from platform_settings.models import Country
 from platform_settings.serializers import LocationSyncMixin
+from platform_settings.utils import resolve_request_country_code
 
 from .models import (
     PropertyListing,
@@ -182,6 +184,13 @@ class PropertyListingSerializer(LocationSyncMixin, serializers.ModelSerializer):
         request = self.context.get('request')
         if request and request.user and not validated_data.get('owner'):
             validated_data['owner'] = request.user
+        if not validated_data.get('country'):
+            country_code = resolve_request_country_code(request)
+            selected_country = Country.objects.filter(iso_code__iexact=country_code, is_active=True).first()
+            if selected_country is None:
+                selected_country = Country.objects.filter(is_default=True, is_active=True).first()
+            if selected_country:
+                validated_data['country'] = selected_country
         prop = super().create(validated_data)
         self._sync_location_obj(prop, validated_data)
         self._save_nested(prop, development_metadata, specification, features, media_assets, ownership_profile, pricing_profile, showings)

@@ -103,6 +103,8 @@
       const role = authStore.user?.role;
       if (role === 'ADMIN') router.push('/admin');
       else if (role === 'PROPERTY_MANAGER' || authStore.hasRole('PROPERTY_MANAGER')) router.push('/property-manager/dashboard');
+      else if (role === 'REAL_ESTATE_AGENT' || authStore.hasRole('REAL_ESTATE_AGENT')) router.push('/agent/dashboard');
+      else if (role === 'SURVEYOR' || authStore.hasRole('SURVEYOR')) router.push('/surveyor/dashboard');
       else if (role === 'INVESTOR') router.push('/investor/dashboard');
       else if (role === 'GOVERNMENT') router.push('/government/dashboard');
       else if (role === 'COURIER') router.push('/courier/dashboard');

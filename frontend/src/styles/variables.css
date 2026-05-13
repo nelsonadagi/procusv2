@@ -38,15 +38,15 @@
   --pz-font-mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
   
   /* Type Scale */
-  --pz-text-display: 4rem;
-  --pz-text-h1: 3rem;
-  --pz-text-h2: 2rem;
-  --pz-text-h3: 1.5rem;
-  --pz-text-h4: 1.25rem;
-  --pz-text-body-lg: 1.125rem;
-  --pz-text-body: 1rem;
-  --pz-text-small: 0.875rem;
-  --pz-text-caption: 0.75rem;
+  --pz-text-display: 5.5rem;
+  --pz-text-h1: 4.5rem;
+  --pz-text-h2: 3.25rem;
+  --pz-text-h3: 2.25rem;
+  --pz-text-h4: 1.75rem;
+  --pz-text-body-lg: 1.375rem;
+  --pz-text-body: 1.25rem;
+  --pz-text-small: 1.125rem;
+  --pz-text-caption: 1rem;
   
   /* Font Weights */
   --pz-weight-regular: 400;

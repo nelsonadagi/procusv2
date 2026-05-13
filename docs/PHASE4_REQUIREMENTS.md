@@ -16,6 +16,23 @@ Enable the platform to support:
 * Property assets feeding project demand
 * Full lifecycle construction commerce
 
+## 1.1 Project Module Definition
+
+Projects are the execution hub for construction activity.
+
+* A project is not a tender.
+* A project is not a property listing.
+* A project may link to one or more awarded contracts.
+* A project may link to one or more property records when the asset is part of the development context.
+* A project must be usable immediately after creation, even before requirements or contracts are added.
+
+### Project Screens
+
+* `ProjectList.vue` is the discovery and filtering surface.
+* `CreateProject.vue` is the minimal shell creation flow.
+* `ProjectDetail.vue` is the project management cockpit for summary, requirements, contracts, milestones, funding, documents, updates, risks, and activity.
+* `OwnerDashboard.vue` is the owner entry point for project actions.
+
 ---
 
 ---
@@ -56,6 +73,14 @@ Project owners can publish:
 
 Projects become structured pipelines beyond single contracts.
 
+### 2.1.1 Project Behavior
+
+* Creation only stores the project shell.
+* Requirements are added after creation.
+* Contract links are added after award.
+* Updates are posted during execution.
+* Funding and pledges are attached to the project record.
+
 ---
 
 ### 2.2 Investor Participation Layer
@@ -90,13 +115,43 @@ Projects progress through:
 * Listed
 * Funding Open
 * Execution Started
-* Milestones Delivered
 * Completed
 
 Each stage integrates:
 
 * Contractors (Phase 2)
 * Escrow + financing (Phase 3)
+
+### 2.4.1 Minimum UI Expectations
+
+* The project list must support browse, search, and filter.
+* The project detail page must show linked contracts, requirements, milestones, documents, updates, funding state, and risk/issues.
+* The project create form must not force the owner to define every operational detail up front.
+* The owner dashboard must provide a direct route into project creation and project review.
+
+### 2.4.2 Project Detail Layout
+
+Project detail should be organized into clear sections or tabs rather than one long form.
+
+Recommended sections:
+
+* Summary
+* Requirements
+* Contracts
+* Milestones
+* Funding
+* Documents
+* Updates
+* Risks / Issues
+* Activity Log
+
+The summary section should always come first and show:
+
+* project status
+* budget
+* funding state
+* linked contracts
+* current blockers or issues
 
 ---
 

@@ -79,7 +79,7 @@ Section 2 provides a high-level system overview. Section 3 identifies stakeholde
 
 ### 2.1 Product Perspective
 
-Procus v2 is a standalone, full-stack web application. It is not a replacement or module of any existing system but operates as an independent platform. It communicates with external payment gateways (M-Pesa, Stripe), ERP systems (SAP, Oracle), and identity verification services (SumSub, Onfido) via adapters.
+Procus v2 is a standalone, full-stack web application. It is not a replacement or module of any existing system but operates as an independent platform. It communicates with external payment gateways (M-Pesa, Stripe), ERP systems (SAP, Oracle), and identity verification services (SumSub, Onfido) via adapters. Payment methods are admin-configurable in platform settings and can be simulated in development and test environments. Currency handling is country-aware: selecting a country resolves its local currency, all monetary values are displayed in that selected-country currency, and each priced record stores its source currency so the UI can convert accurately. Exchange rates are maintained relative to KES as the platform reference currency. The default FX sync provider is Frankfurter, with ExchangeRate-API available as an admin-managed fallback.
 
 ```
 External World
@@ -181,7 +181,7 @@ Admins SHALL be able to deactivate any user account. Deactivated users SHALL be 
 ### 4.2 Materials Catalogue (Phase 1)
 
 #### FR-CAT-001 — Product Listing
-Vendors SHALL be able to create product listings containing: name, description, category, base price, unit of measure, minimum order quantity, stock level, delivery regions, and status.
+Vendors SHALL be able to create product listings containing: name, description, category, base price, currency, unit of measure, minimum order quantity, stock level, delivery regions, and status.
 
 #### FR-CAT-002 — Product Status Management
 Products SHALL have statuses: `ACTIVE`, `INACTIVE`, `OUT_OF_STOCK`. Vendors SHALL be able to update product status.
@@ -309,14 +309,47 @@ Project Owners SHALL link awarded contracts to a project, enabling unified execu
 #### FR-PRJ-005 — Project Updates Feed
 Project Owners SHALL post text updates to a project's progress feed, visible to linked investors.
 
+#### FR-PRJ-006 — Project Detail Workspace
+Project detail SHALL expose requirements, linked contracts, funding state, and project updates in one operational view.
+
+#### FR-PRJ-007 — Project Creation Scope
+Project creation SHALL initialize only the project shell. Requirements, contract links, funding actions, and updates SHALL occur after creation.
+
+#### FR-PRJ-008 — Project Discovery
+Project lists SHALL support discovery and filtering without exposing execution controls that belong in project detail.
+
+#### FR-PRJ-009 — Project Management Cockpit
+Project detail SHALL act as the project management cockpit and SHALL organize the following areas into clear sections or tabs: summary, requirements, contracts, milestones, funding, documents, updates, risks/issues, and activity log.
+
+#### FR-PRJ-010 — Priority Information
+Project detail SHALL present status, budget, funding state, linked contracts, and current blockers or issues before lower-priority content.
+
+#### FR-PRJ-011 — Project Documents
+Project detail SHALL support project documents and attachments such as drawings, reports, specifications, and related files.
+
+#### FR-PRJ-012 — Project Activity Log
+Project detail SHALL expose an activity log or audit trail showing important project actions and updates.
+
 #### FR-INV-001 — Investment Pledge
 Investors SHALL be able to commit a specified amount to a project in `FUNDING_OPEN` status. Pledges SHALL have status `PLEDGED → CONFIRMED → CANCELLED`.
 
 #### FR-PROP-001 — Property Listing
-Users SHALL be able to list real estate assets with: title, description, location, asset type (LAND, RESIDENTIAL, COMMERCIAL, RENOVATION), and price estimate.
+Users SHALL be able to list real estate assets with: title, description, location, asset type (LAND, RESIDENTIAL, COMMERCIAL, RENOVATION), price estimate, and pricing currency.
 
 #### FR-PROP-002 — Property-Project Linkage
 Property listings SHALL be linkable to a project to represent upstream demand generation.
+
+---
+
+### 4.8.1 Project Module Rules
+
+The project module SHALL follow these rules:
+
+* Project and contract records remain separate.
+* Projects act as the execution container.
+* Awarded contracts can be linked into a project.
+* Property listings can be linked into a project when the asset becomes part of a development or execution flow.
+* The owner dashboard is the entry point for project operations.
 
 ---
 
@@ -388,10 +421,10 @@ The system SHALL expose an ERP connector configuration interface supporting SAP 
 Admins SHALL configure: platform name, tagline, support email, support phone, website URL, physical address, default region code, and brand colours.
 
 #### FR-ADM-002 — Currency Management
-Admins SHALL add, enable/disable, and set exchange rates for supported currencies relative to the platform default (KES).
+Admins SHALL add, enable/disable, and set exchange rates for supported currencies relative to the platform reference currency (KES). Admins SHALL also configure the active FX sync provider, with Frankfurter as the default and ExchangeRate-API as an alternate provider.
 
 #### FR-ADM-003 — Country Management
-Admins SHALL configure active countries including: ISO code, name, flag emoji, phone prefix, default currency, and active/default status.
+Admins SHALL configure active countries including: ISO code, name, flag emoji, phone prefix, default currency, and active/default status. Country selection in the UI SHALL resolve the active local currency from the selected country.
 
 #### FR-ADM-004 — Role (Group) Management
 Admins SHALL create and delete Django permission groups used as platform roles. Admins SHALL assign groups to users.
@@ -506,6 +539,8 @@ Admins SHALL see a queue of pending contractor registrations and SHALL approve o
 |---|---|---|
 | M-Pesa | REST API (Daraja 2.0) | Mobile money collection and disbursement |
 | Stripe | REST API + Webhooks | Card-based payments and payouts |
+| Flutterwave | REST API + Webhooks | Regional card and wallet payments |
+| PayPal | REST API + Webhooks | International payments and payouts |
 
 ### 7.4 KYC Provider Interface
 

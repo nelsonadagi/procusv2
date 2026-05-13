@@ -361,4 +361,41 @@ The target property detail experience should aggregate:
 
 ---
 
+## 10. Actor Interaction Matrix
+
+| Actor | Create | Update/Delete Own | Update/Delete Any | View Public | Inquiries | Appointments | Admin Console |
+|-------|--------|-------------------|-------------------|-------------|-----------|--------------|---------------|
+| **Guest** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| **Buyer** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| **Project Owner** | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| **Property Manager** | ✅ | ✅* | ❌ | ✅ | ✅ | ✅ | ❌ |
+| **Investor** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| **Admin** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Finance** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+\* *Only properties where they are assigned as `manager`*
+
+### Permission Implementation
+
+Backend permission classes:
+
+* `IsPropertyOperator` — grants access if user is `ADMIN`, staff, superuser, `owner`, or `manager` of the property
+* `IsPropertyOwner` — grants access if user is `ADMIN`, staff, superuser, or `owner` of the property
+
+ViewSet permission mapping:
+
+| Action | Permission Classes |
+|--------|-------------------|
+| `list`, `retrieve`, `availability` | `AllowAny` |
+| `mine`, `create` | `IsAuthenticated + HasRequiredPermission` |
+| `update`, `partial_update`, `destroy`, `link_project` | `IsAuthenticated + HasRequiredPermission + IsPropertyOwner` |
+
+Seeded property permissions in RBAC:
+
+* `property:view`
+* `property:list_property`
+* `property:update_property`
+
+**Note:** There is currently no `property:delete` permission; delete is gated under `property:update_property`.
+
 **Property schema target updated for standalone operation plus cross-module integration.**

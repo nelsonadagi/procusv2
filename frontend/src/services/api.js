@@ -17,6 +17,14 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Token ${token}`;
         }
+        const activeCountry = localStorage.getItem('activeCountry');
+        if (activeCountry) {
+            config.headers['X-Active-Country'] = activeCountry;
+        }
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type'];
+            delete config.headers['content-type'];
+        }
         return config;
     },
     (error) => {

@@ -3,6 +3,7 @@
 ## Construction Marketplace — Phase 2 Requirements
 
 Phase 2 expands the platform from a **materials procurement marketplace** into a **contracts + services execution marketplace**.
+The contract record is the procurement layer, while the project record remains the execution layer that can link to an awarded contract later.
 
 ---
 
@@ -32,7 +33,7 @@ Enable construction work execution by introducing:
 
 ### Project Owner (Contract Publisher)
 *   **Permissions**: `contracts:post_contract`, `contracts:award_contract`, `contracts:view`, `projects:create_project`, `bids:view`, `milestones:manage_milestones`
-*   **Actions**: Post job scopes, select winning bidders, and define milestones.
+*   **Actions**: Post job scopes from the owner workspace, select winning bidders, and define milestones.
 *   **Forbidden**: Cannot bid on their own contracts.
 
 ### Contracts Admin
@@ -63,13 +64,15 @@ Enable construction work execution by introducing:
 
 ### 3.2 Contract Posting
 
-Project owners can post:
+Project owners can post tenders from the owner workspace:
 
 * Work scope
 * Location
 * Budget range
 * Timeline
 * Qualification requirements
+
+Contract posting remains separate from project creation. A project may later link to an awarded contract, but the initial tender starts in `/contracts/new` or the owner dashboard quick action.
 
 ### 3.3 Bidding System
 

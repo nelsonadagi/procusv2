@@ -172,17 +172,36 @@ MATERIAL_CATEGORY_EXPORT = [
 ]
 
 SUPPLIER_EXPORT = [
+    # Kenya
     {'name': 'Kenbro Industries', 'contact_email': 'contact@kenbroindustries.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'wholesale', 'website': 'https://www.kenbroindustries.com'},
-    {'name': 'Kenbro Industries Limited', 'contact_email': 'contact@kenbroindustries_limited.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'wholesale', 'website': 'https://www.kenbroindustries_limited.com'},
-    {'name': 'Kenya Builders & Concrete Co., Kenya Limited', 'contact_email': 'contact@kenyabuilders_concrete.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'retail', 'website': 'https://www.kenya_builders_concrete.com'},
-    {'name': 'Kubik, Inc.', 'contact_email': 'contact@kubik_inc.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'service', 'website': 'https://www.kubik_inc.com'},
-    {'name': 'Mabati Rolling Mills Ltd - Member of the SAFAL Group', 'contact_email': 'contact@mabati_rollings_mills.com', 'location': 'Mombasa, Kenya', 'supplier_type': 'material', 'website': 'https://www.mabati_rollings_mills.com'},
-    {'name': 'Mjenzi Application', 'contact_email': 'contact@mjenzis_application.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'service', 'website': 'https://www.mjenzis_application.com'},
-    {'name': 'Mogaya Contractors', 'contact_email': 'contact@mogaya_contractors.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'service', 'website': 'https://www.mogaya_contractors.com'},
-    {'name': 'Mombasa Sealing', 'contact_email': 'contact@mombasa_sealing.com', 'location': 'Mombasa, Kenya', 'supplier_type': 'material', 'website': 'https://www.mombasa_sealing.com'},
-    {'name': 'Muthokinju Paints and cement', 'contact_email': 'contact@muthokinju_paint_cement.com', 'location': 'Nakuru, Kenya', 'supplier_type': 'material', 'website': 'https://www.muthokinju_paint_cement.com'},
-    {'name': 'NOVEL PAINTS', 'contact_email': 'contact@novel_paints.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'material', 'website': 'https://www.novel_paints.com'},
-    {'name': 'Nanjing Africa Co., Kenya Limited', 'contact_email': 'contact@nanjing_africa_co_limited.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'material', 'website': 'https://www.nanjing_africa_co_limited.com'},
+    {'name': 'Kenya Builders & Concrete Co.', 'contact_email': 'contact@kenyabuilders_concrete.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'retail', 'website': 'https://www.kenyabuilders.co.ke'},
+    {'name': 'Mabati Rolling Mills Ltd', 'contact_email': 'contact@mabati_rollings_mills.com', 'location': 'Mombasa, Kenya', 'supplier_type': 'material', 'website': 'https://www.mabati.co.ke'},
+    {'name': 'Muthokinju Paints and Cement', 'contact_email': 'contact@muthokinju_paint_cement.com', 'location': 'Nakuru, Kenya', 'supplier_type': 'material', 'website': 'https://www.muthokinju.co.ke'},
+    {'name': 'Nanjing Africa Co.', 'contact_email': 'contact@nanjing_africa_co.com', 'location': 'Nairobi, Kenya', 'supplier_type': 'material', 'website': 'https://www.nanjingafrica.co.ke'},
+    # Uganda
+    {'name': 'Kampala Cement Ltd', 'contact_email': 'contact@kampalacement.com', 'location': 'Kampala, Uganda', 'supplier_type': 'material', 'website': 'https://www.kampalacement.co.ug'},
+    {'name': 'Roofings Uganda', 'contact_email': 'contact@roofingsuganda.com', 'location': 'Kampala, Uganda', 'supplier_type': 'material', 'website': 'https://www.roofings.co.ug'},
+    {'name': 'Jinja Steel Works', 'contact_email': 'contact@jinjasteel.com', 'location': 'Jinja, Uganda', 'supplier_type': 'material', 'website': 'https://www.jinjasteel.co.ug'},
+    {'name': 'Entebbe Plumbing Supplies', 'contact_email': 'contact@entebbeplumbing.com', 'location': 'Entebbe, Uganda', 'supplier_type': 'retail', 'website': 'https://www.entebbeplumbing.co.ug'},
+    # Tanzania
+    {'name': 'Twiga Cement', 'contact_email': 'contact@twigacement.com', 'location': 'Dar es Salaam, Tanzania', 'supplier_type': 'material', 'website': 'https://www.twigacement.co.tz'},
+    {'name': 'Alaf Limited', 'contact_email': 'contact@alaf.com', 'location': 'Dar es Salaam, Tanzania', 'supplier_type': 'material', 'website': 'https://www.alaf.co.tz'},
+    {'name': 'Arusha Hardware Mart', 'contact_email': 'contact@arushahardware.com', 'location': 'Arusha, Tanzania', 'supplier_type': 'retail', 'website': 'https://www.arushahardware.co.tz'},
+    {'name': 'Mwanza Builders Depot', 'contact_email': 'contact@mwanzabuilders.com', 'location': 'Mwanza, Tanzania', 'supplier_type': 'wholesale', 'website': 'https://www.mwanzabuilders.co.tz'},
+    # Rwanda
+    {'name': 'Cimerwa Cement', 'contact_email': 'contact@cimerwa.com', 'location': 'Kigali, Rwanda', 'supplier_type': 'material', 'website': 'https://www.cimerwa.rw'},
+    {'name': 'Kigali Steel & Tube', 'contact_email': 'contact@kigalisteel.com', 'location': 'Kigali, Rwanda', 'supplier_type': 'material', 'website': 'https://www.kigalisteel.rw'},
+    {'name': 'Musanze Construction Supply', 'contact_email': 'contact@musanzecs.com', 'location': 'Musanze, Rwanda', 'supplier_type': 'retail', 'website': 'https://www.musanzecs.rw'},
+    # Burundi
+    {'name': 'Bujumbura Cement Company', 'contact_email': 'contact@bujumburacement.com', 'location': 'Bujumbura, Burundi', 'supplier_type': 'material', 'website': 'https://www.bujumburacement.bi'},
+    {'name': 'Gitega Builders Supply', 'contact_email': 'contact@gitegabuilders.com', 'location': 'Gitega, Burundi', 'supplier_type': 'retail', 'website': 'https://www.gitegabuilders.bi'},
+    # South Sudan
+    {'name': 'Juba Concrete Works', 'contact_email': 'contact@jubaconcrete.com', 'location': 'Juba, South Sudan', 'supplier_type': 'material', 'website': 'https://www.jubaconcrete.ss'},
+    {'name': 'Wau Construction Materials', 'contact_email': 'contact@waucm.com', 'location': 'Wau, South Sudan', 'supplier_type': 'retail', 'website': 'https://www.waucm.ss'},
+    # Ethiopia
+    {'name': 'Derba Cement', 'contact_email': 'contact@derbacement.com', 'location': 'Addis Ababa, Ethiopia', 'supplier_type': 'material', 'website': 'https://www.derbacement.com.et'},
+    {'name': 'Addis Steel Factory', 'contact_email': 'contact@addissteel.com', 'location': 'Addis Ababa, Ethiopia', 'supplier_type': 'material', 'website': 'https://www.addissteel.com.et'},
+    {'name': 'Dire Dawa Hardware', 'contact_email': 'contact@diredawahardware.com', 'location': 'Dire Dawa, Ethiopia', 'supplier_type': 'retail', 'website': 'https://www.diredawahardware.com.et'},
 ]
 
 SPECIFICATION_PRODUCT_EXPORT = [
@@ -221,6 +240,247 @@ SPECIFICATION_PRODUCT_EXPORT = [
     {'name': 'Solar water heater 300 liters', 'specificationid': 'SP970', 'materialid': 'PV0206', 'margin': 10, 'units': 'NO', 'cpurate': 35600, 'category_code': 'V020'},
     {'name': 'uPVC Windows: uPVC framed windows including 6 mm thick glass', 'specificationid': 'SP1033', 'materialid': 'DA0014', 'margin': 10, 'units': 'SM', 'cpurate': 18000, 'category_code': 'J009'},
     {'name': 'Window Blinds: Wooden window blinds including supply and fix', 'specificationid': 'SP1078', 'materialid': 'DA0014', 'margin': 10, 'units': 'SM', 'cpurate': 22500, 'category_code': 'J009'},
+]
+
+COUNTRY_SPECIFIC_PRODUCT_EXPORT = [
+    {
+        'country_code': 'KE',
+        'vendor_name': 'Kenya Regional Materials Hub',
+        'location_text': 'Nairobi, Kenya',
+        'formatted_address': 'Nairobi, Kenya',
+        'name': 'Mombasa Blend Cement 50kg',
+        'specificationid': 'KE-SP2001',
+        'materialid': 'CDKE2001',
+        'margin': 12,
+        'units': 'BAG',
+        'cpurate': 790,
+        'category_code': 'D004',
+        'country_of_origin': 'Kenya',
+        'delivery_regions': ['NAIROBI', 'MOMBASA', 'NAKURU', 'KISUMU'],
+        'description': 'High-strength cement stock seeded for Kenyan procurement workflows.',
+        'short_description': 'Kenya seed stock cement priced in KES.',
+    },
+    {
+        'country_code': 'KE',
+        'vendor_name': 'Kenya Regional Materials Hub',
+        'location_text': 'Nairobi, Kenya',
+        'formatted_address': 'Nairobi, Kenya',
+        'name': 'Kenya Reinforcement Bar 12mm',
+        'specificationid': 'KE-SP2002',
+        'materialid': 'CDKE2002',
+        'margin': 12,
+        'units': 'KG',
+        'cpurate': 168,
+        'category_code': 'D004',
+        'country_of_origin': 'Kenya',
+        'delivery_regions': ['NAIROBI', 'MOMBASA', 'NAKURU', 'KISUMU'],
+        'description': 'Regional reinforcement steel sample for Kenyan buyers and contractors.',
+        'short_description': 'Kenya seed stock rebar priced in KES.',
+    },
+    {
+        'country_code': 'UG',
+        'vendor_name': 'Uganda Regional Materials Hub',
+        'location_text': 'Kampala, Uganda',
+        'formatted_address': 'Kampala, Uganda',
+        'name': 'Kampala Standard Cement 50kg',
+        'specificationid': 'UG-SP3001',
+        'materialid': 'CDUG3001',
+        'margin': 11,
+        'units': 'BAG',
+        'cpurate': 25500,
+        'category_code': 'D004',
+        'country_of_origin': 'Uganda',
+        'delivery_regions': ['KAMPALA', 'ENTEBBE', 'JINJA'],
+        'description': 'Uganda market cement stock seeded in UGX for local browsing.',
+        'short_description': 'Uganda seed stock cement priced in UGX.',
+    },
+    {
+        'country_code': 'UG',
+        'vendor_name': 'Uganda Regional Materials Hub',
+        'location_text': 'Kampala, Uganda',
+        'formatted_address': 'Kampala, Uganda',
+        'name': 'Uganda PVC Pressure Pipe 100mm',
+        'specificationid': 'UG-SP3002',
+        'materialid': 'PVUG3002',
+        'margin': 11,
+        'units': 'M',
+        'cpurate': 18250,
+        'category_code': 'V020',
+        'country_of_origin': 'Uganda',
+        'delivery_regions': ['KAMPALA', 'ENTEBBE', 'JINJA'],
+        'description': 'Pipe stock for Ugandan delivery and conversion tests.',
+        'short_description': 'Uganda seed stock pipe priced in UGX.',
+    },
+    {
+        'country_code': 'TZ',
+        'vendor_name': 'Tanzania Regional Materials Hub',
+        'location_text': 'Dar es Salaam, Tanzania',
+        'formatted_address': 'Dar es Salaam, Tanzania',
+        'name': 'Dar es Salaam Ceramic Floor Tile',
+        'specificationid': 'TZ-SP4001',
+        'materialid': 'IPTZ4001',
+        'margin': 10,
+        'units': 'SM',
+        'cpurate': 22500,
+        'category_code': 'P014',
+        'country_of_origin': 'Tanzania',
+        'delivery_regions': ['DAR ES SALAAM', 'ARUSHA', 'MWANZA'],
+        'description': 'Ceramic tile seed stock for Tanzanian marketplace pricing.',
+        'short_description': 'Tanzania seed stock tiles priced in TZS.',
+    },
+    {
+        'country_code': 'TZ',
+        'vendor_name': 'Tanzania Regional Materials Hub',
+        'location_text': 'Dar es Salaam, Tanzania',
+        'formatted_address': 'Dar es Salaam, Tanzania',
+        'name': 'Tanzania Flush Timber Door',
+        'specificationid': 'TZ-SP4002',
+        'materialid': 'DATZ4002',
+        'margin': 10,
+        'units': 'NO',
+        'cpurate': 980000,
+        'category_code': 'H008',
+        'country_of_origin': 'Tanzania',
+        'delivery_regions': ['DAR ES SALAAM', 'ARUSHA', 'MWANZA'],
+        'description': 'Door stock seeded for Tanzanian buyers and cross-country conversion.',
+        'short_description': 'Tanzania seed stock door priced in TZS.',
+    },
+    {
+        'country_code': 'RW',
+        'vendor_name': 'Rwanda Regional Materials Hub',
+        'location_text': 'Kigali, Rwanda',
+        'formatted_address': 'Kigali, Rwanda',
+        'name': 'Kigali Aluminum Casement Window',
+        'specificationid': 'RW-SP5001',
+        'materialid': 'DARW5001',
+        'margin': 10,
+        'units': 'SM',
+        'cpurate': 185000,
+        'category_code': 'J009',
+        'country_of_origin': 'Rwanda',
+        'delivery_regions': ['KIGALI', 'HUYE', 'MUSANZE'],
+        'description': 'Window stock seeded for Rwanda-specific product browsing.',
+        'short_description': 'Rwanda seed stock windows priced in RWF.',
+    },
+    {
+        'country_code': 'RW',
+        'vendor_name': 'Rwanda Regional Materials Hub',
+        'location_text': 'Kigali, Rwanda',
+        'formatted_address': 'Kigali, Rwanda',
+        'name': 'Rwanda LED Fittings Pack',
+        'specificationid': 'RW-SP5002',
+        'materialid': 'EURW5002',
+        'margin': 10,
+        'units': 'NO',
+        'cpurate': 24800,
+        'category_code': 'U019',
+        'country_of_origin': 'Rwanda',
+        'delivery_regions': ['KIGALI', 'HUYE', 'MUSANZE'],
+        'description': 'Lighting stock for Rwanda catalog and pricing conversion tests.',
+        'short_description': 'Rwanda seed stock fittings priced in RWF.',
+    },
+    {
+        'country_code': 'BI',
+        'vendor_name': 'Burundi Regional Materials Hub',
+        'location_text': 'Bujumbura, Burundi',
+        'formatted_address': 'Bujumbura, Burundi',
+        'name': 'Bujumbura Walling Blocks',
+        'specificationid': 'BI-SP6001',
+        'materialid': 'CDBI6001',
+        'margin': 10,
+        'units': 'NO',
+        'cpurate': 85000,
+        'category_code': 'E005',
+        'country_of_origin': 'Burundi',
+        'delivery_regions': ['BUJUMBURA', 'GITEGA', 'RUMONGE'],
+        'description': 'Walling blocks seeded for Burundi-specific inventory.',
+        'short_description': 'Burundi seed stock blocks priced in BIF.',
+    },
+    {
+        'country_code': 'BI',
+        'vendor_name': 'Burundi Regional Materials Hub',
+        'location_text': 'Bujumbura, Burundi',
+        'formatted_address': 'Bujumbura, Burundi',
+        'name': 'Burundi Paint and Finish Kit',
+        'specificationid': 'BI-SP6002',
+        'materialid': 'PABI6002',
+        'margin': 10,
+        'units': 'KIT',
+        'cpurate': 64000,
+        'category_code': 'R016',
+        'country_of_origin': 'Burundi',
+        'delivery_regions': ['BUJUMBURA', 'GITEGA', 'RUMONGE'],
+        'description': 'Paint stock for Burundi browsing and conversion tests.',
+        'short_description': 'Burundi seed stock finish kit priced in BIF.',
+    },
+    {
+        'country_code': 'SS',
+        'vendor_name': 'South Sudan Regional Materials Hub',
+        'location_text': 'Juba, South Sudan',
+        'formatted_address': 'Juba, South Sudan',
+        'name': 'Juba Water Storage Tank',
+        'specificationid': 'SS-SP7001',
+        'materialid': 'PVSS7001',
+        'margin': 10,
+        'units': 'NO',
+        'cpurate': 76000,
+        'category_code': 'V020',
+        'country_of_origin': 'South Sudan',
+        'delivery_regions': ['JUBA', 'WAU', 'MALAKAL'],
+        'description': 'Water storage stock seeded for South Sudan procurement.',
+        'short_description': 'South Sudan seed stock tank priced in SSP.',
+    },
+    {
+        'country_code': 'SS',
+        'vendor_name': 'South Sudan Regional Materials Hub',
+        'location_text': 'Juba, South Sudan',
+        'formatted_address': 'Juba, South Sudan',
+        'name': 'South Sudan Booster Pump',
+        'specificationid': 'SS-SP7002',
+        'materialid': 'FWSS7002',
+        'margin': 10,
+        'units': 'NO',
+        'cpurate': 215000,
+        'category_code': 'W021',
+        'country_of_origin': 'South Sudan',
+        'delivery_regions': ['JUBA', 'WAU', 'MALAKAL'],
+        'description': 'Booster pump stock for the South Sudan market.',
+        'short_description': 'South Sudan seed stock pump priced in SSP.',
+    },
+    {
+        'country_code': 'ET',
+        'vendor_name': 'Ethiopia Regional Materials Hub',
+        'location_text': 'Addis Ababa, Ethiopia',
+        'formatted_address': 'Addis Ababa, Ethiopia',
+        'name': 'Addis Ababa Armoured Cable',
+        'specificationid': 'ET-SP8001',
+        'materialid': 'EUTE8001',
+        'margin': 10,
+        'units': 'LM',
+        'cpurate': 930,
+        'category_code': 'U019',
+        'country_of_origin': 'Ethiopia',
+        'delivery_regions': ['ADDIS ABABA', 'DIRE DAWA', 'MEKELLE'],
+        'description': 'Electrical cable stock seeded for Ethiopia-specific browsing.',
+        'short_description': 'Ethiopia seed stock cable priced in ETB.',
+    },
+    {
+        'country_code': 'ET',
+        'vendor_name': 'Ethiopia Regional Materials Hub',
+        'location_text': 'Addis Ababa, Ethiopia',
+        'formatted_address': 'Addis Ababa, Ethiopia',
+        'name': 'Ethiopia Consumer Unit 12 Way',
+        'specificationid': 'ET-SP8002',
+        'materialid': 'EUET8002',
+        'margin': 10,
+        'units': 'NO',
+        'cpurate': 3450,
+        'category_code': 'U019',
+        'country_of_origin': 'Ethiopia',
+        'delivery_regions': ['ADDIS ABABA', 'DIRE DAWA', 'MEKELLE'],
+        'description': 'Consumer unit stock for Ethiopia conversion and browsing tests.',
+        'short_description': 'Ethiopia seed stock consumer unit priced in ETB.',
+    },
 ]
 
 MATERIAL_ID_DETAILS = {
@@ -270,6 +530,33 @@ def derive_category_tags(supplier_type):
     return ['WALLING', 'PAINTING AND DECORATING']
 
 
+COUNTRY_KEYWORDS = {
+    'kenya': 'KE',
+    'uganda': 'UG',
+    'tanzania': 'TZ',
+    'rwanda': 'RW',
+    'burundi': 'BI',
+    'south sudan': 'SS',
+    'ethiopia': 'ET',
+}
+
+
+def infer_country_iso_from_text(text):
+    """Infer country ISO code from free-text location string."""
+    if not text:
+        return None
+    text_lower = text.lower()
+    for keyword, iso in COUNTRY_KEYWORDS.items():
+        if keyword in text_lower:
+            return iso
+    return None
+
+
+def get_country_lookup():
+    """Build a lookup dict of all active countries by ISO code."""
+    return {c.iso_code.upper(): c for c in Country.objects.filter(is_active=True)}
+
+
 def build_reference_attributes(product_seed, vendor_name):
     details = MATERIAL_ID_DETAILS.get(product_seed['materialid'], {})
     attribute_values = {
@@ -312,6 +599,7 @@ def seed_product_record(vendor, category, registry_map, product_seed):
 
     product_defaults = {
         'vendor': vendor,
+        'country': getattr(vendor, 'country', None),
         'category': category,
         'description': product_seed.get('description') or product_seed['name'],
         'short_description': product_seed.get('short_description') or product_seed['name'][:500],
@@ -323,13 +611,14 @@ def seed_product_record(vendor, category, registry_map, product_seed):
         'min_order_quantity': product_seed.get('min_order_quantity', 1),
         'max_order_quantity': product_seed.get('max_order_quantity'),
         'reorder_level': product_seed.get('reorder_level', 5),
+        'currency': product_seed.get('currency') or getattr(getattr(vendor, 'country', None), 'default_currency', 'KES') or 'KES',
         'brand': product_seed.get('brand', vendor.business_name),
         'model_number': product_seed['specificationid'],
         'weight': product_seed.get('weight'),
         'dimensions': product_seed.get('dimensions', ''),
         'color': product_seed.get('color', ''),
         'material_composition': product_seed.get('material_composition', details.get('material_type', '')),
-        'country_of_origin': product_seed.get('country_of_origin', 'Kenya'),
+        'country_of_origin': product_seed.get('country_of_origin', getattr(getattr(vendor, 'country', None), 'name', 'Kenya')),
         'packaging_details': product_seed.get('packaging_details', f"Legacy catalog unit: {unit}"),
         'quality_grade': product_seed.get('quality_grade', 'Commercial'),
         'certifications': product_seed.get('certifications_text', 'KEBS reference catalog item'),
@@ -528,8 +817,11 @@ def seed_vendors(users, categories):
         logger.warning("⚠️ No vendor user found, skipping vendor profiles")
         return []
 
-    kenya = Country.objects.filter(iso_code='KE').first()
+    country_lookup = get_country_lookup()
+    default_country = Country.objects.filter(is_default=True).first() or Country.objects.filter(is_active=True).first()
 
+    # Primary vendor for the default vendor user (OneToOneField constraint — only ONE per user)
+    kenya = country_lookup.get('KE') or default_country
     primary_vendor, created = Vendor.objects.update_or_create(
         user=vendor_user,
         defaults={
@@ -556,7 +848,13 @@ def seed_vendors(users, categories):
         primary_vendor.user.grant_role(User.Role.VENDOR)
 
     vendors = [primary_vendor]
+
     for index, supplier in enumerate(SUPPLIER_EXPORT, start=1):
+        inferred_iso = infer_country_iso_from_text(supplier['location'])
+        country = country_lookup.get(inferred_iso) if inferred_iso else None
+        if not country:
+            country = default_country
+
         username = f"supplier_{index}_{slugify(supplier['name'])[:18]}"
         user_defaults = {
             'email': supplier['contact_email'],
@@ -577,26 +875,27 @@ def seed_vendors(users, categories):
         supplier_user.grant_role(User.Role.VENDOR)
 
         category_tags = derive_category_tags(supplier['supplier_type'])
-        registration_number = f"SUP-{index:03d}"
+        registration_number = f"SUP-{country.iso_code}-{index:03d}" if country else f"SUP-{index:03d}"
+        city_name = supplier['location'].split(',')[0] if ',' in supplier['location'] else supplier['location']
         vendor, vendor_created = Vendor.objects.update_or_create(
             user=supplier_user,
             defaults={
                 'business_name': supplier['name'],
                 'registration_number': registration_number,
                 'verified_status': 'APPROVED',
-                'country': kenya,
+                'country': country,
                 'location_text': supplier['location'],
                 'formatted_address': supplier['location'],
                 'location_hierarchy': {
-                    'country': 'Kenya',
-                    'city': supplier['location'].split(',')[0],
+                    'country': country.name if country else 'Unknown',
+                    'city': city_name,
                 },
                 'provides_delivery': supplier['supplier_type'] != 'service',
                 'delivery_radius_km': 120 if supplier['supplier_type'] == 'material' else 40,
                 'categories_served': [tag for tag in category_tags if tag in categories],
             }
         )
-        log_seed_result("Vendor profile", vendor.business_name, vendor_created)
+        log_seed_result("Vendor profile", f"{vendor.business_name} ({country.iso_code if country else '??'})", vendor_created)
         vendors.append(vendor)
 
     return vendors
@@ -610,53 +909,163 @@ def seed_vendor(users, categories=None):
 
 
 def seed_contractor(users):
-    """Create a contractor profile with approved role grant."""
-    contractor_user = users.get('CONTRACTOR')
-    if not contractor_user:
-        logger.warning("⚠️ No contractor user found, skipping contractor profile")
-        return None
+    """Create contractor profiles with approved role grants across multiple countries."""
+    country_lookup = {c.iso_code: c for c in Country.objects.filter(iso_code__in=['KE','UG','TZ','RW','BI','SS','ET'])}
 
-    contractor, created = ContractorProfile.objects.update_or_create(
-        user=contractor_user,
-        defaults={
+    contractors_data = [
+        {
+            'username': 'contractor',
             'company_name': 'Precision Build Partners',
             'service_categories': ['Masonry', 'Electrical'],
             'location_text': 'Nairobi, Kenya',
-            'verified_status': ContractorProfile.Status.APPROVED,
-        }
-    )
-    log_seed_result("Contractor profile", contractor.company_name, created)
-    if contractor.verified_status == ContractorProfile.Status.APPROVED:
-        contractor.user.grant_role(User.Role.CONTRACTOR)
-    return contractor
+            'country_code': 'KE',
+        },
+        {
+            'username': 'contractor_ug',
+            'company_name': 'Uganda Structural Experts',
+            'service_categories': ['Plumbing', 'Carpentry'],
+            'location_text': 'Kampala, Uganda',
+            'country_code': 'UG',
+        },
+        {
+            'username': 'contractor_tz',
+            'company_name': 'Tanzania Civil Works',
+            'service_categories': ['Masonry', 'Plumbing'],
+            'location_text': 'Dar es Salaam, Tanzania',
+            'country_code': 'TZ',
+        },
+    ]
+
+    created_contractors = []
+    for cd in contractors_data:
+        if cd['username'] == 'contractor':
+            contractor_user = users.get('CONTRACTOR')
+        else:
+            user_defaults = {
+                'email': f"{cd['username']}@example.com",
+                'role': User.Role.PROJECT_OWNER,
+                'first_name': cd['company_name'][:75],
+                'last_name': 'Contractor',
+                'is_staff': False,
+                'is_superuser': False,
+            }
+            contractor_user, user_created = User.objects.update_or_create(
+                username=cd['username'],
+                defaults=user_defaults,
+            )
+            contractor_user.set_password('password123')
+            contractor_user.role = User.Role.PROJECT_OWNER
+            contractor_user.save(update_fields=['password', 'role', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser'])
+            log_seed_result("Contractor user", cd['username'], user_created)
+            contractor_user.grant_role(User.Role.CONTRACTOR)
+
+        if not contractor_user:
+            logger.warning(f"⚠️ No contractor user found for {cd['username']}, skipping contractor profile")
+            continue
+
+        country = country_lookup.get(cd['country_code'])
+        contractor, created = ContractorProfile.objects.update_or_create(
+            user=contractor_user,
+            defaults={
+                'company_name': cd['company_name'],
+                'service_categories': cd['service_categories'],
+                'location_text': cd['location_text'],
+                'country': country,
+                'verified_status': ContractorProfile.Status.APPROVED,
+            }
+        )
+        log_seed_result("Contractor profile", contractor.company_name, created)
+        if contractor.verified_status == ContractorProfile.Status.APPROVED:
+            contractor.user.grant_role(User.Role.CONTRACTOR)
+        created_contractors.append(contractor)
+
+    return created_contractors[0] if created_contractors else None
 
 
 def seed_courier(users):
-    """Create a courier profile with approved role grant."""
-    courier_user = users.get('COURIER')
-    if not courier_user:
-        logger.warning("⚠️ No courier user found, skipping courier profile")
-        return None
+    """Create courier profiles with approved role grants across multiple countries."""
+    country_lookup = {c.iso_code: c for c in Country.objects.filter(iso_code__in=['KE','UG','TZ','RW','BI','SS','ET'])}
 
-    courier, created = CourierProfile.objects.update_or_create(
-        user=courier_user,
-        defaults={
+    couriers_data = [
+        {
+            'username': 'courier',
             'company_name': 'SwiftSite Logistics',
             'registration_number': 'CR-998877',
             'tax_pin': 'P051234567X',
-            'support_email': courier_user.email,
             'support_phone': '+254700111222',
             'location_text': 'Nairobi, Kenya',
-            'status': 'APPROVED',
-            'is_active': True,
-            'submitted_at': timezone.now() - timedelta(days=5),
-            'reviewed_at': timezone.now() - timedelta(days=2),
-        }
-    )
-    log_seed_result("Courier profile", courier.company_name, created)
-    if courier.status == 'APPROVED':
-        courier.user.grant_role(User.Role.COURIER)
-    return courier
+            'country_code': 'KE',
+        },
+        {
+            'username': 'courier_rw',
+            'company_name': 'Kigali Express Delivery',
+            'registration_number': 'CR-RW-001',
+            'tax_pin': 'P052345678X',
+            'support_phone': '+250788123456',
+            'location_text': 'Kigali, Rwanda',
+            'country_code': 'RW',
+        },
+        {
+            'username': 'courier_et',
+            'company_name': 'Addis Fast Freight',
+            'registration_number': 'CR-ET-001',
+            'tax_pin': 'P053456789X',
+            'support_phone': '+251911123456',
+            'location_text': 'Addis Ababa, Ethiopia',
+            'country_code': 'ET',
+        },
+    ]
+
+    created_couriers = []
+    for cd in couriers_data:
+        if cd['username'] == 'courier':
+            courier_user = users.get('COURIER')
+        else:
+            user_defaults = {
+                'email': f"{cd['username']}@example.com",
+                'role': User.Role.PROJECT_OWNER,
+                'first_name': cd['company_name'][:75],
+                'last_name': 'Courier',
+                'is_staff': False,
+                'is_superuser': False,
+            }
+            courier_user, user_created = User.objects.update_or_create(
+                username=cd['username'],
+                defaults=user_defaults,
+            )
+            courier_user.set_password('password123')
+            courier_user.role = User.Role.PROJECT_OWNER
+            courier_user.save(update_fields=['password', 'role', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser'])
+            log_seed_result("Courier user", cd['username'], user_created)
+            courier_user.grant_role(User.Role.COURIER)
+
+        if not courier_user:
+            logger.warning(f"⚠️ No courier user found for {cd['username']}, skipping courier profile")
+            continue
+
+        country = country_lookup.get(cd['country_code'])
+        courier, created = CourierProfile.objects.update_or_create(
+            user=courier_user,
+            defaults={
+                'company_name': cd['company_name'],
+                'registration_number': cd['registration_number'],
+                'tax_pin': cd['tax_pin'],
+                'support_email': courier_user.email,
+                'support_phone': cd['support_phone'],
+                'location_text': cd['location_text'],
+                'country': country,
+                'status': 'APPROVED',
+                'is_active': True,
+                'submitted_at': timezone.now() - timedelta(days=5),
+                'reviewed_at': timezone.now() - timedelta(days=2),
+            }
+        )
+        log_seed_result("Courier profile", courier.company_name, created)
+        if courier.status == 'APPROVED':
+            courier.user.grant_role(User.Role.COURIER)
+        created_couriers.append(courier)
+
+    return created_couriers[0] if created_couriers else None
 
 
 def seed_countries():
@@ -729,10 +1138,11 @@ def seed_products(vendors, categories):
             continue
 
         vendor = vendors[index % len(vendors)]
+        vendor_currency = getattr(getattr(vendor, 'country', None), 'default_currency', 'KES') or 'KES'
         normalized_seed = {
             **seed,
             'brand': vendor.business_name,
-            'country_of_origin': 'Kenya',
+            'country_of_origin': getattr(getattr(vendor, 'country', None), 'name', 'Kenya'),
             'quality_grade': 'Reference export',
             'delivery_regions': ['NAIROBI', 'MOMBASA', 'KISUMU', 'NAKURU'],
             'stock_quantity': 25 + (index * 3),
@@ -740,7 +1150,7 @@ def seed_products(vendors, categories):
             'bulk_threshold': 12 if seed.get('units') in {'NO', 'PRS'} else 30,
             'packaging_details': f"{seed.get('units') or 'NO'} catalog unit from imported legacy schedule",
             'attribute_entries': [
-                {'group': 'Commercial', 'name': 'Legacy Rate', 'value': str(seed['cpurate']), 'unit': 'KES', 'is_highlight': True},
+                {'group': 'Commercial', 'name': 'Legacy Rate', 'value': str(seed['cpurate']), 'unit': vendor_currency, 'is_highlight': True},
                 {'group': 'Reference', 'name': 'Specification ID', 'value': seed['specificationid'], 'unit': '', 'is_highlight': True},
                 {'group': 'Reference', 'name': 'Material ID', 'value': seed['materialid'], 'unit': '', 'is_highlight': False},
             ],
@@ -756,56 +1166,234 @@ def seed_products(vendors, categories):
         }
         seed_product_record(vendor, category, registry_map, normalized_seed)
 
+    vendor_by_country = {getattr(vendor.country, 'iso_code', None): vendor for vendor in vendors if getattr(vendor, 'country', None)}
+    for seed in COUNTRY_SPECIFIC_PRODUCT_EXPORT:
+        country = Country.objects.filter(iso_code=seed['country_code']).first()
+        if not country:
+            logger.warning(f"⚠️ Missing country {seed['country_code']} for {seed['name']}, skipping")
+            continue
+
+        category = categories.get(seed['category_code'])
+        if not category:
+            logger.warning(f"⚠️ Missing category {seed['category_code']} for {seed['name']}, skipping")
+            continue
+
+        vendor = vendor_by_country.get(country.iso_code)
+        if not vendor:
+            username = f"vendor_{country.iso_code.lower()}_regional"
+            user, user_created = User.objects.update_or_create(
+                username=username,
+                defaults={
+                    'email': f"{username}@example.com",
+                    'first_name': country.name,
+                    'last_name': 'Supplier',
+                    'role': User.Role.PROJECT_OWNER,
+                    'is_staff': False,
+                    'is_superuser': False,
+                },
+            )
+            user.set_password('password123')
+            user.role = User.Role.PROJECT_OWNER
+            user.save(update_fields=['password', 'role', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser'])
+            if user_created:
+                log_seed_result("Regional vendor user", username, user_created)
+            user.grant_role(User.Role.VENDOR)
+
+            vendor, vendor_created = Vendor.objects.update_or_create(
+                user=user,
+                defaults={
+                    'business_name': seed['vendor_name'],
+                    'registration_number': f"REG-{country.iso_code}-{slugify(seed['vendor_name'])[:10].upper()}",
+                    'verified_status': 'APPROVED',
+                    'country': country,
+                    'location_text': seed.get('location_text') or country.name,
+                    'formatted_address': seed.get('formatted_address') or seed.get('location_text') or country.name,
+                    'location_hierarchy': {
+                        'country': country.name,
+                        'city': (seed.get('location_text') or country.name).split(',')[0],
+                    },
+                    'provides_delivery': True,
+                    'delivery_radius_km': 150,
+                    'categories_served': [tag for tag in derive_category_tags('material') if tag in categories],
+                }
+            )
+            log_seed_result("Regional vendor profile", vendor.business_name, vendor_created)
+            vendors.append(vendor)
+            vendor_by_country[country.iso_code] = vendor
+
+        regional_seed = {
+            **seed,
+            'brand': seed['vendor_name'],
+            'short_description': seed.get('short_description') or seed['name'][:500],
+            'description': seed.get('description') or seed['name'],
+            'country': country,
+            'currency': country.default_currency,
+            'country_of_origin': seed.get('country_of_origin', country.name),
+            'quality_grade': seed.get('quality_grade', 'Regional market stock'),
+            'packaging_details': seed.get('packaging_details', f"{country.name} regional catalog item"),
+            'delivery_regions': seed.get('delivery_regions') or [seed['location_text'].split(',')[0].upper()],
+            'stock_quantity': seed.get('stock_quantity', 35),
+            'reorder_level': seed.get('reorder_level', 10),
+            'bulk_threshold': seed.get('bulk_threshold', 15 if seed.get('units') in {'NO', 'PRS'} else 30),
+            'attribute_entries': [
+                {
+                    'group': 'Commercial',
+                    'name': 'Regional Currency',
+                    'value': country.default_currency,
+                    'unit': '',
+                    'is_highlight': True,
+                },
+                {
+                    'group': 'Reference',
+                    'name': 'Country Code',
+                    'value': country.iso_code,
+                    'unit': '',
+                    'is_highlight': True,
+                },
+            ],
+            'documents': [
+                {
+                    'document_type': 'DATASHEET',
+                    'title': f"{seed['specificationid']} regional catalog sheet",
+                    'external_url': f"https://example.com/regional-materials/{seed['specificationid'].lower()}.pdf",
+                    'description': f"Regional catalog entry for {country.name}.",
+                    'is_public': True,
+                }
+            ],
+        }
+        seed_product_record(vendor_by_country[country.iso_code], category, registry_map, regional_seed)
+
+
+# Multi-country project and contract seed data
+PROJECT_SEEDS = [
+    {'country': 'KE', 'title': 'Skyline Apartment Wing A', 'location': 'Westlands, Nairobi', 'budget': 1500000.00},
+    {'country': 'KE', 'title': 'Mombasa Port Logistics Hub', 'location': 'Mombasa, Kenya', 'budget': 3200000.00},
+    {'country': 'UG', 'title': 'Kampala Business Centre Tower', 'location': 'Kampala, Uganda', 'budget': 2100000.00},
+    {'country': 'UG', 'title': 'Jinja Hydropower Extension', 'location': 'Jinja, Uganda', 'budget': 4500000.00},
+    {'country': 'TZ', 'title': 'Dar es Salaam Metro Housing', 'location': 'Dar es Salaam, Tanzania', 'budget': 2800000.00},
+    {'country': 'TZ', 'title': 'Arusha Safari Resort Complex', 'location': 'Arusha, Tanzania', 'budget': 1200000.00},
+    {'country': 'RW', 'title': 'Kigali Tech Park Phase 1', 'location': 'Kigali, Rwanda', 'budget': 1800000.00},
+    {'country': 'RW', 'title': 'Musanze Eco-Lodge Development', 'location': 'Musanze, Rwanda', 'budget': 800000.00},
+    {'country': 'BI', 'title': 'Bujumbura Waterfront Apartments', 'location': 'Bujumbura, Burundi', 'budget': 950000.00},
+    {'country': 'SS', 'title': 'Juba Central Market Redevelopment', 'location': 'Juba, South Sudan', 'budget': 1100000.00},
+    {'country': 'ET', 'title': 'Addis Ababa Light Rail Extension', 'location': 'Addis Ababa, Ethiopia', 'budget': 5500000.00},
+    {'country': 'ET', 'title': 'Dire Dawa Industrial Park', 'location': 'Dire Dawa, Ethiopia', 'budget': 2200000.00},
+]
+
+CONTRACT_SEEDS = [
+    {'country': 'KE', 'title': 'Masonry and Foundation Works - Nairobi', 'location': 'Westlands, Nairobi', 'budget_min': 50000, 'budget_max': 75000},
+    {'country': 'KE', 'title': 'Coastal Road Paving - Mombasa', 'location': 'Mombasa, Kenya', 'budget_min': 120000, 'budget_max': 180000},
+    {'country': 'UG', 'title': 'Tower Structural Steel Supply', 'location': 'Kampala, Uganda', 'budget_min': 80000, 'budget_max': 120000},
+    {'country': 'UG', 'title': 'Dam Concrete Pouring Contract', 'location': 'Jinja, Uganda', 'budget_min': 200000, 'budget_max': 350000},
+    {'country': 'TZ', 'title': 'Residential Block Electrical Installations', 'location': 'Dar es Salaam, Tanzania', 'budget_min': 95000, 'budget_max': 140000},
+    {'country': 'TZ', 'title': 'Resort Landscaping and Pool Works', 'location': 'Arusha, Tanzania', 'budget_min': 45000, 'budget_max': 70000},
+    {'country': 'RW', 'title': 'Tech Park Fibre Optic Cabling', 'location': 'Kigali, Rwanda', 'budget_min': 60000, 'budget_max': 90000},
+    {'country': 'RW', 'title': 'Eco-Lodge Timber Frame Construction', 'location': 'Musanze, Rwanda', 'budget_min': 35000, 'budget_max': 55000},
+    {'country': 'BI', 'title': 'Waterfront Retaining Wall Construction', 'location': 'Bujumbura, Burundi', 'budget_min': 40000, 'budget_max': 65000},
+    {'country': 'SS', 'title': 'Market Roofing and Drainage', 'location': 'Juba, South Sudan', 'budget_min': 55000, 'budget_max': 85000},
+    {'country': 'ET', 'title': 'Railway Station Platform Works', 'location': 'Addis Ababa, Ethiopia', 'budget_min': 250000, 'budget_max': 400000},
+    {'country': 'ET', 'title': 'Factory Warehouse Construction', 'location': 'Dire Dawa, Ethiopia', 'budget_min': 150000, 'budget_max': 220000},
+]
+
 
 def seed_projects_and_contracts(users):
-    """Create sample projects and contracts."""
+    """Create sample projects and contracts across all operating countries."""
     owner = users.get('PROJECT_OWNER')
     if not owner:
         logger.warning("⚠️ No project owner found, skipping projects")
         return
 
-    # Create Project
-    project, created = Project.objects.update_or_create(
-        owner=owner,
-        title='Skyline Apartment Wing A',
-        defaults={
-            'description': 'A 12-story residential development in Westlands.',
-            'location_text': 'Westlands, Nairobi',
-            'estimated_budget': 1500000.00,
-            'status': 'FUNDING_OPEN'
-        }
-    )
-    log_seed_result("Project", project.title, created)
+    country_lookup = get_country_lookup()
+    default_country = Country.objects.filter(is_default=True).first() or Country.objects.filter(is_active=True).first()
 
-    # Create Contract
-    contract, created = Contract.objects.update_or_create(
-        owner=owner,
-        title='Masonry and Foundation Works - Wing A',
-        defaults={
-            'description_scope': 'Complete foundation excavation and masonry for first 3 floors.',
-            'location': 'Westlands, Nairobi',
-            'budget_min': 50000.00,
-            'budget_max': 75000.00,
-            'status': 'BIDDING'
-        }
-    )
-    log_seed_result("Contract", contract.title, created)
+    first_project = None
+    for seed in PROJECT_SEEDS:
+        country = country_lookup.get(seed['country']) or default_country
+        project, created = Project.objects.update_or_create(
+            owner=owner,
+            title=seed['title'],
+            defaults={
+                'description': f"A major construction development in {seed['location']}.",
+                'location_text': seed['location'],
+                'country': country,
+                'estimated_budget': seed['budget'],
+                'status': 'FUNDING_OPEN',
+            }
+        )
+        log_seed_result("Project", f"{project.title} ({seed['country']})", created)
+        if first_project is None:
+            first_project = project
 
-    return project
+    for seed in CONTRACT_SEEDS:
+        country = country_lookup.get(seed['country']) or default_country
+        contract, created = Contract.objects.update_or_create(
+            owner=owner,
+            title=seed['title'],
+            defaults={
+                'description_scope': f"Construction contract for works in {seed['location']}.",
+                'location': seed['location'],
+                'country': country,
+                'budget_min': seed['budget_min'],
+                'budget_max': seed['budget_max'],
+                'status': 'BIDDING',
+            }
+        )
+        log_seed_result("Contract", f"{contract.title} ({seed['country']})", created)
+
+    return first_project
 
 
 def seed_government_tenders():
-    """Create sample public tenders."""
-    tender, created = PublicTender.objects.update_or_create(
-        title='Expressway Maintenance Project - 2026',
-        defaults={
+    """Create sample public tenders across operating countries."""
+    tenders_data = [
+        {
+            'title': 'Expressway Maintenance Project - 2026',
             'description': 'Routine maintenance of the Nairobi-Mombasa highway segments.',
             'issuing_authority': 'Roads Authority (KENHA)',
-            'bid_deadline': timezone.now() + timedelta(days=30),
-            'status': 'OPEN'
-        }
-    )
-    log_seed_result("Public tender", tender.title, created)
+        },
+        {
+            'title': 'Kampala Northern Bypass Upgrade',
+            'description': 'Expansion and rehabilitation of the northern bypass road.',
+            'issuing_authority': 'Uganda National Roads Authority (UNRA)',
+        },
+        {
+            'title': 'Dar es Salaam Bus Rapid Transit Phase III',
+            'description': 'Construction of dedicated BRT lanes and terminals.',
+            'issuing_authority': 'Tanzania Roads Agency (TANROADS)',
+        },
+        {
+            'title': 'Kigali Smart City Fiber Network',
+            'description': 'Deployment of fiber optic infrastructure across the city.',
+            'issuing_authority': 'Rwanda Utilities Regulatory Authority (RURA)',
+        },
+        {
+            'title': 'Bujumbura Port Modernization',
+            'description': 'Dredging and modernization of the Bujumbura port facilities.',
+            'issuing_authority': 'Burundi Transport Ministry',
+        },
+        {
+            'title': 'Juba Power Grid Extension',
+            'description': 'Expansion of the electrical distribution network in Juba.',
+            'issuing_authority': 'South Sudan Electricity Corporation',
+        },
+        {
+            'title': 'Addis Ababa Ring Road Phase IV',
+            'description': 'Completion of the fourth phase of the ring road project.',
+            'issuing_authority': 'Ethiopian Roads Authority',
+        },
+    ]
+
+    for td in tenders_data:
+        tender, created = PublicTender.objects.update_or_create(
+            title=td['title'],
+            defaults={
+                'description': td['description'],
+                'issuing_authority': td['issuing_authority'],
+                'bid_deadline': timezone.now() + timedelta(days=30),
+                'status': 'OPEN'
+            }
+        )
+        log_seed_result("Public tender", tender.title, created)
 
 
 def seed_investor_data(users, project):

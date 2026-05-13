@@ -2,16 +2,16 @@
   <DashboardShell
     v-model:active-section="activeSection"
     accent="earth"
-    title="Property Manager Hub"
-    eyebrow="PROPERTY OPERATIONS"
+    :title="dashboardTitle"
+    :eyebrow="dashboardEyebrow"
     signal-text="PROPERTY GRID ONLINE"
     workspace-label="Operations"
     :sidebar-groups="navGroups"
     :quickstats="quickstats"
   >
     <template #headerActions>
-      <Button variant="primary" size="sm" @click="openPropertyModal">New Listing</Button>
-      <Button variant="outline" size="sm" @click="openAvailabilityModal">Publish Availability</Button>
+      <Button v-if="canCreateListing" variant="primary" size="sm" @click="openPropertyModal">New Listing</Button>
+      <Button v-if="canManageAppointments" variant="outline" size="sm" @click="openAvailabilityModal">Publish Availability</Button>
       <Button variant="ghost" size="sm" @click="loadDashboard">Refresh</Button>
     </template>
 
@@ -58,7 +58,7 @@
               <span class="pz-manager-pill">{{ item.inquiry_enabled ? 'Inquiries On' : 'Inquiries Off' }}</span>
             </div>
             <div class="pz-manager-list__commercial">
-              <strong>{{ configStore.formatPrice(item.pricing_profile?.asking_price || item.price_estimate) }}</strong>
+              <strong>{{ configStore.formatPrice(item.pricing_profile?.asking_price || item.price_estimate, item.pricing_profile?.currency || item.country?.default_currency || configStore.activeCurrencyCode) }}</strong>
               <span class="pz-u-text-mono text-xs pz-u-color-earth">{{ item.status }}</span>
               <span class="pz-u-text-mono text-xs pz-u-color-concrete">
                 {{ item.specification?.bedrooms || 0 }} bed / {{ item.specification?.bathrooms || 0 }} bath / {{ item.development_metadata?.development_stage || 'No stage' }}
@@ -224,9 +224,9 @@
             <PzInput v-model="pricingForm.asking_price" label="Asking Price" type="number" />
             <PzInput v-model="pricingForm.rent_amount" label="Rent Amount" type="number" />
             <select v-model="pricingForm.currency" class="pz-input">
-              <option value="KES">KES</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
+              <option v-for="currency in configStore.availableCurrencies" :key="currency.currency_code" :value="currency.currency_code">
+                {{ currency.currency_code }}{{ currency.symbol ? ` (${currency.symbol})` : '' }}
+              </option>
             </select>
             <select v-model="pricingForm.pricing_strategy" class="pz-input">
               <option value="FIXED">Fixed</option>
@@ -327,29 +327,73 @@ const submittingAvailability = ref(false);
 const showPropertyModal = ref(false);
 const showAvailabilityModal = ref(false);
 
+const dashboardProfile = computed(() => {
+  if (authStore.hasRole('SURVEYOR')) {
+    return {
+      title: 'Surveyor Hub',
+      eyebrow: 'VALUATION & VERIFICATION',
+      canCreateListing: false,
+      canManageAppointments: false,
+      canVerify: true,
+    };
+  }
+  if (authStore.hasRole('REAL_ESTATE_AGENT')) {
+    return {
+      title: 'Agent Hub',
+      eyebrow: 'SALES & LISTING OPERATIONS',
+      canCreateListing: true,
+      canManageAppointments: true,
+      canVerify: false,
+    };
+  }
+  return {
+    title: 'Property Manager Hub',
+    eyebrow: 'PROPERTY OPERATIONS',
+    canCreateListing: true,
+    canManageAppointments: true,
+    canVerify: false,
+  };
+});
+
+const dashboardTitle = computed(() => dashboardProfile.value.title);
+const dashboardEyebrow = computed(() => dashboardProfile.value.eyebrow);
+const canCreateListing = computed(() => dashboardProfile.value.canCreateListing);
+const canManageAppointments = computed(() => dashboardProfile.value.canManageAppointments);
+const canVerify = computed(() => dashboardProfile.value.canVerify);
+
 const quickstats = computed(() => [
   { label: 'Listings', value: properties.value.length },
   { label: 'Leads', value: inquiries.value.length },
   { label: 'Appointments', value: appointments.value.length },
 ]);
 
-const navGroups = computed(() => [
-  {
-    title: 'Property Operations',
-    items: [
-      { id: 'listings', label: 'Listings & Availability', icon: '🏠' },
-      { id: 'availability', label: 'Availability Windows', icon: '🗓' },
-      { id: 'leads', label: 'Incoming Leads', icon: '📭' },
-      { id: 'appointments', label: 'Appointments', icon: '⏰' },
-    ],
-  },
-  {
-    title: 'System',
-    items: [
-      { id: 'exit', label: 'Exit Console', icon: '⇚', action: () => { window.location.href = '/'; } },
-    ],
-  },
-]);
+const navGroups = computed(() => {
+  const items = [
+    { id: 'listings', label: 'Listings & Availability', icon: '🏠' },
+  ];
+  if (canManageAppointments.value) {
+    items.push({ id: 'availability', label: 'Availability Windows', icon: '🗓' });
+  }
+  items.push({ id: 'leads', label: 'Incoming Leads', icon: '📭' });
+  if (canManageAppointments.value) {
+    items.push({ id: 'appointments', label: 'Appointments', icon: '⏰' });
+  }
+  if (canVerify.value) {
+    items.push({ id: 'verification', label: 'Verification Queue', icon: '✓' });
+  }
+  return [
+    {
+      title: 'Property Operations',
+      items,
+    },
+    {
+      title: 'System',
+      items: [
+        { id: 'exit', label: 'Exit Console', icon: '⇚', action: () => { window.location.href = '/'; } },
+      ],
+    },
+  ];
+});
 
 const propertyForm = ref({
   title: '',
@@ -380,7 +424,7 @@ const specificationForm = ref({
 });
 
 const pricingForm = ref({
-  currency: 'KES',
+  currency: configStore.activeCurrencyCode || 'KES',
   asking_price: '',
   rent_amount: '',
   pricing_strategy: 'FIXED',
@@ -444,7 +488,7 @@ function resetPropertyForm() {
     occupancy_status: '',
   };
   pricingForm.value = {
-    currency: 'KES',
+    currency: configStore.activeCurrencyCode || 'KES',
     asking_price: '',
     rent_amount: '',
     pricing_strategy: 'FIXED',
@@ -541,7 +585,7 @@ async function createProperty() {
     };
 
     const pricingProfile = {
-      currency: pricingForm.value.currency,
+      currency: pricingForm.value.currency || configStore.activeCurrencyCode || 'KES',
       asking_price: numberOrNull(pricingForm.value.asking_price),
       rent_amount: numberOrNull(pricingForm.value.rent_amount),
       pricing_strategy: pricingForm.value.pricing_strategy,

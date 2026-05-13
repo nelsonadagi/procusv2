@@ -14,8 +14,9 @@
             active-class="pz-nav__link--active">Properties</router-link>
           <router-link to="/contracts" class="pz-nav__link"
             active-class="pz-nav__link--active">Contracts</router-link>
-          <router-link to="/tenders" class="pz-nav__link" active-class="pz-nav__link--active">Tenders</router-link>
           <router-link to="/projects" class="pz-nav__link" active-class="pz-nav__link--active">Projects</router-link>
+          <router-link v-if="authStore.hasRole('INVESTOR')" to="/investor/dashboard" class="pz-nav__link"
+            active-class="pz-nav__link--active">Investor</router-link>
         </div>
 
         <div class="pz-nav__actions">
@@ -31,13 +32,14 @@
               <select v-model="configStore.activeCountryCode" @change="configStore.setCountry($event.target.value)"
                 class="pz-nav__loc-select">
                 <option v-for="c in configStore.countries" :key="c.iso_code" :value="c.iso_code">
-                  {{ c.flag_emoji }} {{ c.iso_code }}
+                  {{ c.flag_emoji }} {{ c.name }} ({{ c.iso_code }} · {{ c.default_currency || 'KES' }})
                 </option>
               </select>
             </div>
             <div class="pz-nav__loc-item">
-              <select v-model="configStore.activeCurrencyCode" @change="configStore.setCurrency($event.target.value)"
-                class="pz-nav__loc-select pz-nav__loc-select--currency">
+              <select v-model="configStore.activeCurrencyCode" disabled
+                class="pz-nav__loc-select pz-nav__loc-select--currency"
+                title="Currency is derived from the selected country">
                 <option v-for="cur in configStore.availableCurrencies" :key="cur.currency_code"
                   :value="cur.currency_code">
                   {{ cur.currency_code }} ({{ cur.symbol }})
@@ -150,9 +152,10 @@
               @click="mobileMenuOpen = false">Properties</router-link>
             <router-link to="/contracts" class="pz-nav__mobile-link"
               @click="mobileMenuOpen = false">Contracts</router-link>
-            <router-link to="/tenders" class="pz-nav__mobile-link" @click="mobileMenuOpen = false">Tenders</router-link>
             <router-link to="/projects" class="pz-nav__mobile-link"
               @click="mobileMenuOpen = false">Projects</router-link>
+            <router-link v-if="authStore.hasRole('INVESTOR')" to="/investor/dashboard" class="pz-nav__mobile-link"
+              @click="mobileMenuOpen = false">Investor</router-link>
 
             <div v-if="authStore.isAuthenticated" class="u-mt-auto pz-l-flex pz-l-flex--column pz-l-flex--gap-6">
               <!-- Mobile Localization Cluster -->
@@ -160,15 +163,14 @@
                 <div class="pz-nav__mobile-loc-row">
                   <label>Region</label>
                   <select v-model="configStore.activeCountryCode" @change="configStore.setCountry($event.target.value)">
-                    <option v-for="c in configStore.countries" :key="c.iso_code" :value="c.iso_code">{{ c.flag_emoji }}
-                      {{
-                        c.name }}</option>
+                    <option v-for="c in configStore.countries" :key="c.iso_code" :value="c.iso_code">{{ c.flag_emoji }} {{
+                      c.name }} ({{ c.iso_code }} · {{ c.default_currency || 'KES' }})</option>
                   </select>
                 </div>
                 <div class="pz-nav__mobile-loc-row">
-                  <label>Currency</label>
-                  <select v-model="configStore.activeCurrencyCode"
-                    @change="configStore.setCurrency($event.target.value)">
+                  <label>Currency (auto)</label>
+                  <select v-model="configStore.activeCurrencyCode" disabled
+                    title="Currency is derived from the selected country">
                     <option v-for="cur in configStore.availableCurrencies" :key="cur.currency_code"
                       :value="cur.currency_code">{{
                         cur.currency_code }} ({{ cur.symbol }})</option>
@@ -217,9 +219,9 @@
 
     <!-- 2. Main Terminal Content -->
     <main class="l-main">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
+      <router-view v-slot="{ Component, route }">
+        <transition name="fade">
+          <component :is="Component" :key="route.path" />
         </transition>
       </router-view>
     </main>
@@ -248,17 +250,17 @@
             <router-link to="/" class="pz-shell-footer__link">Materials Marketplace</router-link>
             <router-link to="/properties" class="pz-shell-footer__link">Property Marketplace</router-link>
             <router-link to="/contracts" class="pz-shell-footer__link">Contracts</router-link>
-            <router-link to="/tenders" class="pz-shell-footer__link">Tender Board</router-link>
             <router-link to="/projects" class="pz-shell-footer__link">Projects</router-link>
           </div>
 
           <div class="pz-shell-footer__column">
-            <h3 class="pz-shell-footer__heading">Start Work</h3>
-            <router-link to="/projects/new" class="pz-shell-footer__link">Create Project</router-link>
-            <router-link to="/contracts/new" class="pz-shell-footer__link">Post Contract</router-link>
-            <router-link to="/vendors/register" class="pz-shell-footer__link">Vendor Onboarding</router-link>
-            <router-link to="/contractors/register" class="pz-shell-footer__link">Contractor Onboarding</router-link>
+            <h3 class="pz-shell-footer__heading">Workspaces</h3>
+            <router-link to="/owner/dashboard" class="pz-shell-footer__link">Owner Workspace</router-link>
             <router-link to="/property-manager/dashboard" class="pz-shell-footer__link">Property Workspace</router-link>
+            <router-link to="/contractor/dashboard" class="pz-shell-footer__link">Contractor Workspace</router-link>
+            <router-link to="/vendor/dashboard" class="pz-shell-footer__link">Vendor Workspace</router-link>
+            <router-link to="/buyer/dashboard" class="pz-shell-footer__link">Buyer Workspace</router-link>
+            <router-link v-if="authStore.hasRole('INVESTOR')" to="/investor/dashboard" class="pz-shell-footer__link">Investor Workspace</router-link>
           </div>
 
           <div class="pz-shell-footer__column">
@@ -269,6 +271,9 @@
             <router-link v-if="authStore.hasRole('VENDOR')" to="/vendor/dashboard" class="pz-shell-footer__link">Vendor Dashboard</router-link>
             <router-link v-if="authStore.hasRole('CONTRACTOR')" to="/contractor/dashboard" class="pz-shell-footer__link">Contractor Dashboard</router-link>
             <router-link v-if="authStore.hasRole('PROPERTY_MANAGER')" to="/property-manager/dashboard" class="pz-shell-footer__link">Property Dashboard</router-link>
+            <router-link v-if="authStore.hasRole('REAL_ESTATE_AGENT')" to="/agent/dashboard" class="pz-shell-footer__link">Agent Dashboard</router-link>
+            <router-link v-if="authStore.hasRole('SURVEYOR')" to="/surveyor/dashboard" class="pz-shell-footer__link">Surveyor Dashboard</router-link>
+            <router-link v-if="authStore.hasRole('INVESTOR')" to="/investor/dashboard" class="pz-shell-footer__link">Investor Dashboard</router-link>
             <router-link v-if="authStore.isAdmin" to="/admin" class="pz-shell-footer__link">Admin</router-link>
           </div>
         </div>
@@ -374,6 +379,8 @@
     if (path.startsWith('/contractor/dashboard')) return 'Contractor';
     if (path.startsWith('/owner/dashboard')) return 'Owner';
     if (path.startsWith('/property-manager/dashboard')) return 'Property';
+    if (path.startsWith('/agent/dashboard')) return 'Agent';
+    if (path.startsWith('/surveyor/dashboard')) return 'Surveyor';
     if (path.startsWith('/investor/dashboard')) return 'Investor';
     if (path.startsWith('/courier/dashboard')) return 'Courier';
     if (path.startsWith('/government/dashboard')) return 'Government';
@@ -389,6 +396,8 @@
     if (authStore.hasRole('VENDOR')) items.push({ label: 'Vendor', path: '/vendor/dashboard', id: 'vendor' });
     if (authStore.hasRole('CONTRACTOR')) items.push({ label: 'Contractor', path: '/contractor/dashboard', id: 'contractor' });
     if (authStore.hasRole('PROPERTY_MANAGER')) items.push({ label: 'Property', path: '/property-manager/dashboard', id: 'property' });
+    if (authStore.hasRole('REAL_ESTATE_AGENT')) items.push({ label: 'Agent', path: '/agent/dashboard', id: 'agent' });
+    if (authStore.hasRole('SURVEYOR')) items.push({ label: 'Surveyor', path: '/surveyor/dashboard', id: 'surveyor' });
     if (authStore.hasRole('INVESTOR')) items.push({ label: 'Investor', path: '/investor/dashboard', id: 'investor' });
     if (authStore.hasRole('COURIER')) items.push({ label: 'Courier', path: '/courier/dashboard', id: 'courier' });
     if (authStore.hasRole('GOVERNMENT')) items.push({ label: 'Government', path: '/government/dashboard', id: 'government' });
@@ -401,6 +410,8 @@
     if (!authStore.hasRole('VENDOR')) items.push({ label: 'Vendor Workspace', path: '/vendor/dashboard' });
     if (!authStore.hasRole('CONTRACTOR')) items.push({ label: 'Contractor Workspace', path: '/contractor/dashboard' });
     if (!authStore.hasRole('PROPERTY_MANAGER')) items.push({ label: 'Property Workspace', path: '/property-manager/dashboard' });
+    if (!authStore.hasRole('REAL_ESTATE_AGENT')) items.push({ label: 'Agent Workspace', path: '/agent/dashboard' });
+    if (!authStore.hasRole('SURVEYOR')) items.push({ label: 'Surveyor Workspace', path: '/surveyor/dashboard' });
     if (!authStore.hasRole('INVESTOR')) items.push({ label: 'Investor Workspace', path: '/investor/dashboard' });
     if (!authStore.hasRole('COURIER')) items.push({ label: 'Courier Workspace', path: '/courier/dashboard' });
     if (!authStore.hasRole('GOVERNMENT')) items.push({ label: 'Government Workspace', path: '/government/dashboard' });

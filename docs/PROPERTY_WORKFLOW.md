@@ -28,33 +28,73 @@ The property module exists to support:
 
 ## 2. Primary Actors
 
-### Property Owner
+The property module is interacted with by **7 distinct actor types**.
 
-* owns the property or controls the asset
-* can create listings directly
-* can define pricing, availability, financing eligibility, and project linkage
+### 1. Public / Unauthenticated Visitor (GUEST)
 
-### Property Manager
+* browses property listings (`/properties`)
+* views property detail (`/properties/:id`)
+* submits inquiries if `inquiry_enabled` is true (anonymous allowed with phone/email)
+* requests viewing appointments if `appointment_enabled` is true
+* views available time slots via the `availability` endpoint
 
-* approved specialized role
-* manages listings, inquiries, appointments, updates, and buyer/visitor communication
-* may operate on behalf of a property owner
+**Backend access:** `list`, `retrieve`, `availability` actions on `PropertyViewSet` are `AllowAny`.
 
-### Project Owner
+### 2. Project Owner (PROJECT_OWNER)
 
-* may discover a property and use it as the origin point for a project
-* may link the property to a project and then manage procurement, contracts, financing, and execution
+* default base role for new users
+* creates property listings
+* updates / deletes **own** listings
+* links properties to projects (`/v1/property/{id}/link-project/`)
+* sets availability windows for viewings
+* manages appointments and inquiries on owned properties
+* assigns a property manager
 
-### Public Visitor
+**Backend permissions:** `property:view`, `property:list_property`, `property:update_property`
 
-* can search and browse public property listings
-* can make anonymous inquiries if contact details are provided
-* can request or book appointments against visible availability slots
+### 3. Property Manager (PROPERTY_MANAGER)
 
-### Investor / Finance Applicant
+* approved specialized role (requires onboarding + admin approval)
+* creates listings on behalf of property owners
+* updates / manages properties where assigned as `manager`
+* publishes availability windows
+* manages appointments and inquiries on managed properties
+* accesses the dedicated Property Manager Hub (`/property-manager/dashboard`)
 
-* can evaluate a property as an acquisition or development opportunity
-* can finance a property directly or finance a linked project
+**Backend permissions:** `property:view`, `property:list_property`, `property:update_property`
+
+### 4. Buyer (BUYER)
+
+* no explicit `property:*` permissions in RBAC matrix
+* browses and views public listings
+* submits inquiries
+* books appointments
+* accesses linked project details from a property page
+
+### 5. Investor (INVESTOR / VERIFIED_INVESTOR)
+
+* browses properties via public routes only
+* evaluates properties as acquisition or development opportunities
+* properties can be linked to investment projects they pledge into
+* **No direct property CRUD** — no `property:*` permissions in RBAC matrix
+
+### 6. Admin / Staff (ADMIN)
+
+* full CRUD on **all** properties regardless of ownership
+* manages all inquiries, appointments, and availability windows
+* accesses Property Console from Admin Dashboard (`/admin`)
+* views regulatory reports (`/admin/reports`)
+
+**Backend access:** `ADMIN` role bypasses all ownership checks via `IsPropertyOperator` and `IsPropertyOwner`.
+
+### 7. Finance / Banking Actor (via Finance Module)
+
+* indirect interaction through `FinanceApplication`
+* `FinanceApplication` may reference a `PropertyListing` via `property` FK
+* investors can apply for property financing
+* property detail page exposes financing entry points
+
+**Model link:** `backend/finance/models.py` → `property = ForeignKey(PropertyListing)`
 
 ---
 

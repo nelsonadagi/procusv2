@@ -23,6 +23,8 @@ Engine      Layer       Layer       Pipeline    & Govt      Layer
 | **5** | Regulated Investment & Government | KYC, Compliance & Public Procurement | ✅ Delivered |
 | **6** | Full Regulatory Integration & AI | Banking, Reporting & Intelligence | ✅ Delivered |
 
+For the revenue model that sits across these phases, see [`MONETIZATION.md`](./MONETIZATION.md).
+
 ---
 
 ## Phase 1 — Materials Liquidity Engine
@@ -61,7 +63,7 @@ User ──▶ VendorProfile ──▶ Product ──▶ Order ──▶ Payment
 | `VendorProfile` | `company_name`, `verified_status`, `fulfillment_rate`, `average_rating` |
 | `Product` | `name`, `base_price`, `unit_of_measure`, `stock_level`, `status` |
 | `Order` | `buyer`, `vendor`, `status` (PLACED → DELIVERED → COMPLETED), `total_amount` |
-| `Payment` | `provider` (MPESA/STRIPE), `status` (UNPAID → PAID), `transaction_reference` |
+| `Payment` | `provider` (admin-configurable gateway code), `status` (UNPAID → PAID), `transaction_reference` |
 | `Dispute` | `order`, `status` (OPENED → RESOLVED_RELEASE/REFUND), `reason` |
 
 ### 🌐 Frontend Views
@@ -90,6 +92,8 @@ Phase 2 — who executes the *work* on the materials? → Contractors.
 ## Phase 2 — Contracts & Execution Layer
 
 > **Theme:** Extend the platform from material procurement into construction services — introducing contractor onboarding, competitive bidding, and milestone-based job execution.
+
+> **Model:** Projects and contracts stay separate. Projects represent the owner-side execution container; contracts represent the tender/procurement record that can later be linked to a project.
 
 ### 🎯 Goals
 - Enable project owners to post construction tenders
@@ -124,6 +128,7 @@ Contract (Tender) ◀──── Owner posts
 
 ### 🌐 Frontend Views
 - `ContractorRegistration.vue` — Contractor onboarding form
+- `OwnerDashboard.vue` — Project Owner workspace and tender entry point
 - `ViewTenders.vue` — Active tender discovery for contractors
 - `ContractList.vue` — Full contract marketplace
 - `ContractDetail.vue` — Bid submission, award, and milestone tracking
@@ -222,6 +227,16 @@ Phase 4 — escrow-backed projects need *project-level* structure, not just cont
 - connect real estate/property listings to upstream project demand
 - Provide project owners with a unified execution dashboard
 
+### 🧭 Project Module Contract
+Projects are the execution hub for the platform.
+
+- `CreateProject.vue` creates the project shell only.
+- `ProjectList.vue` is for discovery, filtering, and routing into detail.
+- `ProjectDetail.vue` is the operational workspace where owners manage requirements, contract links, funding, and updates.
+- `OwnerDashboard.vue` is the primary entry point for project actions.
+- Projects stay separate from contracts; awarded contracts can be linked to a project after procurement.
+- Property remains standalone, but a property can be linked into a project as upstream demand or execution context.
+
 ### 🧩 New Backend Modules
 | Module | App | Responsibility |
 |---|---|---|
@@ -258,14 +273,25 @@ PropertyListing ──▶ PropertyInquiry / Appointment
 | `PropertyProjectLink` | Connects `Property` ↔ `Project` |
 
 ### 🌐 Frontend Views
-- `ProjectList.vue` — Project marketplace and investment discovery
-- `ProjectDetail.vue` — Full project view with requirements, investment, and updates
-- `CreateProject.vue` — Owner project creation flow
+- `ProjectList.vue` — Discovery, search, and filtering for active projects
+- `ProjectDetail.vue` — Full project management cockpit with summary, requirements, contracts, milestones, funding, documents, updates, risks, and activity
+- `CreateProject.vue` — Minimal project shell creation flow
 - `PropertyListing.vue` — Property discovery and filtering
 - `PropertyDetail.vue` — Property hub for inquiries, appointments, financing, linked project context, and suggested materials/services
 - `InvestorDashboard.vue` — Portfolio and pledge management
 - `PropertyManagerDashboard.vue` — Listing operations, inquiries, appointments, and availability management
 - `OwnerDashboard.vue` — Multi-project management
+
+### ✅ Project Module Acceptance
+- An owner can create a project without completing requirements or contracts first.
+- An owner can add requirements after the project is created.
+- An owner can link an awarded contract to a project.
+- An owner can post project updates that appear in the project timeline.
+- Investors can see funding-ready projects and pledge against them.
+- A project detail page must show the live execution state, not just static metadata.
+- A project detail page must present management areas as clear sections or tabs, not as one long unstructured form.
+- The detail page must surface core operational data first: status, budget, funding, linked contracts, and current blockers or issues.
+- Documents, activity, and risk notes belong in the detail page even if they are read-only in the first iteration.
 
 ### 🔗 API Endpoints (v4 foundation)
 ```

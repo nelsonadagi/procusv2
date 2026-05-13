@@ -62,7 +62,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A config worker -l info
+    entrypoint: ["celery"]
+    command: ["-A", "config", "worker", "-l", "info"]
     volumes:
       - ./backend:/app
     env_file:
@@ -79,7 +80,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A config beat -l info
+    entrypoint: ["celery"]
+    command: ["-A", "config", "beat", "-l", "info"]
     volumes:
       - ./backend:/app
     env_file:

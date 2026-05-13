@@ -23,10 +23,11 @@ import io
 
 from rbac.permissions import HasRequiredPermission, IsVendorOwner, VendorApprovedOnly
 from rbac.utils import log_action
+from platform_settings.utils import resolve_request_country_code
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().select_related(
-        'vendor', 'category', 'vendor__country', 'vendor__location'
+        'vendor', 'category', 'country', 'vendor__country', 'vendor__location'
     ).prefetch_related(
         'images', 'certification_entries__registry', 'attribute_entries', 'documents'
     )
@@ -88,9 +89,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
 
-        # User is Staff
-        if self.request.user.is_staff:
-            return qs
+        # Staff sees all product statuses (draft, active, disabled, etc.)
+        # but still respects country, category, price, and other filters below.
+        is_staff = self.request.user.is_staff
 
         # User is Authenticated Vendor
         if self.request.user.is_authenticated and hasattr(self.request.user, 'vendor_profile'):
@@ -98,14 +99,21 @@ class ProductViewSet(viewsets.ModelViewSet):
             # For 'me' action, return only the vendor's products
             if self.action == 'me':
                 return qs.filter(vendor=vendor)
-            qs = qs.filter(models.Q(status='ACTIVE') | models.Q(vendor=vendor))
-        else:
-            # Anonymous or non-vendor Buyer
+            # Vendors see their own products + active ones; staff sees everything
+            if not is_staff:
+                qs = qs.filter(models.Q(status='ACTIVE') | models.Q(vendor=vendor))
+        elif not is_staff:
+            # Anonymous or non-vendor Buyer — only active, approved vendor products
             qs = qs.filter(status='ACTIVE', vendor__verified_status='APPROVED')
 
-        country_id = self.request.query_params.get('country')
-        if country_id:
-            qs = qs.filter(vendor__country_id=country_id)
+        country_code = resolve_request_country_code(self.request)
+        if country_code:
+            country_filter = models.Q(country__iso_code__iexact=country_code)
+            vendor_filter = models.Q(vendor__country__iso_code__iexact=country_code)
+            if str(country_code).isdigit():
+                country_filter |= models.Q(country_id=country_code)
+                vendor_filter |= models.Q(vendor__country_id=country_code)
+            qs = qs.filter(country_filter | (models.Q(country__isnull=True) & vendor_filter))
 
         category_id = self.request.query_params.get('category')
         if category_id:
@@ -209,11 +217,14 @@ class ProductViewSet(viewsets.ModelViewSet):
     def locations(self, request):
         """Retrieve unique counties and cities for hierarchical filtering."""
         from vendors.models import Vendor
-        country_id = request.query_params.get('country')
+        country_code = resolve_request_country_code(request)
 
         vendors = Vendor.objects.filter(verified_status='APPROVED')
-        if country_id:
-            vendors = vendors.filter(country_id=country_id)
+        if country_code:
+            country_filter = models.Q(country__iso_code__iexact=country_code)
+            if str(country_code).isdigit():
+                country_filter |= models.Q(country_id=country_code)
+            vendors = vendors.filter(country_filter)
 
         # Extract unique values from JSONField hierarchy
         # Note: In production with large data, this should be pre-aggregated or cached
@@ -429,6 +440,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                         description=row.get('description', '') or row.get('Description', ''),
                         short_description=row.get('short_description', '') or row.get('Short Description', ''),
                         unit=row.get('unit', '') or row.get('Unit', 'unit'),
+                        currency=(row.get('currency') or row.get('Currency') or getattr(getattr(vendor, 'country', None), 'default_currency', None) or 'KES').upper(),
                         base_price=row.get('base_price') or row.get('Price', 0),
                         stock_quantity=int(row.get('stock_quantity') or row.get('Stock', 0) or 0),
                         brand=row.get('brand', '') or row.get('Brand', ''),
@@ -467,7 +479,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         writer = csv.writer(response)
         # Headers should match the expected import format
-        headers = ['Name', 'Category', 'Price', 'Unit', 'Stock', 'Brand', 'Description', 'Short Description']
+        headers = ['Name', 'Category', 'Price', 'Currency', 'Unit', 'Stock', 'Brand', 'Description', 'Short Description']
         writer.writerow(headers)
 
         # Add an example row

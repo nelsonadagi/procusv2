@@ -8,8 +8,11 @@
 
       <div v-else-if="property" class="pz-space-y-8">
         <nav class="pz-breadcrumb pz-u-text-mono text-xs">
-          <router-link to="/properties" class="pz-breadcrumb__item">PROPERTY MARKETPLACE</router-link>
-          <span class="pz-breadcrumb__separator">//</span>
+          <router-link to="/properties" class="pz-breadcrumb__item">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:0.85rem;height:0.85rem"><path d="m15 18-6-6 6-6"/></svg>
+            Properties
+          </router-link>
+          <span class="pz-breadcrumb__separator">/</span>
           <span class="pz-breadcrumb__current pz-u-color-steel">{{ property.title }}</span>
         </nav>
 
@@ -48,8 +51,11 @@
 
             <div v-if="summaryStats.length" class="pz-property-summary-grid">
               <div v-for="stat in summaryStats" :key="stat.label" class="pz-property-detail__metric">
-                <span class="pz-property-detail__label">{{ stat.label }}</span>
-                <span class="pz-property-detail__value">{{ stat.value }}</span>
+                <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
+                <div class="pz-metric__content">
+                  <span class="pz-property-detail__label">{{ stat.label }}</span>
+                  <span class="pz-property-detail__value">{{ stat.value }}</span>
+                </div>
               </div>
             </div>
 
@@ -62,298 +68,225 @@
         </section>
 
         <div class="pz-property-layout">
-          <section class="pz-space-y-8">
-            <Card v-if="canModifyProperty" title="Operator Console">
-              <div class="pz-space-y-5">
-                <div class="pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center pz-l-flex--gap-4 pz-l-flex--wrap">
-                  <div class="pz-space-y-1">
-                    <div class="pz-u-text-mono text-xs pz-u-color-earth">EDITABLE WORKSPACE</div>
-                    <p class="pz-u-text-mono text-xs pz-u-color-steel">
-                      Update the listing, pricing, readiness, and ownership profile from the same page.
-                    </p>
+          <section class="pz-space-y-6">
+            <!-- Tab Navigation -->
+            <div class="pz-property-tabs">
+              <button
+                v-for="tab in propertyTabs"
+                :key="tab.id"
+                type="button"
+                class="pz-property-tab"
+                :class="{ 'pz-property-tab--active': activeTab === tab.id }"
+                @click="activeTab = tab.id"
+              >
+                <span class="pz-property-tab__label">{{ tab.label }}</span>
+                <span v-if="tab.badge" class="pz-property-tab__badge">{{ tab.badge }}</span>
+              </button>
+            </div>
+
+            <Card v-if="canModifyProperty" title="Operator Console" variant="elevated" eyebrow="Management">
+              <div class="pz-operator-summary">
+                <div class="pz-operator-summary__row">
+                  <div class="pz-operator-summary__item">
+                    <span class="pz-operator-summary__label">Status</span>
+                    <span class="pz-operator-summary__value">
+                      <Badge :variant="property.status === 'ACTIVE' ? 'success' : 'secondary'">{{ property.status }}</Badge>
+                    </span>
                   </div>
-                  <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
-                    <Button variant="outline" @click="toggleEditMode">
-                      {{ editMode ? 'Close Editor' : 'Modify Property' }}
-                    </Button>
+                  <div class="pz-operator-summary__item">
+                    <span class="pz-operator-summary__label">Inquiries</span>
+                    <span class="pz-operator-summary__value">{{ property.inquiry_enabled !== false ? 'Open' : 'Closed' }}</span>
+                  </div>
+                  <div class="pz-operator-summary__item">
+                    <span class="pz-operator-summary__label">Appointments</span>
+                    <span class="pz-operator-summary__value">{{ property.appointment_enabled !== false ? 'Open' : 'Closed' }}</span>
+                  </div>
+                  <div class="pz-operator-summary__item">
+                    <span class="pz-operator-summary__label">Financing</span>
+                    <span class="pz-operator-summary__value">{{ property.financing_allowed ? 'Enabled' : 'Disabled' }}</span>
                   </div>
                 </div>
-
-                <div v-if="editMode" class="pz-space-y-6">
-                  <div class="pz-editor-shell">
-                    <div class="pz-editor-nav">
-                      <button
-                        v-for="section in editorSections"
-                        :key="section.id"
-                        type="button"
-                        class="pz-editor-nav__item"
-                        :class="{ 'is-active': activeEditorSection === section.id }"
-                        @click="activeEditorSection = section.id"
-                      >
-                        <span class="pz-editor-nav__kicker">{{ section.kicker }}</span>
-                        <strong>{{ section.label }}</strong>
-                        <span>{{ section.description }}</span>
-                      </button>
-                    </div>
-                    <div class="pz-operator-form-section">
-                      <div class="pz-space-y-1">
-                        <div class="pz-u-text-display text-sm">{{ activeEditorMeta.label }}</div>
-                        <div class="pz-u-text-mono text-xs pz-u-color-concrete">{{ activeEditorMeta.description }}</div>
-                      </div>
-
-                      <div v-if="activeEditorSection === 'listing'" class="pz-space-y-4">
-                        <div class="pz-operator-form-grid">
-                          <PzInput v-model="operatorForm.title" label="Title" required />
-                          <select v-model="operatorForm.asset_type" class="pz-input">
-                            <option value="LAND">Land</option>
-                            <option value="RESIDENTIAL">Residential</option>
-                            <option value="COMMERCIAL">Commercial</option>
-                            <option value="INDUSTRIAL">Industrial</option>
-                            <option value="MIXED_USE">Mixed Use</option>
-                            <option value="HOSPITALITY">Hospitality</option>
-                            <option value="RENOVATION">Renovation</option>
-                            <option value="SPECIAL_PURPOSE">Special Purpose</option>
-                          </select>
-                          <select v-model="operatorForm.listing_type" class="pz-input">
-                            <option value="SALE">Sale</option>
-                            <option value="LEASE">Lease</option>
-                            <option value="DEVELOPMENT_OPPORTUNITY">Development Opportunity</option>
-                            <option value="COMPLETED_PROJECT">Completed Project</option>
-                          </select>
-                          <select v-model="operatorForm.status" class="pz-input">
-                            <option value="DRAFT">Draft</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="SOLD">Sold</option>
-                            <option value="LEASED">Leased</option>
-                            <option value="UNDER_OFFER">Under Offer</option>
-                            <option value="INACTIVE">Inactive</option>
-                          </select>
-                          <PzInput v-model="operatorForm.location_text" label="Location Text" />
-                          <PzInput v-model="operatorForm.formatted_address" label="Formatted Address" />
-                          <PzInput v-model="operatorForm.price_estimate" label="Estimated Value" type="number" />
-                        </div>
-                        <textarea
-                          v-model="operatorForm.description"
-                          class="pz-input"
-                          rows="4"
-                          placeholder="Describe the property, market position, and operating context"
-                        />
-                        <div class="pz-operator-toggle-grid">
-                          <label class="pz-checkbox-row">
-                            <input v-model="operatorForm.financing_allowed" type="checkbox" />
-                            <span>Financing allowed</span>
-                          </label>
-                          <label class="pz-checkbox-row">
-                            <input v-model="operatorForm.inquiry_enabled" type="checkbox" />
-                            <span>Inquiries enabled</span>
-                          </label>
-                          <label class="pz-checkbox-row">
-                            <input v-model="operatorForm.appointment_enabled" type="checkbox" />
-                            <span>Appointments enabled</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div v-else-if="activeEditorSection === 'specification'" class="pz-operator-form-grid">
-                        <PzInput v-model="operatorForm.specification.bedrooms" label="Bedrooms" type="number" />
-                        <PzInput v-model="operatorForm.specification.bathrooms" label="Bathrooms" type="number" />
-                        <PzInput v-model="operatorForm.specification.floors" label="Floors" type="number" />
-                        <PzInput v-model="operatorForm.specification.parking_spaces" label="Parking Spaces" type="number" />
-                        <PzInput v-model="operatorForm.specification.internal_area" label="Internal Area" type="number" />
-                        <select v-model="operatorForm.specification.internal_area_unit" class="pz-input">
-                          <option value="SQM">Square Meters</option>
-                          <option value="SQFT">Square Feet</option>
-                          <option value="ACRE">Acre</option>
-                          <option value="HECTARE">Hectare</option>
-                        </select>
-                        <PzInput v-model="operatorForm.specification.lot_size" label="Lot Size" type="number" />
-                        <select v-model="operatorForm.specification.lot_size_unit" class="pz-input">
-                          <option value="SQM">Square Meters</option>
-                          <option value="SQFT">Square Feet</option>
-                          <option value="ACRE">Acre</option>
-                          <option value="HECTARE">Hectare</option>
-                        </select>
-                        <PzInput v-model="operatorForm.specification.year_built" label="Year Built" type="number" />
-                        <PzInput v-model="operatorForm.specification.renovation_year" label="Renovation Year" type="number" />
-                        <select v-model="operatorForm.specification.furnishing_state" class="pz-input">
-                          <option value="">Furnishing State</option>
-                          <option value="UNFURNISHED">Unfurnished</option>
-                          <option value="PART_FURNISHED">Part Furnished</option>
-                          <option value="FURNISHED">Furnished</option>
-                          <option value="FITTED">Fitted</option>
-                        </select>
-                        <select v-model="operatorForm.specification.condition_rating" class="pz-input">
-                          <option value="">Condition Rating</option>
-                          <option value="SHELL">Shell</option>
-                          <option value="FAIR">Fair</option>
-                          <option value="GOOD">Good</option>
-                          <option value="EXCELLENT">Excellent</option>
-                        </select>
-                        <PzInput v-model="operatorForm.specification.energy_rating" label="Energy Rating" />
-                        <select v-model="operatorForm.specification.occupancy_status" class="pz-input">
-                          <option value="">Occupancy Status</option>
-                          <option value="VACANT">Vacant</option>
-                          <option value="OCCUPIED">Occupied</option>
-                          <option value="OWNER_OCCUPIED">Owner Occupied</option>
-                          <option value="TENANTED">Tenanted</option>
-                          <option value="UNDER_CONSTRUCTION">Under Construction</option>
-                        </select>
-                      </div>
-
-                      <div v-else-if="activeEditorSection === 'commercial'" class="pz-space-y-4">
-                        <div class="pz-operator-form-grid">
-                          <PzInput v-model="operatorForm.pricing_profile.asking_price" label="Asking Price" type="number" />
-                          <PzInput v-model="operatorForm.pricing_profile.rent_amount" label="Rent Amount" type="number" />
-                          <select v-model="operatorForm.pricing_profile.currency" class="pz-input">
-                            <option value="KES">KES</option>
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                          </select>
-                          <select v-model="operatorForm.pricing_profile.pricing_strategy" class="pz-input">
-                            <option value="FIXED">Fixed</option>
-                            <option value="NEGOTIABLE">Negotiable</option>
-                            <option value="PRICE_ON_APPLICATION">Price On Application</option>
-                            <option value="PER_UNIT">Per Unit</option>
-                          </select>
-                          <PzInput v-model="operatorForm.pricing_profile.deposit_amount" label="Deposit Amount" type="number" />
-                          <PzInput v-model="operatorForm.pricing_profile.price_per_area_unit" label="Price Per Area Unit" type="number" />
-                          <select v-model="operatorForm.pricing_profile.area_unit" class="pz-input">
-                            <option value="SQM">Square Meters</option>
-                            <option value="SQFT">Square Feet</option>
-                            <option value="ACRE">Acre</option>
-                            <option value="HECTARE">Hectare</option>
-                          </select>
-                          <PzInput v-model="operatorForm.pricing_profile.service_charge_amount" label="Service Charge" type="number" />
-                          <PzInput v-model="operatorForm.pricing_profile.tax_percentage" label="Tax %" type="number" />
-                          <PzInput v-model="operatorForm.pricing_profile.insurance_percentage" label="Insurance %" type="number" />
-                        </div>
-                        <div class="pz-operator-toggle-grid">
-                          <label class="pz-checkbox-row">
-                            <input v-model="operatorForm.pricing_profile.requires_deposit" type="checkbox" />
-                            <span>Requires deposit</span>
-                          </label>
-                        </div>
-                        <textarea
-                          v-model="operatorForm.pricing_profile.financing_notes"
-                          class="pz-input"
-                          rows="3"
-                          placeholder="Financing notes, eligibility, or underwriting context"
-                        />
-                      </div>
-
-                      <div v-else-if="activeEditorSection === 'readiness'" class="pz-space-y-4">
-                        <div class="pz-operator-form-grid">
-                          <PzInput v-model="operatorForm.development_metadata.zoning_info" label="Zoning" />
-                          <select v-model="operatorForm.development_metadata.development_stage" class="pz-input">
-                            <option value="">Development Stage</option>
-                            <option value="RAW_LAND">Raw Land</option>
-                            <option value="SERVICED_SITE">Serviced Site</option>
-                            <option value="IN_DESIGN">In Design</option>
-                            <option value="IN_PROGRESS">In Progress</option>
-                            <option value="COMPLETED">Completed</option>
-                          </select>
-                          <PzInput v-model="operatorForm.development_metadata.recommended_use" label="Recommended Use" />
-                          <PzInput v-model="operatorForm.development_metadata.estimated_completion_budget" label="Completion Budget" type="number" />
-                          <PzInput v-model="operatorForm.development_metadata.expected_completion_date" label="Expected Completion Date" type="date" />
-                          <PzInput v-model="operatorForm.development_metadata.utilities_text" label="Utilities" />
-                        </div>
-                        <div class="pz-operator-toggle-grid">
-                          <label class="pz-checkbox-row">
-                            <input v-model="operatorForm.development_metadata.build_ready" type="checkbox" />
-                            <span>Build ready</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div v-else class="pz-space-y-4">
-                        <div class="pz-operator-form-grid">
-                          <PzInput v-model="operatorForm.ownership_profile.legal_owner_name" label="Legal Owner Name" />
-                          <select v-model="operatorForm.ownership_profile.ownership_type" class="pz-input">
-                            <option value="">Ownership Type</option>
-                            <option value="INDIVIDUAL">Individual</option>
-                            <option value="COMPANY">Company</option>
-                            <option value="TRUST">Trust</option>
-                            <option value="GOVERNMENT">Government</option>
-                            <option value="OTHER">Other</option>
-                          </select>
-                          <PzInput v-model="operatorForm.ownership_profile.title_reference" label="Title Reference" />
-                          <PzInput v-model="operatorForm.ownership_profile.deed_reference" label="Deed Reference" />
-                        </div>
-                        <div class="pz-operator-toggle-grid">
-                          <label class="pz-checkbox-row">
-                            <input v-model="operatorForm.ownership_profile.has_liens" type="checkbox" />
-                            <span>Has liens</span>
-                          </label>
-                        </div>
-                        <textarea
-                          v-model="operatorForm.ownership_profile.lien_notes"
-                          class="pz-input"
-                          rows="3"
-                          placeholder="Lien notes"
-                        />
-                        <textarea
-                          v-model="operatorForm.ownership_profile.disclosure_notes"
-                          class="pz-input"
-                          rows="3"
-                          placeholder="Disclosure notes"
-                        />
-                        <textarea
-                          v-model="operatorForm.featureText"
-                          class="pz-input"
-                          rows="3"
-                          placeholder="Feature highlights, comma separated"
-                        />
-                      </div>
-                    </div>
-
-                    <div class="pz-editor-actions">
-                      <div class="pz-editor-actions__summary">
-                        <span class="pz-editor-status">Editing: {{ activeEditorMeta.label }}</span>
-                        <span class="pz-u-text-mono text-xs pz-u-color-steel">Changes save back to the live listing.</span>
-                      </div>
-                      <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
-                        <Button variant="ghost" @click="cancelEditing">Cancel</Button>
-                        <Button variant="primary" :loading="savingProperty" @click="saveProperty">
-                          Save Changes
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                <div class="pz-operator-summary__actions">
+                  <router-link :to="`/properties/${property.id}/edit`">
+                    <Button variant="primary" size="sm">Edit Property</Button>
+                  </router-link>
                 </div>
               </div>
             </Card>
 
-            <Card title="Overview">
+            <div v-show="activeTab === 'overview'" class="pz-tab-panel pz-space-y-6">
+            <Card title="Overview" variant="premium" eyebrow="Property Details">
               <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
                 <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Owner</span>
-                  <span class="pz-property-detail__value">{{ property.owner_name }}</span>
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Owner')" v-html="getMetricIcon('Owner')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Owner</span>
+                    <span class="pz-property-detail__value">{{ property.owner_name }}</span>
+                  </div>
                 </div>
                 <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Manager</span>
-                  <span class="pz-property-detail__value">{{ property.manager_name || 'Owner-managed' }}</span>
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Manager')" v-html="getMetricIcon('Manager')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Manager</span>
+                    <span class="pz-property-detail__value">{{ property.manager_name || 'Owner-managed' }}</span>
+                  </div>
                 </div>
                 <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Address</span>
-                  <span class="pz-property-detail__value">{{ property.formatted_address || property.location_display || 'Address pending' }}</span>
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Address')" v-html="getMetricIcon('Address')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Address</span>
+                    <span class="pz-property-detail__value">{{ property.formatted_address || property.location_display || 'Address pending' }}</span>
+                  </div>
                 </div>
                 <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Finance</span>
-                  <span class="pz-property-detail__value">{{ property.financing_allowed ? 'Financing supported' : 'Direct purchase only' }}</span>
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Finance')" v-html="getMetricIcon('Finance')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Finance</span>
+                    <span class="pz-property-detail__value">{{ property.financing_allowed ? 'Financing supported' : 'Direct purchase only' }}</span>
+                  </div>
                 </div>
               </div>
             </Card>
 
-            <Card title="Market Positioning">
+            <Card title="Market Positioning" variant="premium" eyebrow="Market Analysis">
               <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
                 <div v-for="stat in marketStats" :key="stat.label" class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">{{ stat.label }}</span>
-                  <span class="pz-property-detail__value">{{ stat.value }}</span>
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">{{ stat.label }}</span>
+                    <span class="pz-property-detail__value">{{ stat.value }}</span>
+                  </div>
                 </div>
               </div>
             </Card>
 
-            <Card v-if="mediaGallery.length" title="Media">
+            <Card title="Property Operations" eyebrow="Operations">
+              <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
+                <div class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Ownership')" v-html="getMetricIcon('Ownership')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Ownership</span>
+                    <span class="pz-property-detail__value">{{ ownershipSummary }}</span>
+                  </div>
+                </div>
+                <div class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Verification')" v-html="getMetricIcon('Verification')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Verification</span>
+                    <span class="pz-property-detail__value">{{ property.ownership_profile?.verification_status || 'UNVERIFIED' }}</span>
+                  </div>
+                </div>
+                <div class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Pricing Strategy')" v-html="getMetricIcon('Pricing Strategy')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Pricing Strategy</span>
+                    <span class="pz-property-detail__value">{{ property.pricing_profile?.pricing_strategy || 'FIXED' }}</span>
+                  </div>
+                </div>
+                <div class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Deposit')" v-html="getMetricIcon('Deposit')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Deposit</span>
+                    <span class="pz-property-detail__value">{{ depositSummary }}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+            </div>
+
+            <div v-show="activeTab === 'specs'" class="pz-tab-panel pz-space-y-6">
+            <Card title="Property Specification" variant="premium" eyebrow="Key Specs">
+              <div v-if="specificationStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-3 pz-l-grid--gap-4">
+                <div v-for="stat in specificationStats" :key="stat.label" class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">{{ stat.label }}</span>
+                    <span class="pz-property-detail__value">{{ stat.value }}</span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No structured specification has been published yet.</p>
+            </Card>
+
+            <Card title="Development Readiness" eyebrow="Development">
+              <div v-if="property.development_metadata" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
+                <div class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Zoning')" v-html="getMetricIcon('Zoning')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Zoning</span>
+                    <span class="pz-property-detail__value">{{ property.development_metadata.zoning_info || 'Not specified' }}</span>
+                  </div>
+                </div>
+                <div class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Build Ready')" v-html="getMetricIcon('Build Ready')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Build Ready</span>
+                    <span class="pz-property-detail__value">{{ property.development_metadata.build_ready ? 'Yes' : 'No' }}</span>
+                  </div>
+                </div>
+                <div class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Development Stage')" v-html="getMetricIcon('Development Stage')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Development Stage</span>
+                    <span class="pz-property-detail__value">{{ property.development_metadata.development_stage || 'Not specified' }}</span>
+                  </div>
+                </div>
+                <div class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Utilities')" v-html="getMetricIcon('Utilities')"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">Utilities</span>
+                    <span class="pz-property-detail__value">{{ formatUtilities(property.development_metadata.utilities_available) }}</span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Development metadata has not been published for this property yet.</p>
+            </Card>
+
+            <Card title="Features And Amenities" eyebrow="Amenities">
+              <div v-if="property.features?.length" class="pz-property-feature-grid">
+                <div v-for="feature in property.features" :key="feature.id" class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(feature.category)" v-html="getMetricIcon(feature.category)"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">{{ feature.category || 'Feature' }}</span>
+                    <span class="pz-property-detail__value">{{ feature.name }}</span>
+                    <span v-if="feature.description" class="pz-u-text-mono text-xs pz-u-color-steel">{{ feature.description }}</span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No feature list published yet.</p>
+            </Card>
+            </div>
+
+            <div v-show="activeTab === 'financials'" class="pz-tab-panel pz-space-y-6">
+            <Card title="Financial Structure" variant="premium" eyebrow="Pricing">
+              <div v-if="financialStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
+                <div v-for="stat in financialStats" :key="stat.label" class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">{{ stat.label }}</span>
+                    <span class="pz-property-detail__value">{{ stat.value }}</span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Detailed pricing data has not been published yet.</p>
+            </Card>
+
+            <Card title="Ownership And Compliance" eyebrow="Legal">
+              <div v-if="ownershipStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
+                <div v-for="stat in ownershipStats" :key="stat.label" class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">{{ stat.label }}</span>
+                    <span class="pz-property-detail__value">{{ stat.value }}</span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Ownership diligence notes have not been published yet.</p>
+            </Card>
+            </div>
+
+            <div v-show="activeTab === 'links'" class="pz-tab-panel pz-space-y-6">
+            <Card v-if="mediaGallery.length" title="Media" variant="elevated" eyebrow="Gallery">
               <div class="pz-property-gallery">
                 <a
                   v-for="asset in mediaGallery"
@@ -381,91 +314,7 @@
               </div>
             </Card>
 
-            <Card title="Property Specification">
-              <div v-if="specificationStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-3 pz-l-grid--gap-4">
-                <div v-for="stat in specificationStats" :key="stat.label" class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">{{ stat.label }}</span>
-                  <span class="pz-property-detail__value">{{ stat.value }}</span>
-                </div>
-              </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No structured specification has been published yet.</p>
-            </Card>
-
-            <Card title="Development Readiness">
-              <div v-if="property.development_metadata" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
-                <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Zoning</span>
-                  <span class="pz-property-detail__value">{{ property.development_metadata.zoning_info || 'Not specified' }}</span>
-                </div>
-                <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Build Ready</span>
-                  <span class="pz-property-detail__value">{{ property.development_metadata.build_ready ? 'Yes' : 'No' }}</span>
-                </div>
-                <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Development Stage</span>
-                  <span class="pz-property-detail__value">{{ property.development_metadata.development_stage || 'Not specified' }}</span>
-                </div>
-                <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Utilities</span>
-                  <span class="pz-property-detail__value">{{ formatUtilities(property.development_metadata.utilities_available) }}</span>
-                </div>
-              </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Development metadata has not been published for this property yet.</p>
-            </Card>
-
-            <Card title="Features And Amenities">
-              <div v-if="property.features?.length" class="pz-property-feature-grid">
-                <div v-for="feature in property.features" :key="feature.id" class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">{{ feature.category || 'Feature' }}</span>
-                  <span class="pz-property-detail__value">{{ feature.name }}</span>
-                  <span v-if="feature.description" class="pz-u-text-mono text-xs pz-u-color-steel">{{ feature.description }}</span>
-                </div>
-              </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No feature list published yet.</p>
-            </Card>
-
-            <Card title="Property Operations">
-              <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
-                <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Ownership</span>
-                  <span class="pz-property-detail__value">{{ ownershipSummary }}</span>
-                </div>
-                <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Verification</span>
-                  <span class="pz-property-detail__value">{{ property.ownership_profile?.verification_status || 'UNVERIFIED' }}</span>
-                </div>
-                <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Pricing Strategy</span>
-                  <span class="pz-property-detail__value">{{ property.pricing_profile?.pricing_strategy || 'FIXED' }}</span>
-                </div>
-                <div class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">Deposit</span>
-                  <span class="pz-property-detail__value">{{ depositSummary }}</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card title="Financial Structure">
-              <div v-if="financialStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
-                <div v-for="stat in financialStats" :key="stat.label" class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">{{ stat.label }}</span>
-                  <span class="pz-property-detail__value">{{ stat.value }}</span>
-                </div>
-              </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Detailed pricing data has not been published yet.</p>
-            </Card>
-
-            <Card title="Ownership And Compliance">
-              <div v-if="ownershipStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
-                <div v-for="stat in ownershipStats" :key="stat.label" class="pz-property-detail__metric">
-                  <span class="pz-property-detail__label">{{ stat.label }}</span>
-                  <span class="pz-property-detail__value">{{ stat.value }}</span>
-                </div>
-              </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Ownership diligence notes have not been published yet.</p>
-            </Card>
-
-            <Card title="Linked Projects">
+            <Card title="Linked Projects" eyebrow="Connected">
               <div v-if="property.linked_projects?.length" class="pz-space-y-3">
                 <router-link v-for="link in property.linked_projects" :key="link.id" :to="`/projects/${link.project}`" class="pz-property-detail__link-card">
                   <span class="pz-u-text-display text-sm">{{ link.project_title }}</span>
@@ -475,69 +324,126 @@
               <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">This property is currently operating as a standalone asset.</p>
             </Card>
 
-            <Card title="Suggested Materials">
+            <Card title="Suggested Materials" eyebrow="Recommendations">
               <div v-if="materials.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-3 pz-l-grid--gap-4">
                 <router-link v-for="material in materials" :key="material.id" :to="`/products/${material.id}`" class="pz-property-detail__link-card">
                   <span class="pz-u-text-display text-sm">{{ material.name }}</span>
-                  <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ configStore.formatPrice(material.base_price) }}</span>
+                  <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ configStore.formatPrice(material.base_price, material.currency) }}</span>
                 </router-link>
               </div>
               <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No material suggestions available yet.</p>
             </Card>
+            </div>
           </section>
 
           <aside class="pz-space-y-6">
             <Card title="Showings And Visits">
-              <div v-if="property.showings?.length" class="pz-space-y-3 u-mb-4">
-                <div v-for="showing in property.showings" :key="showing.id" class="pz-property-detail__feed">
-                  <strong>{{ readableShowingType(showing.event_type) }}</strong>
-                  <span>{{ formatDateTime(showing.start_at) }}</span>
-                  <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ showing.instructions || readableOccurrenceType(showing.occurrence_type) }}</span>
+              <!-- Upcoming Showings -->
+              <div class="pz-showing-section">
+                <div class="pz-showing-section__header">
+                  <span class="pz-showing-section__title">Upcoming Showings</span>
+                  <span v-if="property.showings?.length" class="pz-showing-section__count">{{ property.showings.length }}</span>
+                </div>
+
+                <div v-if="property.showings?.length" class="pz-showing-list">
+                  <div v-for="showing in property.showings.slice(0, 3)" :key="showing.id" class="pz-showing-item">
+                    <div class="pz-showing-item__date">
+                      <span class="pz-showing-item__day">{{ new Date(showing.start_at).toLocaleDateString(undefined, { weekday: 'short' }) }}</span>
+                      <span class="pz-showing-item__date-num">{{ new Date(showing.start_at).getDate() }}</span>
+                    </div>
+                    <div class="pz-showing-item__info">
+                      <strong>{{ readableShowingType(showing.event_type) }}</strong>
+                      <span>{{ new Date(showing.start_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
+                      <span v-if="showing.instructions" class="pz-showing-item__note">{{ showing.instructions }}</span>
+                    </div>
+                  </div>
+                  <div v-if="property.showings.length > 3" class="pz-showing-more">
+                    +{{ property.showings.length - 3 }} more showing{{ property.showings.length - 3 > 1 ? 's' : '' }}
+                  </div>
+                </div>
+                <p v-else class="pz-showing-empty">No upcoming showings scheduled.</p>
+              </div>
+
+              <!-- Divider -->
+              <div v-if="property.showings?.length && availableSlots.length" class="pz-showing-divider"></div>
+
+              <!-- Book a Visit -->
+              <div class="pz-showing-section">
+                <div class="pz-showing-section__header">
+                  <span class="pz-showing-section__title">Book a Visit</span>
+                  <span v-if="availableSlots.length" class="pz-showing-section__count pz-showing-section__count--available">{{ availableSlots.length }} slot{{ availableSlots.length > 1 ? 's' : '' }}</span>
+                </div>
+
+                <div v-if="availableSlots.length" class="pz-slot-list">
+                  <button
+                    v-for="slot in availableSlots"
+                    :key="slot.start_at"
+                    type="button"
+                    class="pz-slot-card"
+                    :class="{ 'pz-slot-card--selected': selectedSlot?.start_at === slot.start_at }"
+                    @click="selectedSlot = slot"
+                  >
+                    <span class="pz-slot-card__day">{{ new Date(slot.start_at).toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase() }}</span>
+                    <span class="pz-slot-card__date">{{ new Date(slot.start_at).getDate() }}</span>
+                    <span class="pz-slot-card__time">{{ new Date(slot.start_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
+                  </button>
+                </div>
+
+                <!-- Selected Slot Summary -->
+                <div v-if="selectedSlot" class="pz-slot-selected">
+                  <span class="pz-slot-selected__label">Selected</span>
+                  <span class="pz-slot-selected__value">{{ formatSlot(selectedSlot) }}</span>
+                  <button type="button" class="pz-slot-selected__clear" @click="selectedSlot = null">×</button>
+                </div>
+
+                <!-- Booking Form -->
+                <form v-if="selectedSlot" class="pz-booking-form" @submit.prevent="submitAppointment">
+                  <div class="pz-booking-form__row">
+                    <PzInput v-model="appointmentForm.full_name" label="Full Name" required size="sm" />
+                    <PzInput v-model="appointmentForm.email" label="Email" type="email" size="sm" />
+                  </div>
+                  <PzInput v-model="appointmentForm.phone_number" label="Phone Number" size="sm" />
+                  <textarea v-model="appointmentForm.notes" class="pz-input" rows="2" placeholder="Add visit notes or questions" />
+                  <Button type="submit" variant="primary" fullWidth size="sm" :loading="submittingAppointment">Confirm Booking</Button>
+                </form>
+
+                <p v-else-if="!availableSlots.length" class="pz-showing-empty">No public appointment slots are currently available. Check back soon or send an inquiry.</p>
+              </div>
+            </Card>
+
+            <Card title="Availability Snapshot" eyebrow="Status">
+              <div class="pz-space-y-3">
+                <div v-for="stat in availabilityStats" :key="stat.label" class="pz-property-detail__metric">
+                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
+                  <div class="pz-metric__content">
+                    <span class="pz-property-detail__label">{{ stat.label }}</span>
+                    <span class="pz-property-detail__value">{{ stat.value }}</span>
+                  </div>
                 </div>
               </div>
-              <div v-if="availableSlots.length" class="pz-space-y-3">
-                <label v-for="slot in availableSlots" :key="slot.start_at" class="pz-property-detail__slot">
-                  <input v-model="selectedSlot" type="radio" :value="slot" />
-                  <span>{{ formatSlot(slot) }}</span>
-                </label>
-                <form class="pz-space-y-4 u-mt-4" @submit.prevent="submitAppointment">
-                  <PzInput v-model="appointmentForm.full_name" label="Full Name" required />
-                  <PzInput v-model="appointmentForm.email" label="Email" type="email" />
-                  <PzInput v-model="appointmentForm.phone_number" label="Phone Number" />
-                  <textarea v-model="appointmentForm.notes" class="pz-input" rows="3" placeholder="Add visit notes or questions" />
-                  <Button type="submit" variant="outline" fullWidth :loading="submittingAppointment">Book Visit</Button>
+            </Card>
+
+            <Card title="Inquiry" variant="accent" eyebrow="Get In Touch">
+              <div v-if="property.inquiry_enabled !== false" class="pz-space-y-4">
+                <form class="pz-space-y-4" @submit.prevent="submitInquiry">
+                  <PzInput v-model="inquiryForm.full_name" label="Full Name" required />
+                  <PzInput v-model="inquiryForm.email" label="Email" type="email" />
+                  <PzInput v-model="inquiryForm.phone_number" label="Phone Number" />
+                  <select v-model="inquiryForm.inquiry_type" class="pz-input">
+                    <option value="GENERAL">General</option>
+                    <option value="VIEWING">Viewing</option>
+                    <option value="FINANCING">Financing</option>
+                    <option value="MATERIALS">Materials</option>
+                    <option value="SERVICE">Service</option>
+                  </select>
+                  <textarea v-model="inquiryForm.message" class="pz-input" rows="4" placeholder="How can the owner or manager help?" />
+                  <Button type="submit" variant="primary" fullWidth :loading="submittingInquiry">Send Inquiry</Button>
                 </form>
               </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No public appointment slots are currently available.</p>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Inquiries are currently disabled for this property.</p>
             </Card>
 
-            <Card title="Availability Snapshot">
-              <div class="pz-space-y-3">
-                <div v-for="stat in availabilityStats" :key="stat.label" class="pz-property-detail__feed">
-                  <span class="pz-property-detail__label">{{ stat.label }}</span>
-                  <strong>{{ stat.value }}</strong>
-                </div>
-              </div>
-            </Card>
-
-            <Card title="Inquiry">
-              <form class="pz-space-y-4" @submit.prevent="submitInquiry">
-                <PzInput v-model="inquiryForm.full_name" label="Full Name" required />
-                <PzInput v-model="inquiryForm.email" label="Email" type="email" />
-                <PzInput v-model="inquiryForm.phone_number" label="Phone Number" />
-                <select v-model="inquiryForm.inquiry_type" class="pz-input">
-                  <option value="GENERAL">General</option>
-                  <option value="VIEWING">Viewing</option>
-                  <option value="FINANCING">Financing</option>
-                  <option value="MATERIALS">Materials</option>
-                  <option value="SERVICE">Service</option>
-                </select>
-                <textarea v-model="inquiryForm.message" class="pz-input" rows="4" placeholder="How can the owner or manager help?" />
-                <Button type="submit" variant="primary" fullWidth :loading="submittingInquiry">Send Inquiry</Button>
-              </form>
-            </Card>
-
-            <Card title="Financing">
+            <Card title="Financing" variant="accent" eyebrow="Funding">
               <div v-if="financeProducts.length" class="pz-space-y-4">
                 <div class="pz-property-side-note">
                   <span class="pz-u-text-mono text-xs pz-u-color-concrete">Finance target</span>
@@ -559,12 +465,15 @@
               <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Financing products are not available at the moment.</p>
             </Card>
 
-            <Card v-if="operatorView" title="Operator Feed">
+            <Card v-if="operatorView" title="Operator Feed" variant="elevated">
               <div class="pz-space-y-4">
                 <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
                   <div v-for="stat in operatorStats" :key="stat.label" class="pz-property-detail__metric">
-                    <span class="pz-property-detail__label">{{ stat.label }}</span>
-                    <span class="pz-property-detail__value">{{ stat.value }}</span>
+                    <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
+                    <div class="pz-metric__content">
+                      <span class="pz-property-detail__label">{{ stat.label }}</span>
+                      <span class="pz-property-detail__value">{{ stat.value }}</span>
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -622,14 +531,16 @@ const operatorInquiries = ref([]);
 const operatorAppointments = ref([]);
 const selectedSlot = ref(null);
 const loading = ref(true);
-const editMode = ref(false);
-const savingProperty = ref(false);
-const activeEditorSection = ref('listing');
+const activeTab = ref('overview');
+const propertyTabs = computed(() => [
+  { id: 'overview', label: 'Overview', badge: null },
+  { id: 'specs', label: 'Specifications', badge: property.value?.features?.length || null },
+  { id: 'financials', label: 'Financials', badge: null },
+  { id: 'links', label: 'Projects & Media', badge: property.value?.linked_projects?.length || null },
+]);
 const submittingInquiry = ref(false);
 const submittingAppointment = ref(false);
 const submittingFinance = ref(false);
-const operatorForm = ref(createDefaultOperatorForm());
-
 const inquiryForm = ref({
   full_name: '',
   email: '',
@@ -654,12 +565,36 @@ const financeForm = ref({
 
 const operatorView = computed(() => {
   if (!property.value || !authStore.user) return false;
-  return authStore.isAdmin || authStore.user.id === property.value.owner || authStore.user.id === property.value.manager;
+  // Direct ownership or management
+  if (authStore.isAdmin || authStore.user.id === property.value.owner || authStore.user.id === property.value.manager) return true;
+  // Permission-based operators (agents, surveyors, government auditors)
+  if (authStore.hasPermission('property:manage_inquiries')) return true;
+  if (authStore.hasPermission('property:manage_appointments')) return true;
+  if (authStore.hasPermission('property:verify_property')) return true;
+  return false;
 });
 
 const canModifyProperty = computed(() => {
   if (!property.value || !authStore.user) return false;
-  return authStore.user.id === property.value.owner;
+  if (authStore.isAdmin) return true;
+  if (authStore.user.id === property.value.owner) return true;
+  if (authStore.user.id === property.value.manager) return true;
+  // Agents and property managers with update permission
+  if (authStore.hasPermission('property:update_property')) return true;
+  return false;
+});
+
+const canDeleteProperty = computed(() => {
+  if (!property.value || !authStore.user) return false;
+  if (authStore.isAdmin) return true;
+  if (authStore.user.id === property.value.owner) return true;
+  return authStore.hasPermission('property:delete_property');
+});
+
+const canVerifyProperty = computed(() => {
+  if (!property.value || !authStore.user) return false;
+  if (authStore.isAdmin) return true;
+  return authStore.hasPermission('property:verify_property');
 });
 
 const heroMediaUrl = computed(() => property.value?.primary_media?.media_url || property.value?.primary_media?.external_url || '');
@@ -669,10 +604,10 @@ const mediaGallery = computed(() => property.value?.media_assets || []);
 const displayPrice = computed(() => {
   const pricing = property.value?.pricing_profile;
   if (pricing?.asking_price) {
-    return `${configStore.formatPrice(pricing.asking_price)} ${pricing.pricing_strategy || ''}`.trim();
+    return `${configStore.formatPrice(pricing.asking_price, pricing.currency)} ${pricing.pricing_strategy || ''}`.trim();
   }
   if (property.value?.price_estimate) {
-    return configStore.formatPrice(property.value.price_estimate);
+    return configStore.formatPrice(property.value.price_estimate, property.value?.pricing_profile?.currency || property.value?.country?.default_currency || 'KES');
   }
   return 'Price on request';
 });
@@ -743,7 +678,7 @@ const ownershipSummary = computed(() => {
 const depositSummary = computed(() => {
   const pricing = property.value?.pricing_profile;
   if (!pricing?.requires_deposit) return 'No deposit requirement published';
-  if (pricing.deposit_amount) return configStore.formatPrice(pricing.deposit_amount);
+  if (pricing.deposit_amount) return configStore.formatPrice(pricing.deposit_amount, pricing.currency);
   return 'Deposit required';
 });
 
@@ -752,14 +687,14 @@ const financialStats = computed(() => {
   if (!pricing) return [];
   const items = [
     { label: 'Currency', value: pricing.currency },
-    { label: 'Asking Price', value: formatMoney(pricing.asking_price) },
-    { label: 'Rent Amount', value: formatMoney(pricing.rent_amount) },
+    { label: 'Asking Price', value: formatMoney(pricing.asking_price, pricing.currency) },
+    { label: 'Rent Amount', value: formatMoney(pricing.rent_amount, pricing.currency) },
     { label: 'Pricing Strategy', value: pricing.pricing_strategy },
     {
       label: 'Price Per Unit',
-      value: pricing.price_per_area_unit ? `${configStore.formatPrice(pricing.price_per_area_unit)} / ${pricing.area_unit}` : '',
+      value: pricing.price_per_area_unit ? `${configStore.formatPrice(pricing.price_per_area_unit, pricing.currency)} / ${pricing.area_unit}` : '',
     },
-    { label: 'Service Charge', value: formatMoney(pricing.service_charge_amount) },
+    { label: 'Service Charge', value: formatMoney(pricing.service_charge_amount, pricing.currency) },
     { label: 'Tax Percentage', value: pricing.tax_percentage ? `${pricing.tax_percentage}%` : '' },
     { label: 'Insurance Percentage', value: pricing.insurance_percentage ? `${pricing.insurance_percentage}%` : '' },
     { label: 'Financing Notes', value: pricing.financing_notes },
@@ -799,26 +734,14 @@ const operatorStats = computed(() => [
   { label: 'Linked Projects', value: property.value?.linked_projects?.length || 0 },
 ]);
 
-const editorSections = [
-  { id: 'listing', kicker: '01', label: 'Listing Basics', description: 'Identity, status, and visibility controls.' },
-  { id: 'specification', kicker: '02', label: 'Specification', description: 'Beds, area, fit-out, and occupancy data.' },
-  { id: 'commercial', kicker: '03', label: 'Commercials', description: 'Pricing, deposit, and finance posture.' },
-  { id: 'readiness', kicker: '04', label: 'Readiness', description: 'Development stage, utilities, and delivery context.' },
-  { id: 'ownership', kicker: '05', label: 'Ownership', description: 'Title references, disclosures, and highlights.' },
-];
-
-const activeEditorMeta = computed(() =>
-  editorSections.find((section) => section.id === activeEditorSection.value) || editorSections[0]
-);
-
 function formatUtilities(items) {
   if (!items?.length) return 'Not specified';
   return items.join(', ');
 }
 
-function formatMoney(value) {
+function formatMoney(value, sourceCurrency = 'KES') {
   if (value === null || value === undefined || value === '') return '';
-  return configStore.formatPrice(value);
+  return configStore.formatPrice(value, sourceCurrency);
 }
 
 function formatDate(value) {
@@ -838,6 +761,67 @@ function readableMediaType(type) {
   return (type || '').replaceAll('_', ' ');
 }
 
+const ICONS = {
+  bed: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>',
+  bath: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21h6"/><path d="M12 21v-7"/><path d="M8 14a4 4 0 0 1 8 0v7H8z"/><path d="M4 14h16"/></svg>',
+  ruler: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 6H3"/><path d="M10 12H3"/><path d="M10 18H3"/><path d="M14 9h.01"/><path d="M18 9h.01"/><path d="M14 15h.01"/><path d="M18 15h.01"/></svg>',
+  map: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  pin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+  user: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  briefcase: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+  dollar: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  calendar: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>',
+  car: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
+  check: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  layers: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+  bolt: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  shield: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  tag: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>',
+  wallet: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><path d="M16 12h.01"/></svg>',
+  image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+  home: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  trend: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+  info: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>',
+  default: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>'
+};
+
+function getMetricIcon(label) {
+  if (!label) return ICONS.default;
+  const l = label.toLowerCase();
+  if (l.includes('bed')) return ICONS.bed;
+  if (l.includes('bath')) return ICONS.bath;
+  if (l.includes('sqft') || l.includes('square') || l.includes('area') || l.includes('size')) return ICONS.ruler;
+  if (l.includes('lot')) return ICONS.map;
+  if (l.includes('year') || l.includes('built')) return ICONS.calendar;
+  if (l.includes('park')) return ICONS.car;
+  if (l.includes('owner')) return ICONS.user;
+  if (l.includes('manager')) return ICONS.briefcase;
+  if (l.includes('address') || l.includes('location')) return ICONS.pin;
+  if (l.includes('finance') || l.includes('price') || l.includes('cost') || l.includes('deposit') || l.includes('fee')) return ICONS.dollar;
+  if (l.includes('zoning')) return ICONS.map;
+  if (l.includes('build') || l.includes('ready')) return ICONS.check;
+  if (l.includes('stage') || l.includes('development')) return ICONS.layers;
+  if (l.includes('util')) return ICONS.bolt;
+  if (l.includes('ownership')) return ICONS.shield;
+  if (l.includes('verify')) return ICONS.check;
+  if (l.includes('strategy') || l.includes('pricing')) return ICONS.tag;
+  if (l.includes('market') || l.includes('trend') || l.includes('growth')) return ICONS.trend;
+  if (l.includes('home') || l.includes('property') || l.includes('type')) return ICONS.home;
+  return ICONS.default;
+}
+
+function getMetricColor(label) {
+  if (!label) return 'default';
+  const l = label.toLowerCase();
+  if (l.includes('bed') || l.includes('bath') || l.includes('sqft') || l.includes('square') || l.includes('area') || l.includes('size') || l.includes('lot') || l.includes('park') || l.includes('year') || l.includes('built')) return 'blue';
+  if (l.includes('finance') || l.includes('price') || l.includes('cost') || l.includes('deposit') || l.includes('fee') || l.includes('market') || l.includes('trend') || l.includes('growth')) return 'green';
+  if (l.includes('ownership') || l.includes('verify') || l.includes('title') || l.includes('deed') || l.includes('lien') || l.includes('legal') || l.includes('compliance')) return 'purple';
+  if (l.includes('address') || l.includes('location') || l.includes('owner') || l.includes('manager') || l.includes('home') || l.includes('property') || l.includes('type')) return 'orange';
+  if (l.includes('build') || l.includes('ready') || l.includes('stage') || l.includes('development') || l.includes('zoning') || l.includes('util')) return 'teal';
+  if (l.includes('strategy') || l.includes('pricing')) return 'slate';
+  return 'default';
+}
+
 function readableShowingType(type) {
   return (type || '').replaceAll('_', ' ');
 }
@@ -846,254 +830,32 @@ function readableOccurrenceType(type) {
   return (type || '').replaceAll('_', ' ');
 }
 
-function createDefaultOperatorForm() {
-  return {
-    title: '',
-    description: '',
-    asset_type: 'RESIDENTIAL',
-    listing_type: 'SALE',
-    status: 'ACTIVE',
-    location_text: '',
-    formatted_address: '',
-    price_estimate: '',
-    financing_allowed: false,
-    inquiry_enabled: true,
-    appointment_enabled: true,
-    featureText: '',
-    specification: {
-      bedrooms: '',
-      bathrooms: '',
-      floors: '',
-      parking_spaces: '',
-      internal_area: '',
-      internal_area_unit: 'SQM',
-      lot_size: '',
-      lot_size_unit: 'SQM',
-      year_built: '',
-      renovation_year: '',
-      furnishing_state: '',
-      condition_rating: '',
-      energy_rating: '',
-      occupancy_status: '',
-    },
-    development_metadata: {
-      zoning_info: '',
-      build_ready: false,
-      development_stage: '',
-      estimated_completion_budget: '',
-      expected_completion_date: '',
-      recommended_use: '',
-      utilities_text: '',
-    },
-    pricing_profile: {
-      currency: 'KES',
-      asking_price: '',
-      rent_amount: '',
-      pricing_strategy: 'FIXED',
-      requires_deposit: false,
-      deposit_amount: '',
-      price_per_area_unit: '',
-      area_unit: 'SQM',
-      service_charge_amount: '',
-      tax_percentage: '',
-      insurance_percentage: '',
-      financing_notes: '',
-    },
-    ownership_profile: {
-      legal_owner_name: '',
-      ownership_type: '',
-      title_reference: '',
-      deed_reference: '',
-      has_liens: false,
-      lien_notes: '',
-      disclosure_notes: '',
-    },
-  };
-}
-
-function numberOrNull(value) {
-  return value === '' || value === null || value === undefined ? null : Number(value);
-}
-
-function hydrateOperatorForm(source) {
-  const spec = source?.specification || {};
-  const development = source?.development_metadata || {};
-  const pricing = source?.pricing_profile || {};
-  const ownership = source?.ownership_profile || {};
-
-  operatorForm.value = {
-    title: source?.title || '',
-    description: source?.description || '',
-    asset_type: source?.asset_type || 'RESIDENTIAL',
-    listing_type: source?.listing_type || 'SALE',
-    status: source?.status || 'ACTIVE',
-    location_text: source?.location_text || '',
-    formatted_address: source?.formatted_address || '',
-    price_estimate: source?.price_estimate || '',
-    financing_allowed: Boolean(source?.financing_allowed),
-    inquiry_enabled: source?.inquiry_enabled !== false,
-    appointment_enabled: source?.appointment_enabled !== false,
-    featureText: (source?.features || []).map((feature) => feature.name).filter(Boolean).join(', '),
-    specification: {
-      bedrooms: spec.bedrooms ?? '',
-      bathrooms: spec.bathrooms ?? '',
-      floors: spec.floors ?? '',
-      parking_spaces: spec.parking_spaces ?? '',
-      internal_area: spec.internal_area ?? '',
-      internal_area_unit: spec.internal_area_unit || 'SQM',
-      lot_size: spec.lot_size ?? '',
-      lot_size_unit: spec.lot_size_unit || 'SQM',
-      year_built: spec.year_built ?? '',
-      renovation_year: spec.renovation_year ?? '',
-      furnishing_state: spec.furnishing_state || '',
-      condition_rating: spec.condition_rating || '',
-      energy_rating: spec.energy_rating || '',
-      occupancy_status: spec.occupancy_status || '',
-    },
-    development_metadata: {
-      zoning_info: development.zoning_info || '',
-      build_ready: Boolean(development.build_ready),
-      development_stage: development.development_stage || '',
-      estimated_completion_budget: development.estimated_completion_budget ?? '',
-      expected_completion_date: development.expected_completion_date || '',
-      recommended_use: development.recommended_use || '',
-      utilities_text: (development.utilities_available || []).join(', '),
-    },
-    pricing_profile: {
-      currency: pricing.currency || 'KES',
-      asking_price: pricing.asking_price ?? '',
-      rent_amount: pricing.rent_amount ?? '',
-      pricing_strategy: pricing.pricing_strategy || 'FIXED',
-      requires_deposit: Boolean(pricing.requires_deposit),
-      deposit_amount: pricing.deposit_amount ?? '',
-      price_per_area_unit: pricing.price_per_area_unit ?? '',
-      area_unit: pricing.area_unit || 'SQM',
-      service_charge_amount: pricing.service_charge_amount ?? '',
-      tax_percentage: pricing.tax_percentage ?? '',
-      insurance_percentage: pricing.insurance_percentage ?? '',
-      financing_notes: pricing.financing_notes || '',
-    },
-    ownership_profile: {
-      legal_owner_name: ownership.legal_owner_name || '',
-      ownership_type: ownership.ownership_type || '',
-      title_reference: ownership.title_reference || '',
-      deed_reference: ownership.deed_reference || '',
-      has_liens: Boolean(ownership.has_liens),
-      lien_notes: ownership.lien_notes || '',
-      disclosure_notes: ownership.disclosure_notes || '',
-    },
-  };
-}
-
-function buildPropertyPayload() {
-  const featureNames = operatorForm.value.featureText
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  return {
-    title: operatorForm.value.title,
-    description: operatorForm.value.description,
-    asset_type: operatorForm.value.asset_type,
-    listing_type: operatorForm.value.listing_type,
-    status: operatorForm.value.status,
-    location_text: operatorForm.value.location_text,
-    formatted_address: operatorForm.value.formatted_address,
-    price_estimate: numberOrNull(operatorForm.value.price_estimate),
-    financing_allowed: operatorForm.value.financing_allowed,
-    inquiry_enabled: operatorForm.value.inquiry_enabled,
-    appointment_enabled: operatorForm.value.appointment_enabled,
-    specification: {
-      bedrooms: numberOrNull(operatorForm.value.specification.bedrooms),
-      bathrooms: numberOrNull(operatorForm.value.specification.bathrooms),
-      floors: numberOrNull(operatorForm.value.specification.floors),
-      parking_spaces: numberOrNull(operatorForm.value.specification.parking_spaces),
-      internal_area: numberOrNull(operatorForm.value.specification.internal_area),
-      internal_area_unit: operatorForm.value.specification.internal_area_unit,
-      lot_size: numberOrNull(operatorForm.value.specification.lot_size),
-      lot_size_unit: operatorForm.value.specification.lot_size_unit,
-      year_built: numberOrNull(operatorForm.value.specification.year_built),
-      renovation_year: numberOrNull(operatorForm.value.specification.renovation_year),
-      furnishing_state: operatorForm.value.specification.furnishing_state,
-      condition_rating: operatorForm.value.specification.condition_rating,
-      energy_rating: operatorForm.value.specification.energy_rating,
-      occupancy_status: operatorForm.value.specification.occupancy_status,
-    },
-    development_metadata: {
-      zoning_info: operatorForm.value.development_metadata.zoning_info,
-      build_ready: operatorForm.value.development_metadata.build_ready,
-      development_stage: operatorForm.value.development_metadata.development_stage,
-      estimated_completion_budget: numberOrNull(operatorForm.value.development_metadata.estimated_completion_budget),
-      expected_completion_date: operatorForm.value.development_metadata.expected_completion_date || null,
-      recommended_use: operatorForm.value.development_metadata.recommended_use,
-      utilities_available: operatorForm.value.development_metadata.utilities_text
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean),
-    },
-    pricing_profile: {
-      currency: operatorForm.value.pricing_profile.currency,
-      asking_price: numberOrNull(operatorForm.value.pricing_profile.asking_price),
-      rent_amount: numberOrNull(operatorForm.value.pricing_profile.rent_amount),
-      pricing_strategy: operatorForm.value.pricing_profile.pricing_strategy,
-      requires_deposit: operatorForm.value.pricing_profile.requires_deposit,
-      deposit_amount: numberOrNull(operatorForm.value.pricing_profile.deposit_amount),
-      price_per_area_unit: numberOrNull(operatorForm.value.pricing_profile.price_per_area_unit),
-      area_unit: operatorForm.value.pricing_profile.area_unit,
-      service_charge_amount: numberOrNull(operatorForm.value.pricing_profile.service_charge_amount),
-      tax_percentage: numberOrNull(operatorForm.value.pricing_profile.tax_percentage),
-      insurance_percentage: numberOrNull(operatorForm.value.pricing_profile.insurance_percentage),
-      financing_notes: operatorForm.value.pricing_profile.financing_notes,
-    },
-    ownership_profile: {
-      legal_owner_name: operatorForm.value.ownership_profile.legal_owner_name,
-      ownership_type: operatorForm.value.ownership_profile.ownership_type,
-      title_reference: operatorForm.value.ownership_profile.title_reference,
-      deed_reference: operatorForm.value.ownership_profile.deed_reference,
-      has_liens: operatorForm.value.ownership_profile.has_liens,
-      lien_notes: operatorForm.value.ownership_profile.lien_notes,
-      disclosure_notes: operatorForm.value.ownership_profile.disclosure_notes,
-    },
-    features: featureNames.map((name, index) => ({
-      name,
-      category: 'Highlight',
-      is_highlighted: index < 6,
-      sort_order: index + 1,
-    })),
-  };
-}
-
-function toggleEditMode() {
-  editMode.value = !editMode.value;
-  if (editMode.value && property.value) {
-    activeEditorSection.value = 'listing';
-    hydrateOperatorForm(property.value);
-  }
-}
-
-function cancelEditing() {
-  if (property.value) {
-    hydrateOperatorForm(property.value);
-  }
-  activeEditorSection.value = 'listing';
-  editMode.value = false;
-}
-
 async function loadProperty() {
   loading.value = true;
   try {
-    const [propertyRes, availabilityRes, financeRes, materialsRes] = await Promise.all([
+    // Core property data — must succeed
+    const [propertyRes, availabilityRes] = await Promise.all([
       api.get(`/property/${route.params.id}/`),
       api.get(`/property/${route.params.id}/availability/`),
-      api.get('/v3/finance/products/'),
-      api.get('/v1/products/'),
     ]);
 
     property.value = propertyRes.data;
-    hydrateOperatorForm(propertyRes.data);
     availableSlots.value = availabilityRes.data;
-    financeProducts.value = financeRes.data.results || financeRes.data;
-    materials.value = (materialsRes.data.results || materialsRes.data || []).slice(0, 3);
+
+    // Optional enrichment — failures should not block the page
+    try {
+      const financeRes = await api.get('/v3/finance/products/');
+      financeProducts.value = financeRes.data.results || financeRes.data;
+    } catch {
+      financeProducts.value = [];
+    }
+
+    try {
+      const materialsRes = await api.get('/v1/products/');
+      materials.value = (materialsRes.data.results || materialsRes.data || []).slice(0, 3);
+    } catch {
+      materials.value = [];
+    }
 
     if (operatorView.value) {
       const [inquiriesRes, appointmentsRes] = await Promise.all([
@@ -1107,21 +869,6 @@ async function loadProperty() {
     showAlert?.(error.response?.data?.detail || 'Failed to load property details.', 'error');
   } finally {
     loading.value = false;
-  }
-}
-
-async function saveProperty() {
-  if (!canModifyProperty.value) return;
-  savingProperty.value = true;
-  try {
-    await api.patch(`/property/${route.params.id}/`, buildPropertyPayload());
-    showAlert?.('Property updated successfully.', 'success');
-    editMode.value = false;
-    await loadProperty();
-  } catch (error) {
-    showAlert?.(error.response?.data?.detail || 'Failed to update property.', 'error');
-  } finally {
-    savingProperty.value = false;
   }
 }
 
@@ -1206,7 +953,7 @@ onMounted(loadProperty);
   color: var(--pz-color-foundation-black);
   min-height: 100vh;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   font-family: var(--pz-font-primary);
 }
 
@@ -1235,46 +982,34 @@ onMounted(loadProperty);
   z-index: 1;
 }
 
-/* No need to override deep card styles heavily if it defaults to light, 
-   but we ensure glassmorphism is perfect */
-:deep(.pz-card) {
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(10, 10, 15, 0.08) !important;
-  box-shadow: 0 16px 32px -12px rgba(10, 10, 15, 0.08) !important;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease !important;
-}
-:deep(.pz-card:hover) {
-  transform: translateY(-4px) !important;
-  box-shadow: 0 24px 46px rgba(10, 10, 15, 0.12), 0 0 0 1px rgba(212, 101, 42, 0.12) !important;
-  border-color: var(--pz-color-earth-orange) !important;
-}
-
 /* Hero Section */
 .pz-property-hero {
   display: grid;
   gap: 2.5rem;
-  grid-template-columns: 1.3fr 1fr;
-  padding: 2.5rem;
+  grid-template-columns: 1.4fr 1fr;
+  padding: 0;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(10, 10, 15, 0.08);
-  box-shadow: 0 25px 50px -12px rgba(10, 10, 15, 0.1);
+  background: #ffffff;
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  box-shadow:
+    0 1px 2px rgba(10, 10, 15, 0.02),
+    0 8px 24px rgba(10, 10, 15, 0.06),
+    0 24px 48px rgba(10, 10, 15, 0.04);
   margin-bottom: 2rem;
+  overflow: hidden;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .pz-property-hero:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 35px 60px -15px rgba(10, 10, 15, 0.15);
-  border-color: rgba(212, 101, 42, 0.3);
+  transform: translateY(-4px);
+  box-shadow:
+    0 4px 8px rgba(10, 10, 15, 0.03),
+    0 16px 32px rgba(10, 10, 15, 0.06),
+    0 32px 64px rgba(10, 10, 15, 0.08);
 }
 
 .pz-property-hero__media {
-  border-radius: 16px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 10px 30px rgba(10, 10, 15, 0.15);
   min-height: 28rem;
 }
 .pz-property-hero__image {
@@ -1284,8 +1019,8 @@ onMounted(loadProperty);
   display: block;
   transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-.pz-property-hero__media:hover .pz-property-hero__image {
-  transform: scale(1.06);
+.pz-property-hero:hover .pz-property-hero__image {
+  transform: scale(1.04);
 }
 .pz-property-hero__fallback {
   display: grid;
@@ -1294,6 +1029,7 @@ onMounted(loadProperty);
   color: var(--pz-color-limestone-white);
   min-height: 28rem;
   flex-direction: column;
+  gap: 0.5rem;
 }
 
 .pz-property-hero__content {
@@ -1301,6 +1037,7 @@ onMounted(loadProperty);
   flex-direction: column;
   justify-content: center;
   gap: 1.5rem;
+  padding: 2.5rem 2.5rem 2.5rem 0;
 }
 
 .pz-u-text-display {
@@ -1318,32 +1055,41 @@ onMounted(loadProperty);
   line-height: 1.7;
   color: var(--pz-color-structural-steel);
   font-size: 1.05rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .pz-property-hero__price {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(212, 101, 42, 0.05), rgba(212, 101, 42, 0.01));
-  border: 1px solid rgba(212, 101, 42, 0.15);
-  border-left: 4px solid var(--pz-color-earth-orange);
+  background: linear-gradient(135deg, rgba(212, 101, 42, 0.06), rgba(212, 101, 42, 0.02));
+  border: 1px solid rgba(212, 101, 42, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.5);
+  gap: 0.35rem;
 }
 .pz-property-hero__price strong {
   font-family: var(--pz-font-display);
-  font-size: 2.25rem;
+  font-size: 2rem;
   font-weight: 800;
   color: var(--pz-color-earth-orange);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 /* Feature Grids */
-.pz-property-summary-grid,
+.pz-property-summary-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
 .pz-property-feature-grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
 }
 
 .pz-property-chip-row {
@@ -1421,137 +1167,156 @@ onMounted(loadProperty);
   flex-direction: column;
   gap: 0.4rem;
   padding: 1rem 1.25rem;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
   border: 1px solid rgba(10, 10, 15, 0.05);
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .pz-property-detail__metric:hover,
 .pz-property-detail__feed:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   border-color: rgba(10, 10, 15, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(10, 10, 15, 0.06);
+}
+
+/* Modern metric item with icon */
+.pz-property-detail__metric {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1.1rem 1.25rem;
+}
+
+.pz-metric__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 12px;
+  background: rgba(212, 101, 42, 0.08);
+  color: var(--pz-color-earth-orange);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  transition: all 0.3s ease;
+}
+.pz-property-detail__metric:hover .pz-metric__icon {
+  transform: scale(1.08);
+}
+.pz-metric__icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* Color-coded metric icons */
+.pz-metric__icon--blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+.pz-property-detail__metric:hover .pz-metric__icon--blue {
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.pz-metric__icon--green {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+.pz-property-detail__metric:hover .pz-metric__icon--green {
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.pz-metric__icon--purple {
+  background: rgba(168, 85, 247, 0.1);
+  color: #9333ea;
+}
+.pz-property-detail__metric:hover .pz-metric__icon--purple {
+  background: rgba(168, 85, 247, 0.18);
+}
+
+.pz-metric__icon--orange {
+  background: rgba(249, 115, 22, 0.1);
+  color: #ea580c;
+}
+.pz-property-detail__metric:hover .pz-metric__icon--orange {
+  background: rgba(249, 115, 22, 0.18);
+}
+
+.pz-metric__icon--teal {
+  background: rgba(20, 184, 166, 0.1);
+  color: #0d9488;
+}
+.pz-property-detail__metric:hover .pz-metric__icon--teal {
+  background: rgba(20, 184, 166, 0.18);
+}
+
+.pz-metric__icon--slate {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+}
+.pz-property-detail__metric:hover .pz-metric__icon--slate {
+  background: rgba(100, 116, 139, 0.18);
+}
+
+.pz-metric__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .pz-property-detail__label {
   font-family: var(--pz-font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--pz-color-concrete-grey);
 }
 .pz-property-detail__value {
-  color: var(--pz-color-structural-steel);
-  font-size: 1rem;
-  font-weight: 500;
+  color: var(--pz-color-foundation-black);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
-.pz-operator-form-section {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid rgba(10, 10, 15, 0.08);
-  background: rgba(247, 244, 239, 0.72);
-  border-radius: 16px;
-}
-
-.pz-editor-shell {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr);
-}
-
-.pz-editor-nav {
+.pz-operator-summary {
   display: grid;
   gap: 0.75rem;
-  align-content: start;
 }
 
-.pz-editor-nav__item {
+.pz-operator-summary__row {
   display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+}
+
+.pz-operator-summary__item {
+  display: flex;
+  flex-direction: column;
   gap: 0.2rem;
-  padding: 0.95rem 1rem;
-  border: 1px solid rgba(10, 10, 15, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.75);
-  text-align: left;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(10, 10, 15, 0.05);
 }
 
-.pz-editor-nav__item:hover,
-.pz-editor-nav__item.is-active {
-  border-color: rgba(212, 101, 42, 0.35);
-  box-shadow: 0 10px 24px rgba(10, 10, 15, 0.06);
-  transform: translateY(-1px);
-}
-
-.pz-editor-nav__kicker {
+.pz-operator-summary__label {
   font-family: var(--pz-font-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--pz-color-earth-orange);
-}
-
-.pz-editor-nav__item strong {
-  font-size: 0.95rem;
-}
-
-.pz-editor-nav__item span:last-child {
-  font-size: 0.78rem;
   color: var(--pz-color-concrete-grey);
 }
 
-.pz-operator-form-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+.pz-operator-summary__value {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--pz-color-foundation-black);
 }
 
-.pz-operator-toggle-grid {
-  display: grid;
-  gap: 0.8rem;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-}
-
-.pz-checkbox-row {
+.pz-operator-summary__actions {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  min-height: 2.8rem;
-  padding: 0 0.75rem;
-  border: 1px solid rgba(10, 10, 15, 0.1);
-  border-radius: 12px;
-  background: white;
-  font-family: var(--pz-font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.pz-editor-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.1rem;
-  border-top: 1px solid rgba(10, 10, 15, 0.08);
-  background: rgba(255, 255, 255, 0.92);
-  position: sticky;
-  bottom: 0;
-  border-radius: 0 0 16px 16px;
-}
-
-.pz-editor-actions__summary {
-  display: grid;
-  gap: 0.2rem;
-}
-
-.pz-editor-status {
-  font-family: var(--pz-font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--pz-color-earth-orange);
+  justify-content: flex-end;
 }
 
 /* Slots for appointments */
@@ -1574,20 +1339,25 @@ onMounted(loadProperty);
 .pz-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   margin-bottom: 2rem;
   font-family: var(--pz-font-mono);
+  font-size: 0.78rem;
 }
 .pz-breadcrumb__item {
   color: var(--pz-color-concrete-grey);
   text-decoration: none;
   transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 .pz-breadcrumb__item:hover {
   color: var(--pz-color-earth-orange);
 }
 .pz-breadcrumb__separator {
-  color: rgba(10, 10, 15, 0.2);
+  color: rgba(10, 10, 15, 0.15);
+  font-size: 0.65rem;
 }
 .pz-breadcrumb__current {
   color: var(--pz-color-structural-steel);
@@ -1619,6 +1389,351 @@ onMounted(loadProperty);
   grid-template-columns: minmax(0, 1.6fr) minmax(22rem, 1fr);
 }
 
+/* Tab Navigation */
+.pz-property-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  width: fit-content;
+  max-width: 100%;
+}
+.pz-property-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.pz-property-tab {
+  position: relative;
+  padding: 0.7rem 1.1rem;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--pz-font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--pz-color-concrete-grey);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.pz-property-tab:hover {
+  color: var(--pz-color-structural-steel);
+  background: rgba(10, 10, 15, 0.03);
+}
+.pz-property-tab--active {
+  background: white;
+  color: var(--pz-color-earth-orange);
+  box-shadow: 0 2px 8px rgba(10, 10, 15, 0.08);
+}
+
+.pz-property-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(212, 101, 42, 0.12);
+  color: var(--pz-color-earth-orange);
+  font-family: var(--pz-font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+/* Tab Panels */
+.pz-tab-panel {
+  animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sticky Sidebar */
+.pz-property-sidebar,
+aside.pz-space-y-6 {
+  position: sticky;
+  top: 2rem;
+  align-self: start;
+  height: fit-content;
+}
+
+/* Showings & Visits Card */
+.pz-showing-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pz-showing-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pz-showing-section__title {
+  font-family: var(--pz-font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-showing-section__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: rgba(10, 10, 15, 0.06);
+  color: var(--pz-color-concrete-grey);
+  font-family: var(--pz-font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.pz-showing-section__count--available {
+  background: rgba(34, 139, 34, 0.1);
+  color: #228b22;
+}
+
+.pz-showing-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.pz-showing-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(10, 10, 15, 0.05);
+  transition: all 0.2s ease;
+}
+.pz-showing-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(10, 10, 15, 0.1);
+}
+
+.pz-showing-item__date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(212, 101, 42, 0.08);
+  border: 1px solid rgba(212, 101, 42, 0.15);
+}
+
+.pz-showing-item__day {
+  font-family: var(--pz-font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-showing-item__date-num {
+  font-family: var(--pz-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pz-color-earth-orange);
+  line-height: 1;
+}
+
+.pz-showing-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.pz-showing-item__info strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--pz-color-foundation-black);
+}
+.pz-showing-item__info span {
+  font-size: 0.78rem;
+  color: var(--pz-color-steel);
+}
+
+.pz-showing-item__note {
+  font-size: 0.72rem;
+  color: var(--pz-color-concrete-grey);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pz-showing-more {
+  font-family: var(--pz-font-mono);
+  font-size: 0.7rem;
+  color: var(--pz-color-concrete-grey);
+  text-align: center;
+  padding: 0.25rem 0;
+}
+
+.pz-showing-empty {
+  font-family: var(--pz-font-mono);
+  font-size: 0.78rem;
+  color: var(--pz-color-concrete-grey);
+  padding: 0.5rem 0;
+}
+
+.pz-showing-divider {
+  height: 1px;
+  background: rgba(10, 10, 15, 0.08);
+  margin: 0.25rem 0;
+}
+
+/* Slot Cards */
+.pz-slot-list {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pz-slot-list::-webkit-scrollbar {
+  display: none;
+}
+
+.pz-slot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 3.8rem;
+  padding: 0.5rem 0.4rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--pz-font-display);
+}
+.pz-slot-card:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(212, 101, 42, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(10, 10, 15, 0.06);
+}
+.pz-slot-card--selected {
+  background: rgba(212, 101, 42, 0.1);
+  border-color: var(--pz-color-earth-orange);
+  box-shadow: 0 0 0 2px rgba(212, 101, 42, 0.15);
+}
+.pz-slot-card--selected:hover {
+  background: rgba(212, 101, 42, 0.14);
+}
+
+.pz-slot-card__day {
+  font-family: var(--pz-font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--pz-color-concrete-grey);
+}
+.pz-slot-card--selected .pz-slot-card__day {
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-slot-card__date {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--pz-color-foundation-black);
+  line-height: 1;
+}
+.pz-slot-card--selected .pz-slot-card__date {
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-slot-card__time {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-steel);
+}
+.pz-slot-card--selected .pz-slot-card__time {
+  color: var(--pz-color-earth-orange);
+}
+
+/* Selected Slot Summary */
+.pz-slot-selected {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(212, 101, 42, 0.08);
+  border: 1px solid rgba(212, 101, 42, 0.2);
+}
+
+.pz-slot-selected__label {
+  font-family: var(--pz-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+  font-weight: 600;
+}
+
+.pz-slot-selected__value {
+  flex: 1;
+  font-size: 0.82rem;
+  color: var(--pz-color-foundation-black);
+  font-weight: 500;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pz-slot-selected__clear {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(212, 101, 42, 0.15);
+  color: var(--pz-color-earth-orange);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.pz-slot-selected__clear:hover {
+  background: rgba(212, 101, 42, 0.25);
+}
+
+/* Booking Form */
+.pz-booking-form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.pz-booking-form__row {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: 1fr 1fr;
+}
+
 @media (max-width: 1024px) {
   .pz-property-layout {
     grid-template-columns: 1fr;
@@ -1636,9 +1751,13 @@ onMounted(loadProperty);
   .pz-property-hero {
     grid-template-columns: 1fr;
   }
+  .pz-property-hero__content {
+    padding: 0 2rem 2rem;
+  }
   .pz-property-hero__media,
   .pz-property-hero__fallback {
     min-height: 20rem;
+    border-radius: 24px 24px 0 0;
   }
 }
 </style>

@@ -93,6 +93,9 @@ class ProductSerializer(serializers.ModelSerializer):
     )
     vendor_business_name = serializers.CharField(source='vendor.business_name', read_only=True)
     vendor_id = serializers.UUIDField(source='vendor.uuid', read_only=True)
+    country_name = serializers.CharField(source='country.name', read_only=True)
+    country_code = serializers.CharField(source='country.iso_code', read_only=True)
+    country_currency = serializers.CharField(source='country.default_currency', read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     certification_entries = ProductCertificationSerializer(many=True, read_only=True)
     attribute_entries = ProductAttributeSerializer(many=True, read_only=True)
@@ -104,19 +107,21 @@ class ProductSerializer(serializers.ModelSerializer):
     inventory_signal = serializers.CharField(read_only=True)
     vendor_location = serializers.CharField(source='vendor.location_text', read_only=True)
     vendor_country_name = serializers.CharField(source='vendor.country.name', read_only=True)
+    vendor_country_currency = serializers.CharField(source='vendor.country.default_currency', read_only=True)
     vendor_formatted_address = serializers.CharField(source='vendor.formatted_address', read_only=True)
+    effective_currency = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
             # IDs and relationships
-            'id', 'vendor_id', 'vendor_business_name', 'category', 'category_id', 'slug',
+            'id', 'vendor_id', 'vendor_business_name', 'country_name', 'country_code', 'country_currency', 'category', 'category_id', 'slug',
 
             # Basic Information
             'name', 'short_description', 'description',
 
             # Pricing & Inventory
-            'unit', 'base_price', 'bulk_price', 'bulk_threshold', 'effective_price',
+            'unit', 'base_price', 'currency', 'effective_currency', 'bulk_price', 'bulk_threshold', 'effective_price',
             'stock_quantity', 'available_quantity', 'min_order_quantity', 'max_order_quantity', 'is_in_stock',
 
             # Product Specifications
@@ -140,7 +145,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
             # Status & Media
             'status', 'images', 'primary_image_url', 'inventory_signal',
-            'vendor_location', 'vendor_country_name', 'vendor_formatted_address',
+            'vendor_location', 'vendor_country_name', 'vendor_country_currency', 'vendor_formatted_address',
 
             # Timestamps
             'created_at', 'updated_at', 'is_public', 'reorder_level'
@@ -156,6 +161,18 @@ class ProductSerializer(serializers.ModelSerializer):
             return primary_image.image.url
         return None
 
+    def get_effective_currency(self, obj):
+        product_currency = (getattr(getattr(obj, 'country', None), 'default_currency', '') or '').strip().upper()
+        stored_currency = (obj.currency or '').strip().upper()
+        vendor_currency = (getattr(getattr(obj.vendor, 'country', None), 'default_currency', '') or '').strip().upper()
+        if product_currency:
+            return product_currency
+        if stored_currency and stored_currency != 'KES':
+            return stored_currency
+        if vendor_currency:
+            return vendor_currency
+        return stored_currency or 'KES'
+
 
 class ProductListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for product listings"""
@@ -164,24 +181,29 @@ class ProductListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     vendor_business_name = serializers.CharField(source='vendor.business_name', read_only=True)
     vendor_id = serializers.UUIDField(source='vendor.uuid', read_only=True)
+    country_name = serializers.CharField(source='country.name', read_only=True)
+    country_code = serializers.CharField(source='country.iso_code', read_only=True)
+    country_currency = serializers.CharField(source='country.default_currency', read_only=True)
     primary_image_url = serializers.SerializerMethodField()
     effective_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     available_quantity = serializers.IntegerField(read_only=True)
     vendor_location = serializers.CharField(source='vendor.location_text', read_only=True)
     vendor_country_name = serializers.CharField(source='vendor.country.name', read_only=True)
+    vendor_country_currency = serializers.CharField(source='vendor.country.default_currency', read_only=True)
     inventory_signal = serializers.CharField(read_only=True)
     certification_highlights = serializers.SerializerMethodField()
     attribute_highlights = serializers.SerializerMethodField()
+    effective_currency = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
-            'id', 'slug', 'name', 'short_description', 'vendor_id', 'vendor_business_name',
+            'id', 'slug', 'name', 'short_description', 'vendor_id', 'vendor_business_name', 'country_name', 'country_code', 'country_currency',
             'vendor_location', 'vendor_country_name',
-            'category_id', 'category_name', 'unit', 'base_price', 'bulk_price', 'effective_price',
+            'category_id', 'category_name', 'unit', 'base_price', 'currency', 'effective_currency', 'bulk_price', 'effective_price',
             'stock_quantity', 'available_quantity', 'min_order_quantity', 'is_in_stock',
             'brand', 'quality_grade', 'primary_image_url', 'inventory_signal',
-            'country_of_origin', 'packaging_details',
+            'country_of_origin', 'packaging_details', 'vendor_country_currency',
             'certification_highlights', 'attribute_highlights',
             'is_featured', 'is_new_arrival', 'is_on_sale',
             'status', 'created_at'
@@ -211,6 +233,18 @@ class ProductListSerializer(serializers.ModelSerializer):
             for entry in entries
         ]
 
+    def get_effective_currency(self, obj):
+        product_currency = (getattr(getattr(obj, 'country', None), 'default_currency', '') or '').strip().upper()
+        stored_currency = (obj.currency or '').strip().upper()
+        vendor_currency = (getattr(getattr(obj.vendor, 'country', None), 'default_currency', '') or '').strip().upper()
+        if product_currency:
+            return product_currency
+        if stored_currency and stored_currency != 'KES':
+            return stored_currency
+        if vendor_currency:
+            return vendor_currency
+        return stored_currency or 'KES'
+
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating products (vendor use)"""
@@ -231,7 +265,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             'name', 'short_description', 'description', 'category',
 
             # Pricing & Inventory
-            'unit', 'base_price', 'bulk_price', 'bulk_threshold',
+            'unit', 'base_price', 'currency', 'bulk_price', 'bulk_threshold',
             'stock_quantity', 'min_order_quantity', 'max_order_quantity',
 
             # Product Specifications
@@ -277,6 +311,16 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         certification_entries = validated_data.pop('certification_entries', [])
         attribute_entries = validated_data.pop('attribute_entries', [])
         documents = validated_data.pop('documents', [])
+        if not validated_data.get('currency'):
+            request = self.context.get('request')
+            vendor_country_currency = getattr(getattr(getattr(request, 'user', None), 'vendor_profile', None), 'country', None)
+            vendor_country_currency = getattr(vendor_country_currency, 'default_currency', None)
+            validated_data['currency'] = (vendor_country_currency or 'KES').upper()
+        if not validated_data.get('country'):
+            request = self.context.get('request')
+            vendor_country = getattr(getattr(getattr(request, 'user', None), 'vendor_profile', None), 'country', None)
+            if vendor_country is not None:
+                validated_data['country'] = vendor_country
         product = super().create(validated_data)
         self._save_nested(product, certification_entries, attribute_entries, documents)
         return product

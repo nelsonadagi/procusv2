@@ -8,6 +8,7 @@ Phase 3 introduces the **financial infrastructure layer**:
 * Embedded construction financing
 * Supply chain credit
 * Dispute arbitration
+* Admin-configurable payment gateways, including simulated checkout methods for development and test flows
 
 Phase 3 is where the platform becomes a defensible construction operating system.
 

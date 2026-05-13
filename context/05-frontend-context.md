@@ -55,7 +55,7 @@ The documentation and code suggest:
 - workspace activation and dashboard rendering
 - form submission for marketplace and workflow actions
 - data fetching from versioned and app-level APIs
-- configuration-driven localization and currency display
+- configuration-driven localization with country-derived currency display and record-level source currency conversion for property, product, and procurement prices
 
 ## Prompt and copy direction
 

@@ -22,7 +22,7 @@
             <div class="pz-u-bg-limestone pz-p-4 pz-u-border pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center mt-4" style="border-style: dashed;">
                 <div>
                     <div class="pz-u-text-mono text-[10px] pz-u-color-concrete">ESTIMATED_FULFILLMENT_COST</div>
-                    <div class="pz-u-text-display text-2xl">KES {{ calculatedCost }}</div>
+                    <div class="pz-u-text-display text-2xl">{{ displayCost }}</div>
                 </div>
                 <div class="u-text-right">
                     <div class="pz-u-text-mono text-[10px] pz-u-color-concrete">SLA_LEAD_TIME</div>
@@ -44,15 +44,18 @@
 <script setup>
     import { ref, onMounted, computed, inject } from 'vue';
     import api from '../../services/api';
+    import { useConfigStore } from '../../stores/config';
     import Button from '../ui/Button.vue';
     import PzInput from '../PzInput.vue';
 
     const showAlert = inject('showAlert');
+    const configStore = useConfigStore();
     const zones = ref([]);
     const selectedZone = ref('');
     const weight = ref(0);
     const loading = ref(false);
-    const calculatedCost = ref('0.00');
+    const calculatedCost = ref(0);
+    const displayCost = computed(() => configStore.formatPrice ? configStore.formatPrice(calculatedCost.value, 'KES') : `KES ${Number(calculatedCost.value || 0).toLocaleString()}`);
 
     async function fetchZones() {
         try {
@@ -78,10 +81,7 @@
                 return Number(quote.price) < Number(lowest.price) ? quote : lowest;
             }, null);
             const amount = cheapestQuote?.price ?? res.data.base_cost ?? 0;
-            calculatedCost.value = Number(amount).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            });
+            calculatedCost.value = Number(amount || 0);
             if (showAlert) showAlert("Logistics quotation recalculated successfully", "info");
         } catch (err) {
             console.error("Calculation error", err);

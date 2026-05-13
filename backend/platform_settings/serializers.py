@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import PlatformSettings, FeatureFlag, CurrencyRate, Country, Location
+from .models import PlatformSettings, FeatureFlag, CurrencyRate, Country, Location, PaymentGatewayConfig, ExchangeRateConfig
 
 
 class LocationSerializer(serializers.ModelSerializer):
@@ -93,3 +93,71 @@ class FeatureFlagSerializer(serializers.ModelSerializer):
     class Meta:
         model = FeatureFlag
         fields = ['key', 'active', 'description', 'enabled_regions']
+
+
+class PaymentGatewayConfigSerializer(serializers.ModelSerializer):
+    secret_key = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = PaymentGatewayConfig
+        fields = [
+            'id', 'provider', 'label', 'public_key', 'secret_key', 'webhook_secret',
+            'instructions', 'display_order', 'is_default', 'enabled_regions',
+            'active', 'is_test_mode',
+        ]
+        read_only_fields = ['id']
+
+    def create(self, validated_data):
+        secret_key = validated_data.pop('secret_key', None)
+        instance = PaymentGatewayConfig(**validated_data)
+        if secret_key:
+            instance.secret_key = secret_key
+        instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        secret_key = validated_data.pop('secret_key', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if secret_key:
+            instance.secret_key = secret_key
+        instance.save()
+        return instance
+
+
+class PaymentGatewayPublicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentGatewayConfig
+        fields = [
+            'id', 'provider', 'label', 'instructions', 'display_order',
+            'is_default', 'enabled_regions', 'active', 'is_test_mode',
+        ]
+
+
+class ExchangeRateConfigSerializer(serializers.ModelSerializer):
+    api_key = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = ExchangeRateConfig
+        fields = [
+            'id', 'provider', 'label', 'base_url', 'api_key', 'mapping_config',
+            'is_default', 'active', 'last_sync',
+        ]
+        read_only_fields = ['id', 'last_sync']
+
+    def create(self, validated_data):
+        api_key = validated_data.pop('api_key', None)
+        instance = ExchangeRateConfig(**validated_data)
+        if api_key:
+            instance.api_key = api_key
+        instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        api_key = validated_data.pop('api_key', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if api_key:
+            instance.api_key = api_key
+        instance.save()
+        return instance

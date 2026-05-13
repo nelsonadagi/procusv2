@@ -27,6 +27,7 @@ from .serializers import (
     PropertyAvailabilityWindowSerializer,
     PropertyAppointmentSerializer,
 )
+from platform_settings.utils import resolve_request_country_code
 
 
 class IsPropertyOperator(permissions.BasePermission):
@@ -38,7 +39,18 @@ class IsPropertyOperator(permissions.BasePermission):
         prop = obj if isinstance(obj, PropertyListing) else getattr(obj, 'property', None)
         if not prop:
             return False
-        return prop.owner == request.user or prop.manager == request.user
+        # Direct ownership or management
+        if prop.owner == request.user or prop.manager == request.user:
+            return True
+        # Organization-scoped access: same org as owner
+        if (
+            prop.owner
+            and prop.owner.organization
+            and request.user.organization
+            and prop.owner.organization == request.user.organization
+        ):
+            return True
+        return False
 
 
 class IsPropertyOwner(permissions.BasePermission):
@@ -78,7 +90,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         'create': 'property:list_property',
         'update': 'property:update_property',
         'partial_update': 'property:update_property',
-        'destroy': 'property:update_property',
+        'destroy': 'property:delete_property',
         'link_project': 'property:update_property',
     }
 
@@ -139,7 +151,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         asset_type = self.request.query_params.get('asset_type')
         listing_type = self.request.query_params.get('listing_type')
         purpose = self.request.query_params.get('purpose')
-        country = self.request.query_params.get('country')
+        country = resolve_request_country_code(self.request)
         city = self.request.query_params.get('city')
         state = self.request.query_params.get('state')
         location_query = self.request.query_params.get('location')
@@ -180,7 +192,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
             else:
                 qs = qs.filter(Q(purpose__slug=purpose) | Q(purpose__name__iexact=purpose))
         if country:
-            qs = qs.filter(country_id=country)
+            country_filter = Q(country__iso_code__iexact=country)
+            if str(country).isdigit():
+                country_filter |= Q(country_id=country)
+            qs = qs.filter(country_filter)
         if city:
             qs = qs.filter(Q(location__city__icontains=city) | Q(location_text__icontains=city) | Q(formatted_address__icontains=city))
         if state:
@@ -321,6 +336,11 @@ class PropertyInquiryViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), HasRequiredPermission(), IsPropertyOperator()]
 
     required_permission = 'property:view'
+    permission_map = {
+        'update': 'property:manage_inquiries',
+        'partial_update': 'property:manage_inquiries',
+        'destroy': 'property:manage_inquiries',
+    }
 
     def get_queryset(self):
         user = self.request.user
@@ -394,6 +414,11 @@ class PropertyAppointmentViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), HasRequiredPermission(), IsPropertyOperator()]
 
     required_permission = 'property:view'
+    permission_map = {
+        'update': 'property:manage_appointments',
+        'partial_update': 'property:manage_appointments',
+        'destroy': 'property:manage_appointments',
+    }
 
     def get_queryset(self):
         user = self.request.user

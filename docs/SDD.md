@@ -566,6 +566,7 @@ Each view follows a consistent pattern:
 - **UUID primary keys** across all financial and identity models
 - **Soft deletes** (is_active flag) preferred over hard deletes for user-facing entities
 - **Decimal(15,2)** for all monetary amounts
+- **Source currency stored on each priced record** so the UI can convert into the selected country currency at render time
 - **Indexed ForeignKeys** for all join-heavy fields
 - **`created_at` / `updated_at`** auto-managed timestamps on all models
 
@@ -677,7 +678,7 @@ class Currency(Model):
     currency_code    = CharField(max_length=10, unique=True)
     currency_name    = CharField(max_length=100)
     symbol           = CharField(max_length=10)
-    rate_to_default  = DecimalField(max_digits=15, decimal_places=6)
+    rate_to_default  = DecimalField(max_digits=15, decimal_places=6)  # Base currency units per 1 unit of this currency
     is_active        = BooleanField(default=True)
 
 class Country(Model):
@@ -755,7 +756,7 @@ POST   /api/config/admin-users/{id}/set_role/
 #### Materials Marketplace
 ```
 GET    /api/products/                  List products (filterable)
-POST   /api/products/                  Create product (Vendor)
+POST   /api/products/                  Create product (Vendor, includes currency)
 GET    /api/products/{id}/             Product detail
 PATCH  /api/products/{id}/             Update product
 GET    /api/orders/                    List orders
@@ -798,7 +799,7 @@ POST   /api/projects/{id}/commit/      Investor pledge
 POST   /api/projects/{id}/link-contract/ Link contract
 POST   /api/projects/{id}/updates/     Post update
 GET    /api/property/                  Property listings
-POST   /api/property/                  List property
+POST   /api/property/                  List property (includes pricing currency)
 ```
 
 #### Platform Admin

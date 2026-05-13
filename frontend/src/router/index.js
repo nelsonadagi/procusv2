@@ -11,6 +11,11 @@ const router = createRouter({
             component: () => import('../views/ProductList.vue')
         },
         {
+            path: '/products',
+            name: 'products',
+            component: () => import('../views/ProductList.vue')
+        },
+        {
             path: '/products/:id',
             name: 'product-detail',
             component: () => import('../views/ProductDetail.vue')
@@ -77,6 +82,12 @@ const router = createRouter({
             meta: { requiresAuth: true }
         },
         {
+            path: '/finance/apply',
+            name: 'finance-application',
+            component: () => import('../views/FinanceApplication.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
             path: '/government/dashboard',
             name: 'government-dashboard',
             component: () => import('../views/GovernmentDashboard.vue'),
@@ -140,10 +151,33 @@ const router = createRouter({
             component: () => import('../views/PropertyDetail.vue')
         },
         {
+            path: '/properties/:id/edit',
+            name: 'property-edit',
+            component: () => import('../views/PropertyEdit.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
             path: '/property-manager/dashboard',
             name: 'property-manager-dashboard',
             component: () => import('../views/PropertyManagerDashboard.vue'),
             meta: { requiresAuth: true }
+        },
+        {
+            path: '/agent/dashboard',
+            name: 'agent-dashboard',
+            component: () => import('../views/PropertyManagerDashboard.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/surveyor/dashboard',
+            name: 'surveyor-dashboard',
+            component: () => import('../views/PropertyManagerDashboard.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/:pathMatch(.*)*',
+            name: 'not-found',
+            component: () => import('../views/ProductList.vue')
         },
     ]
 })

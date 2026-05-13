@@ -61,6 +61,8 @@ Base:
 - `/api/platform_settings/admin-users/`
 - `/api/platform_settings/roles/`
 - `/api/platform_settings/features/`
+- `/api/platform_settings/payment-gateways/`
+- `/api/platform_settings/payment-methods/`
 
 ### Vendors
 
@@ -105,6 +107,10 @@ Quote request custom actions include:
 - `/api/orders/quote-requests/{id}/respond/`
 - `/api/orders/quote-requests/{id}/checkout/`
 
+Order custom actions include:
+
+- `/api/orders/{id}/simulate_payment/`
+
 ### Contractors
 
 Base:
@@ -134,6 +140,19 @@ Base:
 
 - `/api/bids/`
 - `/api/v2/bids/`
+
+### Finance
+
+Base:
+
+- `/api/v3/finance/products/`
+- `/api/v3/finance/applications/`
+
+Notes:
+
+- finance products are public catalog entries
+- finance applications require authentication and permission checks
+- financing targets may include projects, properties, contracts, and material orders depending on serializer payload
 
 ### Milestones
 

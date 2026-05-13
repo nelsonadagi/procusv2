@@ -24,106 +24,137 @@
             <Button v-if="activeFiltersCount > 0" variant="ghost" size="sm" @click="clearFilters">Reset</Button>
           </div>
 
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Country</span>
-            <select v-model="selectedCountry" @change="handleHubChange" class="pz-filter-bar__control">
-              <option value="">Global Marketplace</option>
-              <option v-for="c in configStore.countries" :key="c.id" :value="c.id">{{ c.flag_emoji }} {{ c.name }}</option>
-            </select>
-          </div>
-
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Material Category</span>
-            <select v-model="selectedCategory" @change="fetchProducts" class="pz-filter-bar__control">
-              <option value="">All Industrial Materials</option>
-              <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-            </select>
-          </div>
-
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Certification</span>
-            <input v-model.trim="certificationQuery" type="text" placeholder="KEBS, ISO 9001, CE" class="pz-filter-bar__input" @input="debouncedSearch">
-          </div>
-
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Country of Origin</span>
-            <input v-model.trim="originQuery" type="text" placeholder="Kenya, Tanzania, China" class="pz-filter-bar__input" @input="debouncedSearch">
-          </div>
-
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">County / State</span>
-            <select v-model="selectedCounty" @change="handleCountyChange" class="pz-filter-bar__control">
-              <option value="">All Counties</option>
-              <option v-for="c in availableCounties" :key="c" :value="c">{{ c }}</option>
-            </select>
-          </div>
-
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Subcounty / City</span>
-            <select v-model="selectedSubcounty" @change="fetchProducts" class="pz-filter-bar__control">
-              <option value="">All Areas</option>
-              <option v-for="s in availableSubcounties" :key="s" :value="s">{{ s }}</option>
-            </select>
-          </div>
-
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Price Range ($)</span>
-            <div class="pz-filter-range">
-              <input v-model.number="priceMin" type="number" placeholder="Min" class="pz-filter-bar__input" @change="fetchProducts">
-              <input v-model.number="priceMax" type="number" placeholder="Max" class="pz-filter-bar__input" @change="fetchProducts">
+          <!-- Location -->
+          <div class="pz-filter-section">
+            <button type="button" class="pz-filter-section__trigger" @click="toggleSection('location')">
+              <span>Location</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pz-filter-section__icon" :class="{ 'is-open': expandedSections.location }"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div v-show="expandedSections.location" class="pz-filter-section__body">
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Country</span>
+                <select v-model="selectedCountry" @change="handleHubChange" class="pz-filter-field__control">
+                  <option value="">Global Marketplace</option>
+                  <option v-for="c in configStore.countries" :key="c.id" :value="c.iso_code">{{ c.flag_emoji }} {{ c.name }}</option>
+                </select>
+              </div>
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">County / State</span>
+                <select v-model="selectedCounty" @change="handleCountyChange" class="pz-filter-field__control">
+                  <option value="">All Counties</option>
+                  <option v-for="c in availableCounties" :key="c" :value="c">{{ c }}</option>
+                </select>
+              </div>
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Subcounty / City</span>
+                <select v-model="selectedSubcounty" @change="fetchProducts" class="pz-filter-field__control">
+                  <option value="">All Areas</option>
+                  <option v-for="s in availableSubcounties" :key="s" :value="s">{{ s }}</option>
+                </select>
+              </div>
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Radius (KM)</span>
+                <select v-model="selectedRadius" @change="fetchProducts" class="pz-filter-field__control">
+                  <option value="">Any distance</option>
+                  <option value="5">5 KM</option>
+                  <option value="10">10 KM</option>
+                  <option value="25">25 KM</option>
+                  <option value="50">50 KM</option>
+                  <option value="100">100 KM</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Sort By</span>
-            <select v-model="sortBy" @change="fetchProducts" class="pz-filter-bar__control">
-              <option value="">Standard</option>
-              <option value="base_price">Lowest Price</option>
-              <option value="-base_price">Highest Price</option>
-              <option value="-created_at">Newest Arrivals</option>
-              <option value="distance" v-if="userCoords">Nearest To Me</option>
-            </select>
+          <!-- Product Details -->
+          <div class="pz-filter-section">
+            <button type="button" class="pz-filter-section__trigger" @click="toggleSection('product')">
+              <span>Product Details</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pz-filter-section__icon" :class="{ 'is-open': expandedSections.product }"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div v-show="expandedSections.product" class="pz-filter-section__body">
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Material Category</span>
+                <select v-model="selectedCategory" @change="fetchProducts" class="pz-filter-field__control">
+                  <option value="">All Industrial Materials</option>
+                  <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                </select>
+              </div>
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Certification</span>
+                <input v-model.trim="certificationQuery" type="text" placeholder="KEBS, ISO 9001, CE" class="pz-filter-field__control" @input="debouncedSearch">
+              </div>
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Country of Origin</span>
+                <input v-model.trim="originQuery" type="text" placeholder="Kenya, Tanzania, China" class="pz-filter-field__control" @input="debouncedSearch">
+              </div>
+            </div>
           </div>
 
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Radius (KM)</span>
-            <select v-model="selectedRadius" @change="fetchProducts" class="pz-filter-bar__control">
-              <option value="">Any distance</option>
-              <option value="5">5 KM</option>
-              <option value="10">10 KM</option>
-              <option value="25">25 KM</option>
-              <option value="50">50 KM</option>
-              <option value="100">100 KM</option>
-            </select>
+          <!-- Pricing -->
+          <div class="pz-filter-section">
+            <button type="button" class="pz-filter-section__trigger" @click="toggleSection('pricing')">
+              <span>Pricing & Sort</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pz-filter-section__icon" :class="{ 'is-open': expandedSections.pricing }"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div v-show="expandedSections.pricing" class="pz-filter-section__body">
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Price Range</span>
+                <div class="pz-filter-range">
+                  <input v-model.number="priceMin" type="number" placeholder="Min" class="pz-filter-field__control" @change="fetchProducts">
+                  <span class="pz-filter-range__sep">—</span>
+                  <input v-model.number="priceMax" type="number" placeholder="Max" class="pz-filter-field__control" @change="fetchProducts">
+                </div>
+              </div>
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Sort By</span>
+                <select v-model="sortBy" @change="fetchProducts" class="pz-filter-field__control">
+                  <option value="">Standard</option>
+                  <option value="base_price">Lowest Price</option>
+                  <option value="-base_price">Highest Price</option>
+                  <option value="-created_at">Newest Arrivals</option>
+                  <option value="distance" v-if="userCoords">Nearest To Me</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Inventory Status</span>
-            <select v-model="inventorySignal" @change="fetchProducts" class="pz-filter-bar__control">
-              <option value="">All stock states</option>
-              <option value="IN_STOCK">In Stock</option>
-              <option value="LOW_STOCK">Low Stock</option>
-              <option value="OUT_OF_STOCK">Out of Stock</option>
-            </select>
-          </div>
-
-          <div class="pz-filter-bar__item">
-            <span class="pz-filter-bar__label">Delivery Region</span>
-            <select v-model="deliveryRegion" @change="fetchProducts" class="pz-filter-bar__control">
-              <option value="">Any delivery region</option>
-              <option v-for="region in regions" :key="region" :value="region">{{ region }}</option>
-            </select>
-          </div>
-
-          <div class="pz-filter-rail__toggles">
-            <label class="pz-filter-toggle">
-              <input v-model="inStockOnly" type="checkbox" @change="fetchProducts">
-              <span>In Stock Only</span>
-            </label>
-            <label class="pz-filter-toggle">
-              <input v-model="verifiedOnly" type="checkbox" @change="fetchProducts">
-              <span>Verified Suppliers</span>
-            </label>
+          <!-- Availability -->
+          <div class="pz-filter-section">
+            <button type="button" class="pz-filter-section__trigger" @click="toggleSection('availability')">
+              <span>Availability</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pz-filter-section__icon" :class="{ 'is-open': expandedSections.availability }"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div v-show="expandedSections.availability" class="pz-filter-section__body">
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Inventory Status</span>
+                <select v-model="inventorySignal" @change="fetchProducts" class="pz-filter-field__control">
+                  <option value="">All stock states</option>
+                  <option value="IN_STOCK">In Stock</option>
+                  <option value="LOW_STOCK">Low Stock</option>
+                  <option value="OUT_OF_STOCK">Out of Stock</option>
+                </select>
+              </div>
+              <div class="pz-filter-field">
+                <span class="pz-filter-field__label">Delivery Region</span>
+                <select v-model="deliveryRegion" @change="fetchProducts" class="pz-filter-field__control">
+                  <option value="">Any delivery region</option>
+                  <option v-for="region in regions" :key="region" :value="region">{{ region }}</option>
+                </select>
+              </div>
+              <div class="pz-filter-toggles">
+                <label class="pz-filter-toggle">
+                  <input v-model="inStockOnly" type="checkbox" @change="fetchProducts">
+                  <span class="pz-toggle-check"></span>
+                  <span>In Stock Only</span>
+                </label>
+                <label class="pz-filter-toggle">
+                  <input v-model="verifiedOnly" type="checkbox" @change="fetchProducts">
+                  <span class="pz-toggle-check"></span>
+                  <span>Verified Suppliers</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       </aside>
@@ -137,6 +168,26 @@
         </div>
 
         <main class="marketplace-main">
+        <!-- Active Filter Chips -->
+        <div v-if="activeFilterChips.length" class="pz-filter-chips">
+          <div class="pz-filter-chips__scroll">
+            <button
+              v-for="chip in activeFilterChips"
+              :key="`${chip.key}-${chip.value}`"
+              type="button"
+              class="pz-filter-chip"
+              @click="removeFilterChip(chip)"
+            >
+              <span class="pz-filter-chip__label">{{ chip.label }}</span>
+              <span class="pz-filter-chip__value">{{ chip.value }}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+            <button v-if="activeFiltersCount > 1" type="button" class="pz-filter-chip pz-filter-chip--clear" @click="clearFilters">
+              Clear all
+            </button>
+          </div>
+        </div>
+
         <!-- Controls Bar -->
         <div class="marketplace-controls" v-if="totalProducts > 0">
           <div class="marketplace-controls__summary">
@@ -162,57 +213,85 @@
         </div>
 
         <!-- Material Grid Redesign -->
-        <div v-else :class="viewMode === 'grid' ? 'pz-premium-grid' : 'pz-listing-list'">
-          <article v-for="product in productList" :key="product.id"
-            class="pz-premium-card pz-card--interactive u-hover-spring"
-            :class="{ 'pz-premium-card--featured': product.is_featured, 'pz-premium-card--list': viewMode === 'list' }"
-            @click="handleProductClick(product)">
-
-            <div class="pz-premium-card__media">
-              <img :src="product.primary_image_url || '/placeholder.png'" :alt="product.name"
-                class="pz-premium-card__img" loading="lazy">
-              <div class="pz-premium-card__badges">
-                <Badge v-if="product.certifications" variant="success">CERTIFIED</Badge>
-                <Badge v-if="product.is_on_sale" variant="finance">BULK RATE</Badge>
+        <div v-else :class="viewMode === 'grid' ? 'pz-product-grid' : 'pz-product-list'">
+          <article
+            v-for="product in productList"
+            :key="product.id"
+            class="pz-product-card"
+            :class="{ 'pz-product-card--featured': product.is_featured, 'pz-product-card--list': viewMode === 'list' }"
+            @click="handleProductClick(product)"
+          >
+            <div class="pz-product-card__media">
+              <img
+                :src="product.primary_image_url || '/placeholder.png'"
+                :alt="product.name"
+                class="pz-product-card__img"
+                loading="lazy"
+              />
+              <div class="pz-product-card__badges">
+                <span v-if="product.is_featured" class="pz-product-card__badge pz-product-card__badge--featured">Featured</span>
+                <span v-if="product.is_new_arrival" class="pz-product-card__badge pz-product-card__badge--new">New</span>
+                <span v-if="product.is_on_sale" class="pz-product-card__badge pz-product-card__badge--sale">Bulk Rate</span>
+                <span
+                  v-if="product.inventory_signal === 'LOW_STOCK'"
+                  class="pz-product-card__badge pz-product-card__badge--warning"
+                >Low Stock</span>
+                <span
+                  v-else-if="product.inventory_signal === 'OUT_OF_STOCK'"
+                  class="pz-product-card__badge pz-product-card__badge--danger"
+                >Out of Stock</span>
+                <span v-else class="pz-product-card__badge pz-product-card__badge--success">In Stock</span>
               </div>
             </div>
 
-            <div class="pz-premium-card__content">
-              <div class="pz-premium-card__top">
-                <span class="pz-premium-card__vendor">{{ product.vendor_business_name }}</span>
-                <div class="pz-premium-card__rating">⭐ {{ product.average_rating || '5.0' }}</div>
+            <div class="pz-product-card__body">
+              <div class="pz-product-card__eyebrow">{{ product.vendor_business_name }}</div>
+              <h4 class="pz-product-card__title">{{ product.name }}</h4>
+
+              <div class="pz-product-card__location">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                {{ product.vendor_location }}{{ product.vendor_country_name ? ', ' + product.vendor_country_name : '' }}
               </div>
 
-              <div class="pz-premium-card__location u-mb-2">
-                <span class="pz-u-text-mono text-xs pz-u-color-steel">
-                  📍 {{ product.vendor_location }}, {{ product.vendor_country_name }}
+              <div class="pz-product-card__specs">
+                <span class="pz-product-card__spec">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                  {{ product.quality_grade || 'A+' }}
+                </span>
+                <span class="pz-product-card__spec">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                  {{ product.stock_quantity }} {{ product.unit }}
+                </span>
+                <span v-if="product.country_of_origin" class="pz-product-card__spec">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                  {{ product.country_of_origin }}
                 </span>
               </div>
 
-              <h4 class="pz-premium-card__title">{{ product.name }}</h4>
-
-              <div class="pz-premium-card__specs">
-                <span class="pz-spec-dot">GRADE: {{ product.quality_grade || 'A+' }}</span>
-                <span class="pz-spec-dot">STOCK: {{ product.inventory_signal === 'LOW_STOCK' ? 'LOW' : product.stock_quantity > 0 ? 'READY' : 'PRE' }}</span>
-                <span v-if="product.country_of_origin" class="pz-spec-dot">ORIGIN: {{ product.country_of_origin }}</span>
-              </div>
-
-              <div v-if="product.attribute_highlights?.length" class="pz-u-text-mono text-xs pz-u-color-steel u-mb-3">
+              <div v-if="product.attribute_highlights?.length" class="pz-product-card__attribute">
                 {{ product.attribute_highlights[0]?.name }}: {{ product.attribute_highlights[0]?.value }}{{ product.attribute_highlights[0]?.unit ? ` ${product.attribute_highlights[0].unit}` : '' }}
               </div>
 
-              <div v-if="product.certification_highlights?.length" class="pz-l-flex pz-l-flex--wrap pz-l-flex--gap-2 u-mb-3">
-                <Badge v-for="cert in product.certification_highlights" :key="cert" variant="success" size="small">{{ cert }}</Badge>
+              <div v-if="product.certification_highlights?.length" class="pz-product-card__features">
+                <span v-for="cert in product.certification_highlights" :key="cert">{{ cert }}</span>
               </div>
 
-              <div class="pz-premium-card__pricing">
-                <div class="pz-price-display">
-                  <span class="pz-price-display__val">{{ configStore.formatPrice(product.base_price) }}</span>
-                  <span class="pz-price-display__unit">/{{ product.unit }}</span>
+              <div class="pz-product-card__price-row">
+                <div>
+                  <span class="pz-product-card__price">{{ configStore.formatPrice(product.base_price, product.effective_currency || product.currency, displayCurrencyCode) }}</span>
+                  <span class="pz-product-card__unit">/{{ product.unit }}</span>
                 </div>
-                <Button variant="primary" size="sm" @click.stop="requestQuote(product)">
-                  GET QUOTE
-                </Button>
+                <Button variant="primary" size="sm" @click.stop="requestQuote(product)">Get Quote</Button>
+              </div>
+
+              <div class="pz-product-card__footer">
+                <div class="pz-product-card__vendor">
+                  <div class="pz-product-card__vendor-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+                  <span>{{ product.vendor_business_name }}</span>
+                </div>
+                <Button variant="outline" size="sm" @click.stop="handleProductClick(product)">View Details</Button>
               </div>
             </div>
           </article>
@@ -244,95 +323,134 @@
 
     <Modal :isOpen="mobileFiltersOpen" title="Refine Materials" size="lg" @close="mobileFiltersOpen = false">
       <div class="pz-mobile-filter-sheet">
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Country</span>
-          <select v-model="selectedCountry" @change="handleHubChange" class="pz-filter-bar__control">
-            <option value="">Global Marketplace</option>
-            <option v-for="c in configStore.countries" :key="c.id" :value="c.id">{{ c.flag_emoji }} {{ c.name }}</option>
-          </select>
-        </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Material Category</span>
-          <select v-model="selectedCategory" @change="fetchProducts" class="pz-filter-bar__control">
-            <option value="">All Industrial Materials</option>
-            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-          </select>
-        </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Certification</span>
-          <input v-model.trim="certificationQuery" type="text" placeholder="KEBS, ISO 9001, CE" class="pz-filter-bar__input" @input="debouncedSearch">
-        </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Country of Origin</span>
-          <input v-model.trim="originQuery" type="text" placeholder="Kenya, Tanzania, China" class="pz-filter-bar__input" @input="debouncedSearch">
-        </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">County / State</span>
-          <select v-model="selectedCounty" @change="handleCountyChange" class="pz-filter-bar__control">
-            <option value="">All Counties</option>
-            <option v-for="c in availableCounties" :key="c" :value="c">{{ c }}</option>
-          </select>
-        </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Subcounty / City</span>
-          <select v-model="selectedSubcounty" @change="fetchProducts" class="pz-filter-bar__control">
-            <option value="">All Areas</option>
-            <option v-for="s in availableSubcounties" :key="s" :value="s">{{ s }}</option>
-          </select>
-        </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Price Range ($)</span>
-          <div class="pz-filter-range">
-            <input v-model.number="priceMin" type="number" placeholder="Min" class="pz-filter-bar__input" @change="fetchProducts">
-            <input v-model.number="priceMax" type="number" placeholder="Max" class="pz-filter-bar__input" @change="fetchProducts">
+        <!-- Location -->
+        <div class="pz-filter-section">
+          <button type="button" class="pz-filter-section__trigger" @click="toggleSection('location')">
+            <span>Location</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pz-filter-section__icon" :class="{ 'is-open': expandedSections.location }"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div v-show="expandedSections.location" class="pz-filter-section__body">
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Country</span>
+              <select v-model="selectedCountry" @change="handleHubChange" class="pz-filter-field__control">
+                <option value="">Global Marketplace</option>
+                <option v-for="c in configStore.countries" :key="c.id" :value="c.iso_code">{{ c.flag_emoji }} {{ c.name }}</option>
+              </select>
+            </div>
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">County / State</span>
+              <select v-model="selectedCounty" @change="handleCountyChange" class="pz-filter-field__control">
+                <option value="">All Counties</option>
+                <option v-for="c in availableCounties" :key="c" :value="c">{{ c }}</option>
+              </select>
+            </div>
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Subcounty / City</span>
+              <select v-model="selectedSubcounty" @change="fetchProducts" class="pz-filter-field__control">
+                <option value="">All Areas</option>
+                <option v-for="s in availableSubcounties" :key="s" :value="s">{{ s }}</option>
+              </select>
+            </div>
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Radius (KM)</span>
+              <select v-model="selectedRadius" @change="fetchProducts" class="pz-filter-field__control">
+                <option value="">Any distance</option>
+                <option value="5">5 KM</option>
+                <option value="10">10 KM</option>
+                <option value="25">25 KM</option>
+                <option value="50">50 KM</option>
+                <option value="100">100 KM</option>
+              </select>
+            </div>
           </div>
         </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Sort By</span>
-          <select v-model="sortBy" @change="fetchProducts" class="pz-filter-bar__control">
-            <option value="">Standard</option>
-            <option value="base_price">Lowest Price</option>
-            <option value="-base_price">Highest Price</option>
-            <option value="-created_at">Newest Arrivals</option>
-            <option value="distance" v-if="userCoords">Nearest To Me</option>
-          </select>
+        <!-- Product Details -->
+        <div class="pz-filter-section">
+          <button type="button" class="pz-filter-section__trigger" @click="toggleSection('product')">
+            <span>Product Details</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pz-filter-section__icon" :class="{ 'is-open': expandedSections.product }"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div v-show="expandedSections.product" class="pz-filter-section__body">
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Material Category</span>
+              <select v-model="selectedCategory" @change="fetchProducts" class="pz-filter-field__control">
+                <option value="">All Industrial Materials</option>
+                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+              </select>
+            </div>
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Certification</span>
+              <input v-model.trim="certificationQuery" type="text" placeholder="KEBS, ISO 9001, CE" class="pz-filter-field__control" @input="debouncedSearch">
+            </div>
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Country of Origin</span>
+              <input v-model.trim="originQuery" type="text" placeholder="Kenya, Tanzania, China" class="pz-filter-field__control" @input="debouncedSearch">
+            </div>
+          </div>
         </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Radius (KM)</span>
-          <select v-model="selectedRadius" @change="fetchProducts" class="pz-filter-bar__control">
-            <option value="">Any distance</option>
-            <option value="5">5 KM</option>
-            <option value="10">10 KM</option>
-            <option value="25">25 KM</option>
-            <option value="50">50 KM</option>
-            <option value="100">100 KM</option>
-          </select>
+        <!-- Pricing -->
+        <div class="pz-filter-section">
+          <button type="button" class="pz-filter-section__trigger" @click="toggleSection('pricing')">
+            <span>Pricing & Sort</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pz-filter-section__icon" :class="{ 'is-open': expandedSections.pricing }"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div v-show="expandedSections.pricing" class="pz-filter-section__body">
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Price Range</span>
+              <div class="pz-filter-range">
+                <input v-model.number="priceMin" type="number" placeholder="Min" class="pz-filter-field__control" @change="fetchProducts">
+                <span class="pz-filter-range__sep">—</span>
+                <input v-model.number="priceMax" type="number" placeholder="Max" class="pz-filter-field__control" @change="fetchProducts">
+              </div>
+            </div>
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Sort By</span>
+              <select v-model="sortBy" @change="fetchProducts" class="pz-filter-field__control">
+                <option value="">Standard</option>
+                <option value="base_price">Lowest Price</option>
+                <option value="-base_price">Highest Price</option>
+                <option value="-created_at">Newest Arrivals</option>
+                <option value="distance" v-if="userCoords">Nearest To Me</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Inventory Status</span>
-          <select v-model="inventorySignal" @change="fetchProducts" class="pz-filter-bar__control">
-            <option value="">All stock states</option>
-            <option value="IN_STOCK">In Stock</option>
-            <option value="LOW_STOCK">Low Stock</option>
-            <option value="OUT_OF_STOCK">Out of Stock</option>
-          </select>
-        </div>
-        <div class="pz-filter-bar__item">
-          <span class="pz-filter-bar__label">Delivery Region</span>
-          <select v-model="deliveryRegion" @change="fetchProducts" class="pz-filter-bar__control">
-            <option value="">Any delivery region</option>
-            <option v-for="region in regions" :key="region" :value="region">{{ region }}</option>
-          </select>
-        </div>
-        <div class="pz-filter-rail__toggles">
-          <label class="pz-filter-toggle">
-            <input v-model="inStockOnly" type="checkbox" @change="fetchProducts">
-            <span>In Stock Only</span>
-          </label>
-          <label class="pz-filter-toggle">
-            <input v-model="verifiedOnly" type="checkbox" @change="fetchProducts">
-            <span>Verified Suppliers</span>
-          </label>
+        <!-- Availability -->
+        <div class="pz-filter-section">
+          <button type="button" class="pz-filter-section__trigger" @click="toggleSection('availability')">
+            <span>Availability</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pz-filter-section__icon" :class="{ 'is-open': expandedSections.availability }"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div v-show="expandedSections.availability" class="pz-filter-section__body">
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Inventory Status</span>
+              <select v-model="inventorySignal" @change="fetchProducts" class="pz-filter-field__control">
+                <option value="">All stock states</option>
+                <option value="IN_STOCK">In Stock</option>
+                <option value="LOW_STOCK">Low Stock</option>
+                <option value="OUT_OF_STOCK">Out of Stock</option>
+              </select>
+            </div>
+            <div class="pz-filter-field">
+              <span class="pz-filter-field__label">Delivery Region</span>
+              <select v-model="deliveryRegion" @change="fetchProducts" class="pz-filter-field__control">
+                <option value="">Any delivery region</option>
+                <option v-for="region in regions" :key="region" :value="region">{{ region }}</option>
+              </select>
+            </div>
+            <div class="pz-filter-toggles">
+              <label class="pz-filter-toggle">
+                <input v-model="inStockOnly" type="checkbox" @change="fetchProducts">
+                <span class="pz-toggle-check"></span>
+                <span>In Stock Only</span>
+              </label>
+              <label class="pz-filter-toggle">
+                <input v-model="verifiedOnly" type="checkbox" @change="fetchProducts">
+                <span class="pz-toggle-check"></span>
+                <span>Verified Suppliers</span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
       <template #footer>
@@ -361,7 +479,7 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted, inject } from 'vue';
+  import { ref, computed, onMounted, inject, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { detectUserLocation, getStoredLocation } from '../utils/location';
 
@@ -416,6 +534,17 @@
 
   // Computed Context
   const totalPages = computed(() => Math.ceil(totalProducts.value / pageSize));
+  const regionalDefaultCountryCode = computed(() => {
+    const country = configStore.activeCountry;
+    return country?.iso_code ? String(country.iso_code) : '';
+  });
+  const displayCurrencyCode = computed(() => {
+    if (selectedCountry.value) {
+      const country = configStore.countries.find((item) => String(item.iso_code).toUpperCase() === String(selectedCountry.value).toUpperCase());
+      return country?.default_currency || configStore.activeCurrencyCode || 'KES';
+    }
+    return configStore.activeCurrencyCode || 'KES';
+  });
   const activeFiltersCount = computed(() => {
     let count = 0;
     if (selectedCountry.value) count++;
@@ -430,14 +559,79 @@
     if (deliveryRegion.value) count++;
     if (inStockOnly.value) count++;
     if (verifiedOnly.value) count++;
+    if (selectedRadius.value) count++;
+    if (sortBy.value) count++;
     return count;
   });
+
+  const expandedSections = ref({ location: true, product: true, pricing: true, availability: true });
+  const toggleSection = (section) => { expandedSections.value[section] = !expandedSections.value[section]; };
+
+  const activeFilterChips = computed(() => {
+    const chips = [];
+    if (selectedCountry.value) {
+      const c = configStore.countries.find(x => String(x.iso_code).toUpperCase() === String(selectedCountry.value).toUpperCase());
+      chips.push({ key: 'country', label: 'Country', value: c?.name || selectedCountry.value });
+    }
+    if (selectedCategory.value) {
+      const c = categories.value.find(x => x.id === selectedCategory.value);
+      chips.push({ key: 'category', label: 'Category', value: c?.name || 'Category' });
+    }
+    if (selectedCounty.value) chips.push({ key: 'county', label: 'County', value: selectedCounty.value });
+    if (selectedSubcounty.value) chips.push({ key: 'subcounty', label: 'City', value: selectedSubcounty.value });
+    if (certificationQuery.value) chips.push({ key: 'certification', label: 'Cert', value: certificationQuery.value });
+    if (originQuery.value) chips.push({ key: 'origin', label: 'Origin', value: originQuery.value });
+    if (priceMin.value !== null) chips.push({ key: 'priceMin', label: 'Min', value: configStore.formatPrice(priceMin.value, configStore.activeCurrencyCode, displayCurrencyCode.value) });
+    if (priceMax.value !== null) chips.push({ key: 'priceMax', label: 'Max', value: configStore.formatPrice(priceMax.value, configStore.activeCurrencyCode, displayCurrencyCode.value) });
+    if (inventorySignal.value) chips.push({ key: 'inventory', label: 'Stock', value: inventorySignal.value.replace('_', ' ') });
+    if (deliveryRegion.value) chips.push({ key: 'delivery', label: 'Delivery', value: deliveryRegion.value });
+    if (inStockOnly.value) chips.push({ key: 'inStock', label: 'Stock', value: 'In Stock Only' });
+    if (verifiedOnly.value) chips.push({ key: 'verified', label: 'Supplier', value: 'Verified' });
+    if (selectedRadius.value) chips.push({ key: 'radius', label: 'Radius', value: `${selectedRadius.value}km` });
+    if (sortBy.value) {
+      const labels = { base_price: 'Lowest Price', '-base_price': 'Highest Price', '-created_at': 'Newest', distance: 'Nearest' };
+      chips.push({ key: 'sort', label: 'Sort', value: labels[sortBy.value] || sortBy.value });
+    }
+    return chips;
+  });
+
+  const removeFilterChip = (chip) => {
+    switch (chip.key) {
+      case 'country': selectedCountry.value = regionalDefaultCountryCode.value; handleHubChange(); break;
+      case 'category': selectedCategory.value = ''; fetchProducts(); break;
+      case 'county': selectedCounty.value = ''; handleCountyChange(); break;
+      case 'subcounty': selectedSubcounty.value = ''; fetchProducts(); break;
+      case 'certification': certificationQuery.value = ''; debouncedSearch(); break;
+      case 'origin': originQuery.value = ''; debouncedSearch(); break;
+      case 'priceMin': priceMin.value = null; fetchProducts(); break;
+      case 'priceMax': priceMax.value = null; fetchProducts(); break;
+      case 'inventory': inventorySignal.value = ''; fetchProducts(); break;
+      case 'delivery': deliveryRegion.value = ''; fetchProducts(); break;
+      case 'inStock': inStockOnly.value = false; fetchProducts(); break;
+      case 'verified': verifiedOnly.value = false; fetchProducts(); break;
+      case 'radius': selectedRadius.value = ''; fetchProducts(); break;
+      case 'sort': sortBy.value = ''; fetchProducts(); break;
+    }
+  };
 
   const searchPlaceholder = computed(() => {
     return "Search materials (e.g. 'TMT Bars', 'Simba Cement')...";
   });
 
   const isSelectedForComparison = (id) => selectedForComparison.value.some(p => p.id === id);
+
+  const syncCountryFilterFromStore = () => {
+    const country = configStore.activeCountry;
+    selectedCountry.value = country?.iso_code ? String(country.iso_code) : '';
+  };
+
+  const syncStoreFromCountryFilter = () => {
+    if (!selectedCountry.value) return;
+    const country = configStore.countries.find((item) => String(item.iso_code).toUpperCase() === String(selectedCountry.value).toUpperCase());
+    if (country && country.iso_code !== configStore.activeCountryCode) {
+      configStore.setCountry(country.iso_code);
+    }
+  };
 
   // Business Logic
   const fetchCategories = async () => {
@@ -471,7 +665,7 @@
         page: currentPage.value,
         page_size: pageSize,
         search: searchQuery.value || undefined,
-        country: selectedCountry.value || undefined,
+        country: selectedCountry.value || '',
         category: selectedCategory.value || undefined,
         county: selectedCounty.value || undefined,
         subcounty: selectedSubcounty.value || undefined,
@@ -488,7 +682,9 @@
         longitude: useDistanceAwareSearch ? userCoords.value?.lng : undefined,
         radius_km: selectedRadius.value || undefined
       };
+      console.log('[ProductList] fetching with params:', JSON.stringify(params));
       const response = await api.get('/v1/products/', { params });
+      console.log('[ProductList] received', (response.data.results || response.data || []).length, 'products');
 
       // Technical mapping: extract results from DRF paginated response or direct list
       const data = response.data.results || response.data || [];
@@ -512,7 +708,7 @@
   };
 
   const handleProductClick = (product) => {
-    router.push(`/products/${product.id}`);
+    router.push({ path: `/products/${product.id}`, query: { currency: displayCurrencyCode.value } });
   };
 
   const requestQuote = async (product) => {
@@ -549,7 +745,7 @@
 
   const clearFilters = () => {
     searchQuery.value = '';
-    selectedCountry.value = '';
+    selectedCountry.value = regionalDefaultCountryCode.value;
     selectedCategory.value = '';
     selectedCounty.value = '';
     selectedSubcounty.value = '';
@@ -569,6 +765,7 @@
     selectedCounty.value = '';
     selectedSubcounty.value = '';
     currentPage.value = 1;
+    syncStoreFromCountryFilter();
     fetchLocations();
     fetchProducts();
   };
@@ -606,11 +803,27 @@
 
   onMounted(async () => {
     await configStore.fetchConfig();
-    selectedCountry.value = '';
+    syncCountryFilterFromStore();
     fetchCategories();
     fetchLocations();
     fetchProducts();
   });
+
+  watch(
+    () => configStore.activeCountryCode,
+    () => {
+      syncCountryFilterFromStore();
+      fetchLocations();
+      fetchProducts();
+    }
+  );
+
+  watch(
+    selectedCountry,
+    () => {
+      syncStoreFromCountryFilter();
+    }
+  );
 </script>
 
 <style scoped>
@@ -637,16 +850,19 @@
     min-width: 0;
   }
 
+  /* Filter Rail */
   .pz-filter-rail {
     position: sticky;
     top: 6.5rem;
     display: grid;
-    gap: 1rem;
-    padding: 1.15rem;
-    background: rgba(255, 255, 255, 0.84);
-    border: 1px solid rgba(10, 10, 15, 0.08);
-    box-shadow: 12px 12px 0 rgba(10, 10, 15, 0.05);
-    backdrop-filter: blur(12px);
+    gap: 0.5rem;
+    padding: 1.25rem;
+    background: #ffffff;
+    border: 1px solid rgba(10, 10, 15, 0.06);
+    border-radius: 20px;
+    box-shadow:
+      0 1px 2px rgba(10, 10, 15, 0.02),
+      0 4px 16px rgba(10, 10, 15, 0.04);
   }
 
   .pz-filter-rail__header {
@@ -654,6 +870,8 @@
     align-items: start;
     justify-content: space-between;
     gap: 1rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
   }
 
   .pz-filter-rail__eyebrow,
@@ -675,69 +893,206 @@
     letter-spacing: -0.04em;
   }
 
-  .pz-filter-range {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
+  /* Filter Section (collapsible) */
+  .pz-filter-section {
+    border-bottom: 1px solid rgba(10, 10, 15, 0.06);
   }
 
-  .pz-filter-rail__toggles {
+  .pz-filter-section__trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.65rem 0;
+    background: none;
+    border: none;
+    font-family: var(--pz-font-display);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--pz-color-foundation-black);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .pz-filter-section__icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--pz-color-concrete-grey);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .pz-filter-section__icon.is-open {
+    transform: rotate(180deg);
+  }
+
+  .pz-filter-section__body {
     display: grid;
-    gap: 0.75rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(10, 10, 15, 0.08);
+    gap: 0.65rem;
+    padding-bottom: 0.75rem;
+  }
+
+  /* Filter Field */
+  .pz-filter-field {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .pz-filter-field__label {
+    font-family: var(--pz-font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--pz-color-concrete-grey);
+  }
+
+  .pz-filter-field__control {
+    min-height: 40px;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba(10, 10, 15, 0.1);
+    border-radius: 10px;
+    background: rgba(250, 249, 245, 0.6);
+    color: var(--pz-color-foundation-black);
+    font-size: 0.9rem;
+    width: 100%;
+    transition: all 0.2s ease;
+  }
+
+  .pz-filter-field__control:focus {
+    outline: none;
+    border-color: var(--pz-color-earth-orange);
+    box-shadow: 0 0 0 3px rgba(212, 101, 42, 0.1);
+    background: white;
+  }
+
+  /* Price Range */
+  .pz-filter-range {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .pz-filter-range__sep {
+    font-family: var(--pz-font-mono);
+    font-size: 0.75rem;
+    color: var(--pz-color-concrete-grey);
+  }
+
+  /* Filter Toggles (checkboxes) */
+  .pz-filter-toggles {
+    display: grid;
+    gap: 0.6rem;
   }
 
   .pz-filter-toggle {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    font-size: 0.92rem;
+    gap: 0.6rem;
+    font-size: 0.88rem;
     color: var(--pz-color-foundation-black);
+    cursor: pointer;
   }
 
   .pz-filter-toggle input {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--pz-color-earth-orange);
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
   }
 
-  .pz-filter-bar {
+  .pz-toggle-check {
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 2px solid rgba(10, 10, 15, 0.15);
+    border-radius: 5px;
     display: grid;
-    gap: 1rem;
-    padding: 1.15rem;
-    background: rgba(255, 255, 255, 0.82);
-    border: 1px solid rgba(10, 10, 15, 0.08);
-    box-shadow: 10px 10px 0 rgba(10, 10, 15, 0.06);
-    backdrop-filter: blur(10px);
+    place-items: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
   }
 
-  .pz-filter-bar__item {
-    display: grid;
-    gap: 0.4rem;
+  .pz-filter-toggle input:checked + .pz-toggle-check {
+    background: var(--pz-color-earth-orange);
+    border-color: var(--pz-color-earth-orange);
   }
 
-  .pz-filter-bar__label {
+  .pz-filter-toggle input:checked + .pz-toggle-check::after {
+    content: '';
+    width: 5px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+
+  .pz-filter-toggle input:focus + .pz-toggle-check {
+    box-shadow: 0 0 0 3px rgba(212, 101, 42, 0.15);
+  }
+
+  /* Active Filter Chips */
+  .pz-filter-chips {
+    margin-bottom: 0.75rem;
+  }
+
+  .pz-filter-chips__scroll {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pz-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.7rem;
+    background: rgba(212, 101, 42, 0.08);
+    border: 1px solid rgba(212, 101, 42, 0.18);
+    border-radius: 10px;
+    font-size: 0.78rem;
+    color: var(--pz-color-earth-orange);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .pz-filter-chip:hover {
+    background: rgba(212, 101, 42, 0.14);
+    border-color: rgba(212, 101, 42, 0.3);
+  }
+
+  .pz-filter-chip svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .pz-filter-chip__label {
     font-family: var(--pz-font-mono);
     font-size: 0.62rem;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+  }
+
+  .pz-filter-chip__value {
+    font-weight: 600;
+  }
+
+  .pz-filter-chip--clear {
+    background: rgba(10, 10, 15, 0.05);
+    border-color: rgba(10, 10, 15, 0.1);
     color: var(--pz-color-concrete-grey);
+    font-family: var(--pz-font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 
-  .pz-filter-bar__control,
-  .pz-filter-bar__input {
-    min-height: 44px;
-    padding: 0.7rem 0.85rem;
-    border: 1px solid rgba(10, 10, 15, 0.12);
-    background: rgba(255, 255, 255, 0.92);
+  .pz-filter-chip--clear:hover {
+    background: rgba(10, 10, 15, 0.08);
+    border-color: rgba(10, 10, 15, 0.15);
     color: var(--pz-color-foundation-black);
-  }
-
-  .pz-filter-bar__control:focus,
-  .pz-filter-bar__input:focus {
-    outline: 2px solid rgba(212, 101, 42, 0.2);
-    border-color: var(--pz-color-earth-orange);
   }
 
   .quote-ticker {
@@ -790,39 +1145,331 @@
     color: var(--pz-color-concrete-grey);
   }
 
-  .pz-premium-card__rating {
-    font-size: 0.75rem;
-    font-weight: 700;
+  /* Product Grid & List */
+  .pz-product-grid {
+    display: grid;
+    gap: 1.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
   }
 
-  .pz-premium-card__specs {
+  .pz-product-list {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+  }
+
+  /* Product Card */
+  .pz-product-card {
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    border: 1px solid rgba(10, 10, 15, 0.06);
+    box-shadow:
+      0 1px 2px rgba(10, 10, 15, 0.02),
+      0 4px 12px rgba(10, 10, 15, 0.04);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pz-product-card:hover {
+    transform: translateY(-6px);
+    box-shadow:
+      0 8px 24px rgba(10, 10, 15, 0.06),
+      0 24px 48px rgba(10, 10, 15, 0.08);
+  }
+
+  .pz-product-card:hover .pz-product-card__img {
+    transform: scale(1.05);
+  }
+
+  .pz-product-card--featured {
+    box-shadow:
+      0 1px 2px rgba(10, 10, 15, 0.02),
+      0 4px 12px rgba(10, 10, 15, 0.06),
+      0 0 0 1px rgba(212, 101, 42, 0.15);
+  }
+
+  .pz-product-card--featured:hover {
+    box-shadow:
+      0 8px 24px rgba(10, 10, 15, 0.08),
+      0 24px 48px rgba(10, 10, 15, 0.1),
+      0 0 0 1px rgba(212, 101, 42, 0.25);
+  }
+
+  /* List View */
+  .pz-product-card--list {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .pz-product-card--list .pz-product-card__media {
+    width: 280px;
+    flex-shrink: 0;
+    aspect-ratio: 4 / 3;
+  }
+
+  .pz-product-card--list .pz-product-card__body {
+    flex: 1;
+    justify-content: center;
+  }
+
+  @media (max-width: 767px) {
+    .pz-product-card--list {
+      flex-direction: column;
+    }
+    .pz-product-card--list .pz-product-card__media {
+      width: 100%;
+      aspect-ratio: 3 / 2;
+    }
+  }
+
+  /* Image Area */
+  .pz-product-card__media {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background: linear-gradient(135deg, #e8e4db, #d4cfc5);
+  }
+
+  .pz-product-card__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Badges */
+  .pz-product-card__badges {
+    position: absolute;
+    top: 0.85rem;
+    left: 0.85rem;
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    z-index: 2;
+  }
+
+  .pz-product-card__badge {
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    font-family: var(--pz-font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .pz-product-card__badge--featured {
+    background: rgba(212, 101, 42, 0.9);
+    color: white;
+    border: 1px solid rgba(212, 101, 42, 0.3);
+  }
+
+  .pz-product-card__badge--new {
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+
+  .pz-product-card__badge--sale {
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .pz-product-card__badge--success {
+    background: rgba(34, 139, 34, 0.9);
+    color: white;
+    border: 1px solid rgba(34, 139, 34, 0.3);
+  }
+
+  .pz-product-card__badge--warning {
+    background: rgba(217, 119, 6, 0.9);
+    color: white;
+    border: 1px solid rgba(217, 119, 6, 0.3);
+  }
+
+  .pz-product-card__badge--danger {
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+  }
+
+  /* Card Body */
+  .pz-product-card__body {
+    padding: 1.25rem 1.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+  }
+
+  .pz-product-card__eyebrow {
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pz-color-earth-orange);
+  }
+
+  .pz-product-card__title {
+    font-family: var(--pz-font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--pz-color-foundation-black);
+    margin: 0;
+    letter-spacing: -0.01em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .pz-product-card__location {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--pz-color-concrete-grey);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-top: 0.1rem;
+  }
+
+  .pz-product-card__location svg {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex-shrink: 0;
+    color: var(--pz-color-earth-orange);
+  }
+
+  /* Specs Row */
+  .pz-product-card__specs {
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid rgba(10, 10, 15, 0.06);
+    border-bottom: 1px solid rgba(10, 10, 15, 0.06);
+    margin-top: 0.2rem;
+  }
+
+  .pz-product-card__spec {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--pz-color-structural-steel);
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  .pz-product-card__spec svg {
+    width: 0.9rem;
+    height: 0.9rem;
+    color: var(--pz-color-concrete-grey);
+    flex-shrink: 0;
+  }
+
+  /* Attribute line */
+  .pz-product-card__attribute {
+    font-family: var(--pz-font-mono);
+    font-size: 0.72rem;
+    color: var(--pz-color-concrete-grey);
+    letter-spacing: 0.02em;
+  }
+
+  /* Feature Pills */
+  .pz-product-card__features {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--pz-space-4);
-    margin-bottom: var(--pz-space-6);
+    gap: 0.4rem;
+    margin-top: 0.1rem;
   }
 
-  .pz-premium-card {
-    background: rgba(255, 255, 255, 0.86);
-    border: 1px solid rgba(10, 10, 15, 0.08);
-    box-shadow: 10px 10px 0 rgba(10, 10, 15, 0.05);
+  .pz-product-card__features span {
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    background: rgba(212, 101, 42, 0.06);
+    border: 1px solid rgba(212, 101, 42, 0.12);
+    color: var(--pz-color-earth-orange);
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
   }
 
-  .pz-premium-card__content {
-    padding: 1.15rem;
+  /* Price Row */
+  .pz-product-card__price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding-top: 0.75rem;
   }
 
-  .pz-spec-dot {
-    font-size: 0.65rem;
-    padding: var(--pz-space-1) var(--pz-space-2);
-    background: rgba(10, 10, 15, 0.05);
-    border-radius: 4px;
-    color: var(--pz-color-structural-steel);
+  .pz-product-card__price {
+    font-family: var(--pz-font-display);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--pz-color-foundation-black);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
   }
 
-  .pz-price-display__unit {
-    font-size: 0.875rem;
+  .pz-product-card__unit {
+    font-family: var(--pz-font-mono);
+    font-size: 0.72rem;
     color: var(--pz-color-concrete-grey);
+    font-weight: 600;
+  }
+
+  /* Footer */
+  .pz-product-card__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(10, 10, 15, 0.06);
+    margin-top: 0.5rem;
+  }
+
+  .pz-product-card__vendor {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .pz-product-card__vendor-avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: rgba(10, 10, 15, 0.06);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .pz-product-card__vendor-avatar svg {
+    width: 0.9rem;
+    height: 0.9rem;
+    color: var(--pz-color-concrete-grey);
+  }
+
+  .pz-product-card__vendor span {
+    font-size: 0.85rem;
+    color: var(--pz-color-structural-steel);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .pz-mobile-filter-trigger {
@@ -835,7 +1482,20 @@
 
   .pz-mobile-filter-sheet {
     display: grid;
-    gap: 1rem;
+    gap: 0.5rem;
+  }
+
+  .pz-mobile-filter-sheet .pz-filter-section {
+    border-bottom: 1px solid rgba(10, 10, 15, 0.08);
+  }
+
+  .pz-mobile-filter-sheet .pz-filter-section__trigger {
+    padding: 0.75rem 0;
+    font-size: 1rem;
+  }
+
+  .pz-mobile-filter-sheet .pz-filter-section__body {
+    padding-bottom: 1rem;
   }
 
   @media (min-width: 1024px) {
@@ -855,6 +1515,12 @@
     }
   }
 
+  @media (max-width: 1024px) {
+    .pz-product-grid {
+      grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    }
+  }
+
   @media (max-width: 767px) {
     .pz-marketplace-shell {
       padding: 0 1rem;
@@ -866,6 +1532,15 @@
 
     .marketplace-controls {
       align-items: flex-start;
+    }
+
+    .pz-product-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .pz-product-card__footer {
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .pz-mobile-filter-trigger {

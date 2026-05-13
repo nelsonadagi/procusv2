@@ -113,6 +113,30 @@ const activeWorkspaces = computed(() => {
       badgeVariant: 'success'
     });
   }
+  if (authStore.hasRole('REAL_ESTATE_AGENT')) {
+    items.push({
+      id: 'agent',
+      label: 'Real Estate Agent',
+      description: 'List, sell, and manage property transactions.',
+      path: '/agent/dashboard',
+      icon: '🏘️',
+      accent: 'earth',
+      badge: 'Approved',
+      badgeVariant: 'success'
+    });
+  }
+  if (authStore.hasRole('SURVEYOR')) {
+    items.push({
+      id: 'surveyor',
+      label: 'Surveyor',
+      description: 'Valuations, verification, and condition assessments.',
+      path: '/surveyor/dashboard',
+      icon: '📐',
+      accent: 'steel',
+      badge: 'Approved',
+      badgeVariant: 'success'
+    });
+  }
   if (authStore.hasRole('INVESTOR')) {
     items.push({
       id: 'investor',
@@ -188,6 +212,22 @@ const activationWorkspaces = computed(() => {
       label: 'Property Manager Workspace',
       description: 'Manage property listings and appointments.',
       path: '/property-manager/dashboard'
+    });
+  }
+  if (!authStore.hasRole('REAL_ESTATE_AGENT')) {
+    items.push({
+      id: 'agent-activation',
+      label: 'Real Estate Agent Workspace',
+      description: 'List and sell properties, manage inquiries and viewings.',
+      path: '/agent/dashboard'
+    });
+  }
+  if (!authStore.hasRole('SURVEYOR')) {
+    items.push({
+      id: 'surveyor-activation',
+      label: 'Surveyor Workspace',
+      description: 'Conduct valuations, verify ownership, and assess condition.',
+      path: '/surveyor/dashboard'
     });
   }
   if (!authStore.hasRole('INVESTOR')) {

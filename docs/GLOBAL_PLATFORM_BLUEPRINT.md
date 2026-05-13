@@ -15,6 +15,12 @@ The platform evolves through six phases:
 
 ---
 
+## 4. Monetization Reference
+
+See [`MONETIZATION.md`](./MONETIZATION.md) for the canonical revenue model, pricing surfaces, phase gating, and compliance boundaries.
+
+---
+
 # 1. Platform Vision
 
 Create the operating marketplace where the world builds:

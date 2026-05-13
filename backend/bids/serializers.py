@@ -5,6 +5,7 @@ from contractors.serializers import ContractorProfileSerializer
 class BidSerializer(serializers.ModelSerializer):
     contractor = ContractorProfileSerializer(read_only=True)
     contract_title = serializers.CharField(source='contract.title', read_only=True)
+    contract_currency = serializers.CharField(source='contract.currency', read_only=True)
     
     class Meta:
         model = Bid

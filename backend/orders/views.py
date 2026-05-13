@@ -10,6 +10,7 @@ from rbac.utils import log_action
 from django.db import models, transaction
 from decimal import Decimal
 from catalog.models import ProductInventoryMovement, Product
+from platform_settings.models import PaymentGatewayConfig
 import json
 
 # Temporary test view for debugging
@@ -191,6 +192,32 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(OrderSerializer(order).data)
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsOrderOwner])
+    def simulate_payment(self, request, pk=None):
+        from payments.models import Payment
+        order = self.get_object()
+        payment = order.payments.order_by('-id').first()
+        if not payment:
+            return Response({"error": "No payment record found for this order."}, status=status.HTTP_400_BAD_REQUEST)
+
+        payment_reference = request.data.get('transaction_reference') or f"SIM-{order.id}-{payment.provider}"
+        payment.status = 'PAID'
+        payment.transaction_reference = payment_reference
+        payment.metadata = {
+            **(payment.metadata or {}),
+            'simulation': True,
+            'simulated_by': request.user.username,
+        }
+        payment.paid_at = timezone.now()
+        payment.save(update_fields=['status', 'transaction_reference', 'metadata', 'paid_at'])
+
+        order.payment_status = 'PAID'
+        order.status = 'CONFIRMED' if order.status == 'PLACED' else order.status
+        order.save(update_fields=['payment_status', 'status', 'updated_at'])
+
+        log_action(request.user, 'ORDER_PAYMENT_SIMULATED', 'order', order.id, metadata={'provider': payment.provider})
+        return Response(OrderSerializer(order).data)
+
+    @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsOrderOwner])
     def initiate_dispute(self, request, pk=None):
         from disputes.models import Dispute
         order = self.get_object()
@@ -303,6 +330,7 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
         from payments.models import Payment
         quote_request = self.get_object()
         response_id = request.data.get('response_id')
+        payment_provider = request.data.get('payment_provider')
 
         try:
             quote_response = quote_request.responses.get(id=response_id)
@@ -311,6 +339,17 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
 
         if Order.objects.filter(quote_response=quote_response).exists():
             return Response({"error": "An order has already been placed for this quote response."}, status=status.HTTP_400_BAD_REQUEST)
+
+        active_gateways = list(
+            PaymentGatewayConfig.objects.filter(active=True).values_list('provider', flat=True)
+        )
+        if not active_gateways:
+            return Response({"error": "No active payment methods configured."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not payment_provider:
+            payment_provider = PaymentGatewayConfig.objects.filter(active=True, is_default=True).order_by('display_order', 'label').values_list('provider', flat=True).first() or active_gateways[0]
+        if payment_provider not in active_gateways:
+            return Response({"error": "Selected payment method is not available."}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
             quote_items = []
@@ -357,9 +396,13 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
             # Create Payment Intent (Placeholder)
             Payment.objects.create(
                 order=order,
-                provider='MODERN_CHECKOUT',
+                provider=payment_provider,
                 amount=total_amount,
-                status='PENDING'
+                status='PENDING',
+                metadata={
+                    'gateway_label': PaymentGatewayConfig.objects.filter(provider=payment_provider).values_list('label', flat=True).first() or payment_provider,
+                    'simulation': True,
+                }
             )
 
         log_action(request.user, 'CHECKOUT_ORDER', 'order', order.id)
