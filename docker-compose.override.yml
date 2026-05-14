@@ -4,23 +4,20 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend:/app
-    env_file:
-      - .env
 
   frontend:
     command: npm run dev -- --host
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8007/api}
+      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:8007/ws/notifications/}
 
   celery-worker:
     volumes:
       - ./backend:/app
-    env_file:
-      - .env
 
   celery-beat:
     volumes:
       - ./backend:/app
-    env_file:
-      - .env

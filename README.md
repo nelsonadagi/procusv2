@@ -231,7 +231,7 @@ procusv2/
 ├── infra/                      # Infrastructure configs
 ├── docs/                       # Extended project documentation
 ├── docker-compose.yml          # Full stack orchestration
-├── .env.example                # Environment template
+├── .env.example                # Local environment variable reference
 ├── .gitignore
 └── README.md
 ```
@@ -261,13 +261,7 @@ git clone https://github.com/nelsonadagi/procusv2.git
 cd procusv2
 ```
 
-**2. Configure environment**
-```bash
-cp .env.example .env
-# Edit .env with your values (see Environment Variables section)
-```
-
-**3. Start dev mode**
+**2. Start dev mode**
 ```bash
 make dev
 ```
@@ -284,7 +278,7 @@ This starts:
 
 Migrations and seed data run automatically when the backend container starts.
 
-**4. Access the application**
+**3. Access the application**
 
 | Service | URL |
 |---|---|
@@ -294,12 +288,38 @@ Migrations and seed data run automatically when the backend container starts.
 
 ### Production Mode
 
-Use the production override only after filling production-specific values:
+Use the production override only after exporting production-specific values through your shell, CI/CD secrets, or deployment platform:
 
 ```bash
-cp .env.production.example .env.production
-# Edit .env.production with real secrets, domains, CORS origins, and API URLs.
+export PUBLIC_DOMAIN='your-domain.example'
+export POSTGRES_PASSWORD='change-me'
+export DJANGO_SECRET_KEY='change-this-to-a-long-random-secret'
 make prod
+```
+
+For the normal Docker deployment, those three variables are enough. The production compose file derives `DATABASE_URL`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, `VITE_API_URL`, and `VITE_WS_URL` from them. You can still override any derived value if your hosting setup needs custom domains, an external database, or a separate API host.
+
+Or let the deployment helper generate the password and Django secret for that run:
+
+```bash
+scripts/deploy-prod.sh your-domain.example --config
+scripts/deploy-prod.sh your-domain.example
+```
+
+The helper does not create a `.env` file. For local Docker deployments, it saves generated secrets in `.deploy/prod-vars.sh`, which is ignored by git, so redeploys reuse the same Postgres password and Django secret. The Postgres container creates the `marketplace` database automatically on first boot when the database volume is empty.
+
+For repeatable production redeploys, generate the three exports once and save them in your host or CI/CD secret store:
+
+```bash
+scripts/generate-prod-vars.sh your-domain.example
+```
+
+Then run `make prod` with those same values injected by your deployment environment.
+
+The direct Docker command works too:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 Useful commands:
@@ -312,10 +332,10 @@ make stop          # Stop the stack
 
 Mode summary:
 
-| Mode | Command | Env file | What changes |
+| Mode | Command | Config source | What changes |
 |---|---|---|---|
-| Dev | `make dev` | `.env` | Source volumes, Vue dev server, Django runserver, localhost API URLs |
-| Prod | `make prod` | `.env.production` | Built frontend preview, `DEBUG=0`, required domains/secrets, restart policies |
+| Dev | `make dev` | Compose defaults, optional shell exports | Source volumes, Vue dev server, Django runserver, localhost API URLs |
+| Prod | `make prod` | Shell/CI/orchestrator environment variables | Frontend served from built `dist` via Nginx, `DEBUG=0`, required domains/secrets, restart policies |
 
 ---
 
@@ -334,8 +354,8 @@ source venv/bin/activate          # macOS/Linux
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment (set DATABASE_URL to your local Postgres)
-cp ../.env.example ../.env
+# Optional: export DATABASE_URL if you are not using the default local SQLite fallback.
+export DATABASE_URL='postgres://postgres:postgres@localhost:5432/marketplace'
 
 # Apply migrations
 python manage.py migrate
@@ -373,7 +393,17 @@ celery -A config beat -l info
 
 ## 🔐 Environment Variables
 
-Copy `.env.example` to `.env` and fill in the values:
+The app does not require a `.env` file. Local Docker uses defaults from Compose. Production values should come from shell exports, CI/CD secrets, Docker secrets, or an orchestrator secret store.
+
+Minimum production variables:
+
+```env
+PUBLIC_DOMAIN=your-domain.example
+POSTGRES_PASSWORD=change_this_database_password
+DJANGO_SECRET_KEY=change_this_to_a_long_random_secret
+```
+
+Common optional overrides:
 
 ```env
 # Database
@@ -399,7 +429,7 @@ VITE_WS_URL=ws://localhost:8007/ws/notifications/
 PAYMENT_PROVIDER_KEYS=placeholder
 ```
 
-> ⚠️ **Never commit `.env` or `.env.production`.** Both should stay local to each environment.
+> ⚠️ Do not commit local secret files. Production secrets should be injected by the deployment environment, not copied into the repository.
 
 ---
 

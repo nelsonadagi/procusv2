@@ -1,11 +1,9 @@
 import os
 from pathlib import Path
 import dj_database_url
-from dotenv import load_dotenv
 from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR.parent / '.env')
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-key-dev')
 

@@ -174,25 +174,25 @@ backend/
 
 ### 3.2 Settings Architecture
 
-Settings are entirely environment-driven via `.env`:
+Settings are environment-driven without requiring a `.env` file. Local Docker supplies defaults from Compose; production values must be injected by the deployment environment or secret store:
 
 ```python
 # config/settings.py (pattern)
 import dj_database_url
 import os
 
-SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
-DEBUG = os.environ.get('DEBUG', '0') == '1'
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-key-dev')
+DEBUG = os.environ.get('DJANGO_DEBUG', os.environ.get('DEBUG', '0')) == '1'
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ['DATABASE_URL']
+        default='sqlite:///db.sqlite3'
     )
 }
 
-CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
-CELERY_RESULT_BACKEND = os.environ['CELERY_RESULT_BACKEND']
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 ```
 
 ### 3.3 App Registration (28 Apps)
@@ -1121,29 +1121,34 @@ frontend ──► backend (API calls via VITE_API_URL)
 
 | Variable | Service | Required | Default |
 |---|---|---|---|
-| `DATABASE_URL` | backend, celery | ✅ | — |
-| `REDIS_URL` | backend, celery | ✅ | — |
-| `CELERY_BROKER_URL` | celery | ✅ | — |
-| `CELERY_RESULT_BACKEND` | celery | ✅ | — |
-| `DJANGO_SECRET_KEY` | backend | ✅ | — |
-| `DEBUG` | backend | — | `0` |
-| `ALLOWED_HOSTS` | backend | — | `*` |
-| `PAYMENT_PROVIDER_KEYS` | backend | — | — |
-| `VITE_API_URL` | frontend | — | `http://localhost:8000/api` |
+| `PUBLIC_DOMAIN` | backend, frontend build | Production | Used to derive host/origin/frontend URLs |
+| `POSTGRES_PASSWORD` | postgres, backend, celery | Production | Used to derive Docker `DATABASE_URL` |
+| `DJANGO_SECRET_KEY` | backend | Production | `insecure-key-dev` locally |
+| `DATABASE_URL` | backend, celery | Optional override | Derived from `POSTGRES_PASSWORD` in production Compose |
+| `REDIS_URL` | backend, celery | Optional override | `redis://redis:6379/0` in Compose |
+| `CELERY_BROKER_URL` | celery | Optional override | `redis://redis:6379/0` in Compose |
+| `CELERY_RESULT_BACKEND` | celery | Optional override | `redis://redis:6379/0` in Compose |
+| `DJANGO_DEBUG` | backend | — | `1` locally, `0` in production override |
+| `ALLOWED_HOSTS` | backend | Optional override | Derived from `PUBLIC_DOMAIN` in production Compose |
+| `CORS_ALLOWED_ORIGINS` | backend | Optional override | Derived from `PUBLIC_DOMAIN` in production Compose |
+| `CSRF_TRUSTED_ORIGINS` | backend | Optional override | Derived from `PUBLIC_DOMAIN` in production Compose |
+| `PAYMENT_PROVIDER_KEYS` | backend | Optional | — |
+| `VITE_API_URL` | frontend | Optional override | Derived from `PUBLIC_DOMAIN` in production Compose |
+| `VITE_WS_URL` | frontend | Optional override | Derived from `PUBLIC_DOMAIN` in production Compose |
 
 ### 11.4 Production Deployment Checklist
 
 ```
-☐ Set DEBUG=0
-☐ Set ALLOWED_HOSTS to production domain(s)
-☐ Generate a new DJANGO_SECRET_KEY (50+ random chars)
+☐ Set DJANGO_DEBUG=0
+☐ Set PUBLIC_DOMAIN to the production domain
+☐ Inject a new DJANGO_SECRET_KEY (50+ random chars) through the deployment environment or secret store
 ☐ Use a managed PostgreSQL instance (not SQLite)
 ☐ Enable PostgreSQL SSL connection
 ☐ Configure Redis with password authentication
 ☐ Serve Django via Gunicorn (not runserver)
 ☐ Serve frontend via Nginx (pre-built static files)
 ☐ Enable HTTPS (TLS certificate via Let's Encrypt)
-☐ Configure CORS_ALLOWED_ORIGINS to production domain
+☐ Confirm derived CORS_ALLOWED_ORIGINS and CSRF_TRUSTED_ORIGINS match the production domain
 ☐ Set up automated PostgreSQL backups
 ☐ Configure Celery with supervisord or systemd
 ☐ Enable application performance monitoring (APM)

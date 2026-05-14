@@ -30,14 +30,37 @@ Docker Compose will run:
 
 ## 3. Environment Variables
 
-Provide `.env.example`:
+Local Docker uses Compose defaults and does not require a `.env` file. For the normal Docker production deployment, provide only these required values through the deployment environment, CI/CD secrets, Docker secrets, or the orchestrator secret store:
+
+* PUBLIC_DOMAIN
+* POSTGRES_PASSWORD
+* DJANGO_SECRET_KEY
+
+The production compose file derives the rest from those three values. Override these only when the deployment needs custom infrastructure:
 
 * DATABASE_URL
 * REDIS_URL
-* DJANGO_SECRET_KEY
-* DEBUG
 * ALLOWED_HOSTS
+* CORS_ALLOWED_ORIGINS
+* CSRF_TRUSTED_ORIGINS
+* VITE_API_URL
+* VITE_WS_URL
 * PAYMENT_PROVIDER_KEYS
+
+The helper script can generate the required secret values for a Docker deployment run:
+
+```bash
+scripts/deploy-prod.sh your-domain.example --config
+scripts/deploy-prod.sh your-domain.example
+```
+
+The script does not create a `.env` file. For local Docker deployments, it saves generated secrets in `.deploy/prod-vars.sh`, which is ignored by git, so redeploys reuse the same Postgres password and Django secret. The Postgres image creates the configured database automatically on first boot when the database volume is empty.
+
+For repeatable production redeploys, generate the exports once and save them in the host or CI/CD secret store:
+
+```bash
+scripts/generate-prod-vars.sh your-domain.example
+```
 
 ---
 
@@ -81,19 +104,13 @@ Services:
 ## 5. Local Development Workflow
 
 1. Clone repo
-2. Copy env file:
-
-```bash
-cp .env.example .env
-```
-
-3. Start stack:
+2. Start stack:
 
 ```bash
 docker-compose up --build
 ```
 
-4. Access:
+3. Access:
 
 * Frontend: [http://localhost:5173](http://localhost:5173)
 * Backend API: [http://localhost:8000/api/v1/](http://localhost:8000/api/v1/)
