@@ -217,6 +217,65 @@
               </div>
             </div>
 
+            <div v-else-if="activeEditorSection === 'media'" class="pz-operator-form-body">
+              <div v-if="property?.media_assets?.length" class="pz-existing-assets">
+                <div class="pz-existing-assets__title">Current Media And Documents</div>
+                <div class="pz-chip-list">
+                  <span v-for="asset in property.media_assets" :key="asset.id" class="pz-chip">
+                    {{ asset.media_type }} · {{ asset.title || asset.alt_text || 'Untitled asset' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="pz-upload-grid">
+                <div class="pz-upload-card">
+                  <div class="pz-upload-card__title">Images</div>
+                  <p class="pz-u-color-steel text-sm">Upload one or more images for this property.</p>
+                  <input ref="propertyImageInput" type="file" accept="image/*" multiple class="u-sr-only" @change="handlePropertyImagesSelected">
+                  <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
+                    <Button type="button" variant="secondary" size="sm" @click="triggerPropertyImageUpload">UPLOAD_IMAGES</Button>
+                    <Button v-if="selectedPropertyImageFiles.length" type="button" variant="ghost" size="sm" @click="clearSelectedPropertyImages">CLEAR_IMAGES</Button>
+                  </div>
+                  <div v-if="selectedPropertyImageFiles.length" class="pz-upload-selection">
+                    {{ selectedPropertyImageFiles.length }} image{{ selectedPropertyImageFiles.length === 1 ? '' : 's' }} selected.
+                  </div>
+                </div>
+
+                <div class="pz-upload-card">
+                  <div class="pz-upload-card__title">Documents</div>
+                  <p class="pz-u-color-steel text-sm">Upload documents or floor plans with a clear update action.</p>
+                  <div class="pz-input-wrapper">
+                    <label class="pz-input__label">Upload type</label>
+                    <select v-model="propertyUploadDocumentType" class="pz-input">
+                      <option value="DOCUMENT">Document</option>
+                      <option value="FLOOR_PLAN">Floor Plan</option>
+                    </select>
+                  </div>
+                  <input ref="propertyDocumentInput" type="file" multiple class="u-sr-only" @change="handlePropertyDocumentsSelected">
+                  <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
+                    <Button type="button" variant="secondary" size="sm" @click="triggerPropertyDocumentUpload">UPLOAD_DOCUMENTS</Button>
+                    <Button v-if="selectedPropertyDocumentFiles.length" type="button" variant="ghost" size="sm" @click="clearSelectedPropertyDocuments">CLEAR_DOCUMENTS</Button>
+                  </div>
+                  <div v-if="selectedPropertyDocumentFiles.length" class="pz-upload-selection">
+                    {{ selectedPropertyDocumentFiles.length }} document{{ selectedPropertyDocumentFiles.length === 1 ? '' : 's' }} selected.
+                  </div>
+                </div>
+              </div>
+
+              <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  :loading="uploadingMedia"
+                  :disabled="!selectedPropertyImageFiles.length && !selectedPropertyDocumentFiles.length"
+                  @click="uploadPropertyFiles"
+                >
+                  UPDATE_UPLOADS
+                </Button>
+              </div>
+            </div>
+
             <div v-else class="pz-operator-form-body">
               <div class="pz-operator-form-grid">
                 <PzInput v-model="operatorForm.ownership_profile.legal_owner_name" label="Legal Owner Name" />
@@ -295,7 +354,13 @@ const showAlert = inject('showAlert');
 const property = ref(null);
 const loading = ref(true);
 const saving = ref(false);
+const uploadingMedia = ref(false);
 const activeEditorSection = ref('listing');
+const propertyImageInput = ref(null);
+const propertyDocumentInput = ref(null);
+const selectedPropertyImageFiles = ref([]);
+const selectedPropertyDocumentFiles = ref([]);
+const propertyUploadDocumentType = ref('DOCUMENT');
 const defaultCurrencyCode = computed(() => configStore.activeCurrencyCode || 'KES');
 const operatorForm = ref(createDefaultOperatorForm());
 
@@ -304,6 +369,7 @@ const editorSectionIcons = {
   specification: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 6H3"/><path d="M10 12H3"/><path d="M10 18H3"/><path d="M14 9h.01"/><path d="M18 9h.01"/><path d="M14 15h.01"/><path d="M18 15h.01"/></svg>',
   commercial: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
   readiness: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+  media: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>',
   ownership: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
 };
 
@@ -312,7 +378,8 @@ const editorSections = [
   { id: 'specification', kicker: '02', label: 'Specification', description: 'Beds, area, fit-out, and occupancy data.' },
   { id: 'commercial', kicker: '03', label: 'Commercials', description: 'Pricing, deposit, and finance posture.' },
   { id: 'readiness', kicker: '04', label: 'Readiness', description: 'Development stage, utilities, and delivery context.' },
-  { id: 'ownership', kicker: '05', label: 'Ownership', description: 'Title references, disclosures, and highlights.' },
+  { id: 'media', kicker: '05', label: 'Media & Documents', description: 'Images, floor plans, and property files.' },
+  { id: 'ownership', kicker: '06', label: 'Ownership', description: 'Title references, disclosures, and highlights.' },
 ];
 
 const activeEditorMeta = computed(() =>
@@ -572,6 +639,65 @@ async function saveProperty() {
   }
 }
 
+function triggerPropertyImageUpload() {
+  propertyImageInput.value?.click();
+}
+
+function triggerPropertyDocumentUpload() {
+  propertyDocumentInput.value?.click();
+}
+
+function handlePropertyImagesSelected(event) {
+  selectedPropertyImageFiles.value = Array.from(event.target.files || []);
+}
+
+function handlePropertyDocumentsSelected(event) {
+  selectedPropertyDocumentFiles.value = Array.from(event.target.files || []);
+}
+
+function clearSelectedPropertyImages() {
+  selectedPropertyImageFiles.value = [];
+  if (propertyImageInput.value) propertyImageInput.value.value = '';
+}
+
+function clearSelectedPropertyDocuments() {
+  selectedPropertyDocumentFiles.value = [];
+  if (propertyDocumentInput.value) propertyDocumentInput.value.value = '';
+}
+
+async function uploadPropertyFiles() {
+  if (!property.value?.id) return;
+  uploadingMedia.value = true;
+  try {
+    if (selectedPropertyImageFiles.value.length) {
+      const imageData = new FormData();
+      imageData.append('media_type', 'IMAGE');
+      selectedPropertyImageFiles.value.forEach((file) => imageData.append('files', file));
+      await api.post(`/property/${property.value.id}/upload-media/`, imageData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+
+    if (selectedPropertyDocumentFiles.value.length) {
+      const documentData = new FormData();
+      documentData.append('media_type', propertyUploadDocumentType.value);
+      selectedPropertyDocumentFiles.value.forEach((file) => documentData.append('files', file));
+      await api.post(`/property/${property.value.id}/upload-media/`, documentData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+
+    clearSelectedPropertyImages();
+    clearSelectedPropertyDocuments();
+    await loadProperty();
+    showAlert?.('Property media updated successfully.', 'success');
+  } catch (error) {
+    showAlert?.(error.response?.data?.error || error.response?.data?.detail || 'Failed to upload property media.', 'error');
+  } finally {
+    uploadingMedia.value = false;
+  }
+}
+
 function cancelEdit() {
   router.push(`/properties/${route.params.id}`);
 }
@@ -753,6 +879,55 @@ onMounted(() => {
 .pz-operator-form-body {
   display: grid;
   gap: 0.6rem;
+}
+
+.pz-existing-assets,
+.pz-upload-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pz-existing-assets__title,
+.pz-upload-card__title {
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pz-color-text-secondary);
+}
+
+.pz-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pz-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  background: rgba(247, 244, 239, 0.9);
+  font-size: 0.76rem;
+}
+
+.pz-upload-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.pz-upload-card {
+  padding: 1rem;
+  border: 1px dashed rgba(10, 10, 15, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 12px;
+}
+
+.pz-upload-selection {
+  font-size: 0.8rem;
+  color: var(--pz-color-earth-orange);
 }
 
 .pz-operator-form-grid {

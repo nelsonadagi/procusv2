@@ -6,6 +6,7 @@ from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 
 from chat.models import ChatRoom
@@ -20,12 +21,14 @@ from .models import (
     PropertyInquiry,
     PropertyAvailabilityWindow,
     PropertyAppointment,
+    PropertyMediaAsset,
 )
 from .serializers import (
     PropertyListingSerializer,
     PropertyInquirySerializer,
     PropertyAvailabilityWindowSerializer,
     PropertyAppointmentSerializer,
+    PropertyMediaAssetSerializer,
 )
 from platform_settings.utils import resolve_request_country_code
 
@@ -92,6 +95,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         'partial_update': 'property:update_property',
         'destroy': 'property:delete_property',
         'link_project': 'property:update_property',
+        'upload_media': 'property:update_property',
     }
 
     def get_permissions(self):
@@ -103,6 +107,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated(), HasRequiredPermission()]
         if self.action in {'update', 'partial_update', 'destroy', 'link_project'}:
             return [permissions.IsAuthenticated(), HasRequiredPermission(), IsPropertyOwner()]
+        if self.action == 'upload_media':
+            return [permissions.IsAuthenticated(), HasRequiredPermission(), IsPropertyOperator()]
         return super().get_permissions()
 
     def get_queryset(self):
@@ -279,6 +285,41 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 pass
 
         return qs.distinct()
+
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='upload-media')
+    def upload_media(self, request, pk=None):
+        prop = self.get_object()
+        files = request.FILES.getlist('files')
+        if not files:
+            return Response({'error': 'No files provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        requested_type = request.data.get('media_type', PropertyMediaAsset.MediaType.IMAGE)
+        if requested_type not in PropertyMediaAsset.MediaType.values:
+            return Response({'error': f'Unsupported media type: {requested_type}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        existing_primary = prop.media_assets.filter(is_primary=True).exists()
+        created_assets = []
+        for idx, upload in enumerate(files):
+            created_assets.append(
+                PropertyMediaAsset.objects.create(
+                    property=prop,
+                    media_type=request.data.get(f'media_type_{idx}', requested_type) or requested_type,
+                    file=upload,
+                    title=request.data.get(f'title_{idx}', '') or upload.name,
+                    caption=request.data.get(f'caption_{idx}', ''),
+                    alt_text=request.data.get(f'alt_text_{idx}', upload.name),
+                    sort_order=prop.media_assets.count() + idx,
+                    is_primary=(
+                        requested_type == PropertyMediaAsset.MediaType.IMAGE
+                        and idx == 0
+                        and not existing_primary
+                    ),
+                    is_public=str(request.data.get(f'is_public_{idx}', request.data.get('is_public', 'true'))).lower() not in {'false', '0', 'no'},
+                )
+            )
+
+        serializer = PropertyMediaAssetSerializer(created_assets, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         user = self.request.user

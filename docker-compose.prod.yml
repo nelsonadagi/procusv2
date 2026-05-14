@@ -1,0 +1,50 @@
+# Prod overrides — use with:
+#   cp .env.production.example .env.production
+#   make prod
+#
+# Or without make:
+#   docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+  backend:
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env.production}
+      DEBUG: "0"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS in .env.production}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS in .env.production}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?Set CSRF_TRUSTED_ORIGINS in .env.production}
+      RUN_BOOTSTRAP_TASKS: "1"
+    restart: unless-stopped
+
+  frontend:
+    command: sh -c "npm run build && npm run preview -- --host --port 5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:?Set VITE_API_URL in .env.production}
+      VITE_WS_URL: ${VITE_WS_URL:?Set VITE_WS_URL in .env.production}
+    restart: unless-stopped
+
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  celery-worker:
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env.production}
+      DEBUG: "0"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS in .env.production}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS in .env.production}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?Set CSRF_TRUSTED_ORIGINS in .env.production}
+      RUN_BOOTSTRAP_TASKS: "0"
+    restart: unless-stopped
+
+  celery-beat:
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env.production}
+      DEBUG: "0"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS in .env.production}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS in .env.production}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?Set CSRF_TRUSTED_ORIGINS in .env.production}
+      RUN_BOOTSTRAP_TASKS: "0"
+    restart: unless-stopped

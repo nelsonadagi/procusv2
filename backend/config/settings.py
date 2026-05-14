@@ -9,14 +9,22 @@ load_dotenv(BASE_DIR.parent / '.env')
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-key-dev')
 
-DEBUG = os.environ.get('DEBUG', '0') == '1'
+DEBUG = os.environ.get('DJANGO_DEBUG', os.environ.get('DEBUG', '0')) == '1'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+def env_list(name, default=''):
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '*')
+
+CORS_ALLOWED_ORIGINS = env_list(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://127.0.0.1:5173',
+)
+
+CSRF_TRUSTED_ORIGINS = env_list(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost:5173,http://127.0.0.1:5173',
+)
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-active-country',

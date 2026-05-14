@@ -68,6 +68,7 @@ Detailed documentation for the entire platform is available in the [`docs/`](./d
 | 📋 [**SRS**](./docs/SRS.md) | Software Requirements Specification |
 | 🏛️ [**SDD**](./docs/SDD.md) | Software Design Document (Architecture) |
 | 📖 [**User Guide**](./docs/USER_GUIDE.md) | Role-based workflows for all users |
+| 🧪 [**API-Only E2E Harness**](./docs/E2E_FRONTEND_HARNESS.md) | Python `requests` client that exercises backend APIs like the frontend |
 | 🤝 [**Contributing**](./CONTRIBUTING.md) | Standards, commit conventions, and PR process |
 | 🎨 [**Style Guide**](./frontend/FRONTEND_STYLE_GUIDE.md) | Frontend design system and UI tokens |
 
@@ -266,35 +267,55 @@ cp .env.example .env
 # Edit .env with your values (see Environment Variables section)
 ```
 
-**3. Start all services**
+**3. Start dev mode**
 ```bash
-docker-compose up --build
+make dev
 ```
 
 This starts:
 | Service | Port | Description |
 |---|---|---|
 | `frontend` | 5173 | Vue 3 dev server |
-| `backend` | 8000 | Django API |
+| `backend` | 8007 | Django API |
 | `postgres` | 5432 | PostgreSQL database |
 | `redis` | 6379 | Redis cache/broker |
 | `celery-worker` | — | Async task worker |
 | `celery-beat` | — | Scheduled task runner |
 
-**4. Run initial setup** *(first time only)*
-```bash
-# In a separate terminal:
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py createsuperuser
-```
+Migrations and seed data run automatically when the backend container starts.
 
-**5. Access the application**
+**4. Access the application**
 
 | Service | URL |
 |---|---|
 | 🌐 Frontend App | http://localhost:5173 |
-| 🔌 Backend API | http://localhost:8000/api/ |
-| 🛡️ Django Admin | http://localhost:8000/admin/ |
+| 🔌 Backend API | http://localhost:8007/api/ |
+| 🛡️ Django Admin | http://localhost:8007/admin/ |
+
+### Production Mode
+
+Use the production override only after filling production-specific values:
+
+```bash
+cp .env.production.example .env.production
+# Edit .env.production with real secrets, domains, CORS origins, and API URLs.
+make prod
+```
+
+Useful commands:
+
+```bash
+make prod-config   # Validate the merged production Compose file
+make logs          # Follow container logs
+make stop          # Stop the stack
+```
+
+Mode summary:
+
+| Mode | Command | Env file | What changes |
+|---|---|---|---|
+| Dev | `make dev` | `.env` | Source volumes, Vue dev server, Django runserver, localhost API URLs |
+| Prod | `make prod` | `.env.production` | Built frontend preview, `DEBUG=0`, required domains/secrets, restart policies |
 
 ---
 
@@ -365,14 +386,20 @@ CELERY_RESULT_BACKEND=redis://redis:6379/0
 
 # Django
 DJANGO_SECRET_KEY=replace_this_with_a_long_random_secret_key
-DEBUG=1                    # Set to 0 in production
+DJANGO_DEBUG=1             # Set to 0 in production
 ALLOWED_HOSTS=*            # Restrict in production
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+# Frontend
+VITE_API_URL=http://localhost:8007/api
+VITE_WS_URL=ws://localhost:8007/ws/notifications/
 
 # Integrations
 PAYMENT_PROVIDER_KEYS=placeholder
 ```
 
-> ⚠️ **Never commit your `.env` file.** It is already included in `.gitignore`.
+> ⚠️ **Never commit `.env` or `.env.production`.** Both should stay local to each environment.
 
 ---
 

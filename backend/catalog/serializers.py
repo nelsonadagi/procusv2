@@ -253,6 +253,11 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         queryset=Product._meta.get_field('category').remote_field.model.objects.all(),
         slug_field='uuid'
     )
+    country = serializers.PrimaryKeyRelatedField(
+        queryset=Product._meta.get_field('country').remote_field.model.objects.all(),
+        required=False,
+        allow_null=True,
+    )
     certification_entries = ProductCertificationSerializer(many=True, required=False)
     attribute_entries = ProductAttributeSerializer(many=True, required=False)
     documents = ProductDocumentSerializer(many=True, required=False)
@@ -262,7 +267,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             # Basic Information
-            'name', 'short_description', 'description', 'category',
+            'name', 'short_description', 'description', 'category', 'country',
 
             # Pricing & Inventory
             'unit', 'base_price', 'currency', 'bulk_price', 'bulk_threshold',

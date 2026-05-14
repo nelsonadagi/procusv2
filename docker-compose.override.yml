@@ -1,0 +1,26 @@
+# Dev overrides — loaded automatically by `docker compose up`
+services:
+  backend:
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+
+  frontend:
+    command: npm run dev -- --host
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  celery-worker:
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+
+  celery-beat:
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env

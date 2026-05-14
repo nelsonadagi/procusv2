@@ -5,6 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from catalog.models import (
     Product,
     ProductImage,
+    ProductDocument,
     ProductCertificationRegistry,
     ProductCertification,
     ProductAttribute,
@@ -305,12 +306,48 @@ class TestCatalogAPI:
         assert response.status_code == status.HTTP_201_CREATED
         assert Product.objects.filter(name='Steel Bar').exists()
 
+    def test_import_products_csv_with_minimal_fields_only(self, api_client, vendor):
+        self.setup_vendor(vendor)
+        self.setup_category()
+
+        api_client.force_authenticate(user=vendor)
+        url = reverse('product-import-products')
+
+        csv_content = "Name,Description,Price,Unit\n"
+        csv_content += "Quick Lime,Fast-setting binder,850,bag\n"
+
+        file = SimpleUploadedFile("products-minimal.csv", csv_content.encode('utf-8'), content_type="text/csv")
+        response = api_client.post(url, {'file': file}, format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+        product = Product.objects.get(name='Quick Lime')
+        assert product.description == 'Fast-setting binder'
+        assert product.unit == 'bag'
+
     def test_download_template(self, api_client, project_owner):
         api_client.force_authenticate(user=project_owner)
         url = reverse('product-download-template')
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert response['Content-Type'] == 'text/csv'
+
+    def test_upload_documents(self, api_client, vendor):
+        v_profile = self.setup_vendor(vendor)
+        cat = self.setup_category()
+        product = Product.objects.create(vendor=v_profile, category=cat, name="P1", base_price=10, unit="u")
+
+        api_client.force_authenticate(user=vendor)
+        url = reverse('product-upload-documents', args=[product.uuid])
+
+        document = SimpleUploadedFile("datasheet.pdf", b"pdf_content", content_type="application/pdf")
+        response = api_client.post(
+            url,
+            {'documents': [document], 'document_type': ProductDocument.DocumentType.DATASHEET},
+            format='multipart'
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert product.documents.count() == 1
 
     def test_set_primary_image(self, api_client, vendor):
         v_profile = self.setup_vendor(vendor)

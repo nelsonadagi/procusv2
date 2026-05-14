@@ -8,6 +8,7 @@ from accounts.models import User
 class VendorViewSet(viewsets.ModelViewSet):
     queryset = Vendor.objects.all()
     serializer_class = VendorSerializer
+    lookup_field = "uuid"
     permission_classes = [HasRequiredPermission]
     required_permission = 'vendors:view'
     permission_map = {
@@ -119,7 +120,7 @@ class VendorViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e), "message": "An unexpected error occurred while fetching vendor profile."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def approve(self, request, pk=None):
+    def approve(self, request, pk=None, **kwargs):
         if not self._is_admin():
             return Response({"error": "Admin only"}, status=status.HTTP_403_FORBIDDEN)
         vendor = self.get_object()
@@ -129,7 +130,7 @@ class VendorViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(vendor).data)
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def reject(self, request, pk=None):
+    def reject(self, request, pk=None, **kwargs):
         if not self._is_admin():
             return Response({"error": "Admin only"}, status=status.HTTP_403_FORBIDDEN)
         vendor = self.get_object()

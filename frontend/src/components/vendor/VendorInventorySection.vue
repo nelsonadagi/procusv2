@@ -8,8 +8,8 @@
           <div class="pz-section-shell__meta">Manage commercial pricing, structured specs, compliance records, and vendor-facing stock readiness from one workspace.</div>
         </div>
         <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
-          <Button size="sm" variant="ghost" :loading="downloadingTemplate" @click="downloadTemplate">DOWNLOAD_TEMPLATE</Button>
           <input ref="csvInput" type="file" accept=".csv" class="u-sr-only" @change="handleCsvSelected">
+          <Button size="sm" variant="ghost" :loading="downloadingTemplate" @click="downloadTemplate">CSV_EXAMPLE</Button>
           <Button size="sm" variant="secondary" :loading="importing" @click="triggerCsvImport">IMPORT_CSV</Button>
           <Button size="sm" @click="openCreateModal">ADD_MATERIAL</Button>
         </div>
@@ -246,6 +246,100 @@
           </div>
           <p v-else class="pz-u-color-steel text-sm">No supporting documents added yet.</p>
         </section>
+
+        <section class="pz-form-section">
+          <div class="pz-form-section__header">
+            <div class="pz-form-section__eyebrow">Media Operations</div>
+            <h4>Images And File Uploads</h4>
+          </div>
+
+          <div v-if="editingProduct?.images?.length || editingProduct?.documents?.length" class="pz-existing-assets">
+            <div v-if="editingProduct?.images?.length" class="pz-existing-assets__group">
+              <div class="pz-existing-assets__title">Existing Images</div>
+              <div class="pz-chip-list">
+                <span v-for="image in editingProduct.images" :key="image.id" class="pz-chip">
+                  {{ image.alt_text || `Image ${image.display_order + 1}` }}
+                </span>
+              </div>
+            </div>
+            <div v-if="editingProduct?.documents?.length" class="pz-existing-assets__group">
+              <div class="pz-existing-assets__title">Existing Documents</div>
+              <div class="pz-chip-list">
+                <span v-for="document in editingProduct.documents" :key="document.id" class="pz-chip">
+                  {{ document.title }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pz-upload-grid">
+            <div class="pz-upload-card">
+              <div class="pz-upload-card__title">Product Images</div>
+              <p class="pz-u-color-steel text-sm">Upload one or multiple images for the same material.</p>
+              <input
+                ref="productImageInput"
+                type="file"
+                accept="image/*"
+                multiple
+                class="u-sr-only"
+                @change="handleProductImagesSelected"
+              >
+              <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
+                <Button size="sm" variant="secondary" type="button" @click="triggerProductImageUpload">UPLOAD_IMAGES</Button>
+                <Button
+                  v-if="selectedProductImageFiles.length"
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  @click="clearSelectedProductImages"
+                >
+                  CLEAR_IMAGES
+                </Button>
+              </div>
+              <div v-if="selectedProductImageFiles.length" class="pz-upload-selection">
+                {{ selectedProductImageFiles.length }} image{{ selectedProductImageFiles.length === 1 ? '' : 's' }} queued for upload on save.
+              </div>
+            </div>
+
+            <div class="pz-upload-card">
+              <div class="pz-upload-card__title">Product Documents</div>
+              <p class="pz-u-color-steel text-sm">Upload datasheets, brochures, warranties, or other supporting files.</p>
+              <div class="pz-input-wrapper">
+                <label class="pz-input__label">Uploaded document type</label>
+                <select v-model="uploadDocumentType" class="pz-input">
+                  <option value="DATASHEET">DATASHEET</option>
+                  <option value="SAFETY">SAFETY</option>
+                  <option value="WARRANTY">WARRANTY</option>
+                  <option value="BROCHURE">BROCHURE</option>
+                  <option value="INSTALLATION">INSTALLATION</option>
+                  <option value="OTHER">OTHER</option>
+                </select>
+              </div>
+              <input
+                ref="productDocumentInput"
+                type="file"
+                multiple
+                class="u-sr-only"
+                @change="handleProductDocumentsSelected"
+              >
+              <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
+                <Button size="sm" variant="secondary" type="button" @click="triggerProductDocumentUpload">UPLOAD_DOCUMENTS</Button>
+                <Button
+                  v-if="selectedProductDocumentFiles.length"
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  @click="clearSelectedProductDocuments"
+                >
+                  CLEAR_DOCUMENTS
+                </Button>
+              </div>
+              <div v-if="selectedProductDocumentFiles.length" class="pz-upload-selection">
+                {{ selectedProductDocumentFiles.length }} document{{ selectedProductDocumentFiles.length === 1 ? '' : 's' }} queued for upload on save.
+              </div>
+            </div>
+          </div>
+        </section>
       </form>
       <template #footer>
         <Button variant="ghost" @click="closeProductModal">Cancel</Button>
@@ -362,6 +456,8 @@ const deletingProductId = ref(null);
 const showProductModal = ref(false);
 const editingProductId = ref(null);
 const csvInput = ref(null);
+const productImageInput = ref(null);
+const productDocumentInput = ref(null);
 const selectedInventoryProduct = ref(null);
 const showAdjustmentModal = ref(false);
 const adjustingInventory = ref(false);
@@ -369,6 +465,9 @@ const showHistoryModal = ref(false);
 const historyLoading = ref(false);
 const inventoryHistory = ref([]);
 const searchQuery = ref('');
+const selectedProductImageFiles = ref([]);
+const selectedProductDocumentFiles = ref([]);
+const uploadDocumentType = ref('DATASHEET');
 
 const inventoryAdjustmentForm = ref({
   quantity_delta: 0,
@@ -439,6 +538,12 @@ const filteredProducts = computed(() => {
     return haystack.includes(query);
   });
 });
+
+const editingProduct = computed(() => (
+  editingProductId.value
+    ? products.value.find((entry) => entry.id === editingProductId.value) || null
+    : null
+));
 
 function normalizeListPayload(data) {
   return data?.results || data || [];
@@ -545,6 +650,9 @@ function removeDocument(index) {
 
 function openCreateModal() {
   editingProductId.value = null;
+  selectedProductImageFiles.value = [];
+  selectedProductDocumentFiles.value = [];
+  uploadDocumentType.value = 'DATASHEET';
   productForm.value = {
     ...emptyProductForm(),
     currency: configStore.activeCurrencyCode || 'KES',
@@ -554,6 +662,9 @@ function openCreateModal() {
 
 function openEditModal(product) {
   editingProductId.value = product.id;
+  selectedProductImageFiles.value = [];
+  selectedProductDocumentFiles.value = [];
+  uploadDocumentType.value = 'DATASHEET';
   productForm.value = {
     name: product.name || '',
     category: product.category?.id || product.category_id || '',
@@ -608,10 +719,43 @@ function openEditModal(product) {
 function closeProductModal() {
   showProductModal.value = false;
   editingProductId.value = null;
+  selectedProductImageFiles.value = [];
+  selectedProductDocumentFiles.value = [];
+  uploadDocumentType.value = 'DATASHEET';
   productForm.value = {
     ...emptyProductForm(),
     currency: configStore.activeCurrencyCode || 'KES',
   };
+}
+
+function triggerProductImageUpload() {
+  productImageInput.value?.click();
+}
+
+function triggerProductDocumentUpload() {
+  productDocumentInput.value?.click();
+}
+
+function handleProductImagesSelected(event) {
+  selectedProductImageFiles.value = Array.from(event.target.files || []);
+}
+
+function handleProductDocumentsSelected(event) {
+  selectedProductDocumentFiles.value = Array.from(event.target.files || []);
+}
+
+function clearSelectedProductImages() {
+  selectedProductImageFiles.value = [];
+  if (productImageInput.value) {
+    productImageInput.value.value = '';
+  }
+}
+
+function clearSelectedProductDocuments() {
+  selectedProductDocumentFiles.value = [];
+  if (productDocumentInput.value) {
+    productDocumentInput.value.value = '';
+  }
 }
 
 function openAdjustmentModal(product) {
@@ -718,12 +862,17 @@ async function saveProduct() {
   saving.value = true;
   try {
     const payload = buildPayload();
+    let response;
     if (editingProductId.value) {
-      await api.patch(`/v1/products/${editingProductId.value}/`, payload);
+      response = await api.patch(`/v1/products/${editingProductId.value}/`, payload);
       showAlert?.('Material record updated successfully.', 'success');
     } else {
-      await api.post('/v1/products/', payload);
+      response = await api.post('/v1/products/', payload);
       showAlert?.('Material published to your vendor catalogue.', 'success');
+    }
+    const productId = response?.data?.id || editingProductId.value;
+    if (productId) {
+      await uploadProductAssets(productId);
     }
     closeProductModal();
     await fetchProducts();
@@ -732,6 +881,25 @@ async function saveProduct() {
     showAlert?.(typeof detail === 'string' ? detail : 'Failed to save material record.', 'error');
   } finally {
     saving.value = false;
+  }
+}
+
+async function uploadProductAssets(productId) {
+  if (selectedProductImageFiles.value.length) {
+    const imageData = new FormData();
+    selectedProductImageFiles.value.forEach((file) => imageData.append('images', file));
+    await api.post(`/v1/products/${productId}/upload_images/`, imageData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
+  if (selectedProductDocumentFiles.value.length) {
+    const documentData = new FormData();
+    documentData.append('document_type', uploadDocumentType.value);
+    selectedProductDocumentFiles.value.forEach((file) => documentData.append('documents', file));
+    await api.post(`/v1/products/${productId}/upload-documents/`, documentData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   }
 }
 
@@ -860,6 +1028,59 @@ onMounted(async () => {
 .pz-repeaters {
   display: grid;
   gap: 1rem;
+}
+
+.pz-existing-assets,
+.pz-existing-assets__group,
+.pz-upload-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pz-existing-assets {
+  margin-bottom: 1rem;
+}
+
+.pz-existing-assets__title,
+.pz-upload-card__title {
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pz-color-text-secondary);
+}
+
+.pz-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pz-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  background: rgba(247, 244, 239, 0.9);
+  font-size: 0.76rem;
+}
+
+.pz-upload-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.pz-upload-card {
+  padding: 1rem;
+  border: 1px dashed rgba(10, 10, 15, 0.18);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.pz-upload-selection {
+  font-size: 0.8rem;
+  color: var(--pz-color-earth-orange);
 }
 
 .pz-inventory-toolbar {

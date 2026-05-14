@@ -8,12 +8,14 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Product, ProductImage, ProductCertificationRegistry, ProductInventoryMovement
+from .models import ProductDocument
 from taxonomy.models import Category
 from .serializers import (
     ProductSerializer,
     ProductListSerializer,
     ProductCreateUpdateSerializer,
     ProductImageSerializer,
+    ProductDocumentSerializer,
     ProductCertificationRegistrySerializer,
     ProductInventoryMovementSerializer,
     ProductInventoryAdjustmentSerializer,
@@ -56,6 +58,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         'destroy': 'catalog:delete',
         'import_products': 'catalog:create',
         'upload_images': 'catalog:update',
+        'upload_documents': 'catalog:update',
         'adjust_inventory': 'catalog:manage_stock',
         'inventory_history': 'catalog:manage_stock',
     }
@@ -82,7 +85,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated()]
         if self.action in ['create', 'import_products']:
             return [permissions.IsAuthenticated()]
-        if self.action in ['update', 'partial_update', 'destroy', 'upload_images', 'adjust_inventory', 'inventory_history']:
+        if self.action in ['update', 'partial_update', 'destroy', 'upload_images', 'upload_documents', 'adjust_inventory', 'inventory_history']:
             return [HasRequiredPermission(), IsVendorOwner()]
         return super().get_permissions()
 
@@ -381,6 +384,43 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = ProductImageSerializer(created_images, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='upload-documents')
+    def upload_documents(self, request, pk=None):
+        """Upload one or more supporting documents for a product."""
+        product = self.get_object()
+
+        if not hasattr(request.user, 'vendor_profile') or product.vendor != request.user.vendor_profile:
+            return Response(
+                {'error': 'You do not have permission to upload documents for this product'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        document_files = request.FILES.getlist('documents')
+        if not document_files:
+            return Response(
+                {'error': 'No documents provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created_documents = []
+        default_type = request.data.get('document_type', ProductDocument.DocumentType.OTHER)
+        default_visibility = str(request.data.get('is_public', 'true')).lower() not in {'false', '0', 'no'}
+        title_prefix = request.data.get('title_prefix', '').strip()
+
+        for idx, document_file in enumerate(document_files):
+            document = ProductDocument.objects.create(
+                product=product,
+                file=document_file,
+                document_type=request.data.get(f'document_type_{idx}', default_type) or ProductDocument.DocumentType.OTHER,
+                title=request.data.get(f'title_{idx}', '') or title_prefix or document_file.name,
+                description=request.data.get(f'description_{idx}', ''),
+                is_public=str(request.data.get(f'is_public_{idx}', default_visibility)).lower() not in {'false', '0', 'no'},
+            )
+            created_documents.append(document)
+
+        serializer = ProductDocumentSerializer(created_documents, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def import_products(self, request):
         """Import products from CSV file"""
@@ -415,21 +455,19 @@ class ProductViewSet(viewsets.ModelViewSet):
                     if not name:
                         continue # Skip empty rows or rows without name
 
-                    category_field = row.get('category') or row.get('Category')
-                    if not category_field:
-                        raise ValueError("Category is required")
-
-                    # Find category by name (case insensitive) or slug
-                    # Also try to clean up the category name e.g. "Materials" -> "Materials"
-                    category_field = category_field.strip()
-                    category = Category.objects.filter(
-                        models.Q(name__iexact=category_field) | models.Q(slug__iexact=category_field),
-                        taxonomy_type='MATERIAL'
-                    ).first()
-
-                    if not category:
-                        # Try to find by partial match if exact fails? No, too risky.
-                         raise ValueError(f"Category '{category_field}' not found. Please verify category name.")
+                    category_field = (row.get('category') or row.get('Category') or '').strip()
+                    category = None
+                    if category_field:
+                        category = Category.objects.filter(
+                            models.Q(name__iexact=category_field) | models.Q(slug__iexact=category_field),
+                            taxonomy_type='MATERIAL'
+                        ).first()
+                        if not category:
+                            raise ValueError(f"Category '{category_field}' not found. Please verify category name.")
+                    else:
+                        category = Category.objects.filter(taxonomy_type='MATERIAL', active=True).order_by('name').first()
+                        if not category:
+                            raise ValueError('No active material category exists for minimal import.')
 
                     # Create product
                     # Basic fields
@@ -437,9 +475,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                         vendor=vendor,
                         category=category,
                         name=name.strip(),
-                        description=row.get('description', '') or row.get('Description', ''),
+                        description=row.get('description', '') or row.get('Description', '') or name.strip(),
                         short_description=row.get('short_description', '') or row.get('Short Description', ''),
-                        unit=row.get('unit', '') or row.get('Unit', 'unit'),
+                        unit=row.get('unit') or row.get('Unit') or 'unit',
                         currency=(row.get('currency') or row.get('Currency') or getattr(getattr(vendor, 'country', None), 'default_currency', None) or 'KES').upper(),
                         base_price=row.get('base_price') or row.get('Price', 0),
                         stock_quantity=int(row.get('stock_quantity') or row.get('Stock', 0) or 0),
@@ -478,20 +516,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = 'attachment; filename="product_import_template.csv"'
 
         writer = csv.writer(response)
-        # Headers should match the expected import format
-        headers = ['Name', 'Category', 'Price', 'Currency', 'Unit', 'Stock', 'Brand', 'Description', 'Short Description']
+        # The template intentionally contains only the minimal fields needed for import.
+        headers = ['Name', 'Description', 'Price', 'Unit']
         writer.writerow(headers)
 
-        # Add an example row
         example_row = [
             'Example Cement 50kg',
-            'Cement',
+            'High strength portland cement for structural works',
             '650',
             'bag',
-            '100',
-            'Simba',
-            'High strength portland cement',
-            '50kg bag'
         ]
         writer.writerow(example_row)
 

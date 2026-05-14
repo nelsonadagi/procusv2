@@ -275,6 +275,40 @@
             </label>
           </div>
           <textarea v-model="propertyForm.feature_tags" class="pz-input" rows="3" placeholder="Feature highlights, comma separated" />
+          <div class="pz-upload-grid">
+            <div class="pz-upload-card">
+              <div class="pz-upload-card__title">Property Images</div>
+              <p class="pz-u-color-steel text-sm">Select one or more images. They upload after the listing is created.</p>
+              <input ref="propertyImageInput" type="file" accept="image/*" multiple class="u-sr-only" @change="handlePropertyImagesSelected">
+              <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
+                <Button type="button" variant="secondary" @click="triggerPropertyImageUpload">UPLOAD_IMAGES</Button>
+                <Button v-if="selectedPropertyImageFiles.length" type="button" variant="ghost" @click="clearSelectedPropertyImages">CLEAR_IMAGES</Button>
+              </div>
+              <div v-if="selectedPropertyImageFiles.length" class="pz-upload-selection">
+                {{ selectedPropertyImageFiles.length }} image{{ selectedPropertyImageFiles.length === 1 ? '' : 's' }} queued.
+              </div>
+            </div>
+
+            <div class="pz-upload-card">
+              <div class="pz-upload-card__title">Property Documents</div>
+              <p class="pz-u-color-steel text-sm">Upload floor plans, brochures, or due-diligence documents after create.</p>
+              <div class="pz-input-wrapper">
+                <label class="pz-input__label">Document upload type</label>
+                <select v-model="propertyUploadDocumentType" class="pz-input">
+                  <option value="DOCUMENT">Document</option>
+                  <option value="FLOOR_PLAN">Floor Plan</option>
+                </select>
+              </div>
+              <input ref="propertyDocumentInput" type="file" multiple class="u-sr-only" @change="handlePropertyDocumentsSelected">
+              <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
+                <Button type="button" variant="secondary" @click="triggerPropertyDocumentUpload">UPLOAD_DOCUMENTS</Button>
+                <Button v-if="selectedPropertyDocumentFiles.length" type="button" variant="ghost" @click="clearSelectedPropertyDocuments">CLEAR_DOCUMENTS</Button>
+              </div>
+              <div v-if="selectedPropertyDocumentFiles.length" class="pz-upload-selection">
+                {{ selectedPropertyDocumentFiles.length }} document{{ selectedPropertyDocumentFiles.length === 1 ? '' : 's' }} queued.
+              </div>
+            </div>
+          </div>
         </div>
       </form>
       <template #footer>
@@ -326,6 +360,11 @@ const submittingProperty = ref(false);
 const submittingAvailability = ref(false);
 const showPropertyModal = ref(false);
 const showAvailabilityModal = ref(false);
+const propertyImageInput = ref(null);
+const propertyDocumentInput = ref(null);
+const selectedPropertyImageFiles = ref([]);
+const selectedPropertyDocumentFiles = ref([]);
+const propertyUploadDocumentType = ref('DOCUMENT');
 
 const dashboardProfile = computed(() => {
   if (authStore.hasRole('SURVEYOR')) {
@@ -506,6 +545,11 @@ function resetPropertyForm() {
     primary_image_url: '',
     virtual_tour_url: '',
   };
+  selectedPropertyImageFiles.value = [];
+  selectedPropertyDocumentFiles.value = [];
+  propertyUploadDocumentType.value = 'DOCUMENT';
+  if (propertyImageInput.value) propertyImageInput.value.value = '';
+  if (propertyDocumentInput.value) propertyDocumentInput.value.value = '';
 }
 
 function resetAvailabilityForm() {
@@ -518,6 +562,7 @@ function openPropertyModal() {
 
 function closePropertyModal() {
   showPropertyModal.value = false;
+  resetPropertyForm();
 }
 
 function openAvailabilityModal() {
@@ -526,6 +571,32 @@ function openAvailabilityModal() {
 
 function closeAvailabilityModal() {
   showAvailabilityModal.value = false;
+}
+
+function triggerPropertyImageUpload() {
+  propertyImageInput.value?.click();
+}
+
+function triggerPropertyDocumentUpload() {
+  propertyDocumentInput.value?.click();
+}
+
+function handlePropertyImagesSelected(event) {
+  selectedPropertyImageFiles.value = Array.from(event.target.files || []);
+}
+
+function handlePropertyDocumentsSelected(event) {
+  selectedPropertyDocumentFiles.value = Array.from(event.target.files || []);
+}
+
+function clearSelectedPropertyImages() {
+  selectedPropertyImageFiles.value = [];
+  if (propertyImageInput.value) propertyImageInput.value.value = '';
+}
+
+function clearSelectedPropertyDocuments() {
+  selectedPropertyDocumentFiles.value = [];
+  if (propertyDocumentInput.value) propertyDocumentInput.value.value = '';
 }
 
 async function loadDashboard() {
@@ -634,7 +705,10 @@ async function createProperty() {
       };
     }
 
-    await api.post('/property/', payload);
+    const response = await api.post('/property/', payload);
+    if (response.data?.id) {
+      await uploadPropertyAssets(response.data.id);
+    }
     showAlert?.('Property listing created.', 'success');
     resetPropertyForm();
     closePropertyModal();
@@ -643,6 +717,26 @@ async function createProperty() {
     showAlert?.(error.response?.data?.detail || 'Failed to create property listing.', 'error');
   } finally {
     submittingProperty.value = false;
+  }
+}
+
+async function uploadPropertyAssets(propertyId) {
+  if (selectedPropertyImageFiles.value.length) {
+    const imageData = new FormData();
+    imageData.append('media_type', 'IMAGE');
+    selectedPropertyImageFiles.value.forEach((file) => imageData.append('files', file));
+    await api.post(`/property/${propertyId}/upload-media/`, imageData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
+  if (selectedPropertyDocumentFiles.value.length) {
+    const documentData = new FormData();
+    documentData.append('media_type', propertyUploadDocumentType.value);
+    selectedPropertyDocumentFiles.value.forEach((file) => documentData.append('files', file));
+    await api.post(`/property/${propertyId}/upload-media/`, documentData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   }
 }
 
@@ -683,6 +777,33 @@ onMounted(loadDashboard);
   padding: 1rem;
   border: 1px solid rgba(20, 20, 20, 0.08);
   background: rgba(247, 244, 239, 0.8);
+}
+
+.pz-upload-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.pz-upload-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px dashed rgba(10, 10, 15, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.pz-upload-card__title {
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pz-color-text-secondary);
+}
+
+.pz-upload-selection {
+  font-size: 0.8rem;
+  color: var(--pz-color-earth-orange);
 }
 
 .pz-manager-feed {

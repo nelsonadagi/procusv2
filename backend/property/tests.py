@@ -1,5 +1,6 @@
 import pytest
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 
 from platform_settings.models import Country
@@ -11,6 +12,7 @@ from property.models import (
     PropertySpecification,
     PropertyPricingProfile,
     PropertyFeature,
+    PropertyMediaAsset,
 )
 from taxonomy.models import Category, TaxonomyType
 
@@ -215,3 +217,26 @@ class TestPropertyAPI:
 
         assert response.status_code == status.HTTP_201_CREATED
         assert PropertyAppointment.objects.filter(property=prop, full_name='Prospective Buyer').exists()
+
+    def test_owner_can_upload_multiple_property_media_files(self, api_client, project_owner):
+        api_client.force_authenticate(user=project_owner)
+        prop = PropertyListing.objects.create(
+            owner=project_owner,
+            title='Media Ready Asset',
+            description='Managed asset',
+            asset_type=PropertyListing.Type.RESIDENTIAL,
+            price_estimate=250000,
+        )
+
+        url = reverse('propertylisting-upload-media', args=[prop.id])
+        image_one = SimpleUploadedFile("front.jpg", b"front_image", content_type="image/jpeg")
+        image_two = SimpleUploadedFile("rear.jpg", b"rear_image", content_type="image/jpeg")
+
+        response = api_client.post(
+            url,
+            {'files': [image_one, image_two], 'media_type': PropertyMediaAsset.MediaType.IMAGE},
+            format='multipart',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert prop.media_assets.count() == 2
