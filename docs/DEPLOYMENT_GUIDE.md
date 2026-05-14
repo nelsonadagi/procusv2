@@ -28,13 +28,15 @@ Docker Compose will run:
 
 ---
 
-## 3. Environment Variables
+## 3. Production Variables
 
 Local Docker uses Compose defaults and does not require a `.env` file. For the normal Docker production deployment, provide only these required values through the deployment environment, CI/CD secrets, Docker secrets, or the orchestrator secret store:
 
-* PUBLIC_DOMAIN
-* POSTGRES_PASSWORD
-* DJANGO_SECRET_KEY
+```bash
+export PUBLIC_DOMAIN=paanguzo.iqsaccodigital.com
+export POSTGRES_PASSWORD='<generated-by-scripts-deploy-prod>'
+export DJANGO_SECRET_KEY='<generated-by-scripts-deploy-prod>'
+```
 
 The production compose file derives the rest from those three values. Override these only when the deployment needs custom infrastructure:
 
@@ -47,11 +49,24 @@ The production compose file derives the rest from those three values. Override t
 * VITE_WS_URL
 * PAYMENT_PROVIDER_KEYS
 
-The helper script can generate the required secret values for a Docker deployment run:
+For this deployment, the derived values are:
+
+```env
+POSTGRES_DB=marketplace
+POSTGRES_USER=postgres
+DATABASE_URL=postgres://postgres:<POSTGRES_PASSWORD>@postgres:5432/marketplace
+ALLOWED_HOSTS=paanguzo.iqsaccodigital.com
+CORS_ALLOWED_ORIGINS=https://paanguzo.iqsaccodigital.com
+CSRF_TRUSTED_ORIGINS=https://paanguzo.iqsaccodigital.com
+VITE_API_URL=https://paanguzo.iqsaccodigital.com/api
+VITE_WS_URL=wss://paanguzo.iqsaccodigital.com/ws/notifications/
+```
+
+The helper script can generate and persist the required secret values for this Docker deployment:
 
 ```bash
-scripts/deploy-prod.sh your-domain.example --config
-scripts/deploy-prod.sh your-domain.example
+scripts/deploy-prod.sh paanguzo.iqsaccodigital.com --config
+scripts/deploy-prod.sh paanguzo.iqsaccodigital.com
 ```
 
 The script does not create a `.env` file. For local Docker deployments, it saves generated secrets in `.deploy/prod-vars.sh`, which is ignored by git, so redeploys reuse the same Postgres password and Django secret. The Postgres image creates the configured database automatically on first boot when the database volume is empty.
@@ -59,12 +74,68 @@ The script does not create a `.env` file. For local Docker deployments, it saves
 For repeatable production redeploys, generate the exports once and save them in the host or CI/CD secret store:
 
 ```bash
-scripts/generate-prod-vars.sh your-domain.example
+scripts/generate-prod-vars.sh paanguzo.iqsaccodigital.com
 ```
 
 ---
 
-## 4. Docker Compose Structure
+## 4. Copy-Paste Production Deployment
+
+Run these commands on the production server from the repository root.
+
+### First Deploy
+
+```bash
+git pull
+scripts/deploy-prod.sh paanguzo.iqsaccodigital.com --config
+scripts/deploy-prod.sh paanguzo.iqsaccodigital.com
+```
+
+### Redeploy Existing Server
+
+The first deploy creates `.deploy/prod-vars.sh`. Keep that file on the server so Postgres and Django reuse the same secrets.
+
+```bash
+git pull
+scripts/deploy-prod.sh paanguzo.iqsaccodigital.com --config
+scripts/deploy-prod.sh paanguzo.iqsaccodigital.com
+```
+
+### Manual Export Alternative
+
+Use this only if the three values are stored by your hosting platform or CI/CD secrets:
+
+```bash
+export PUBLIC_DOMAIN=paanguzo.iqsaccodigital.com
+export POSTGRES_PASSWORD='<saved-postgres-password>'
+export DJANGO_SECRET_KEY='<saved-django-secret-key>'
+
+make prod-config
+make prod
+```
+
+### Check Logs
+
+```bash
+scripts/prod-compose.sh ps
+scripts/prod-compose.sh logs -f --tail=150
+```
+
+### Stop Production Stack
+
+```bash
+scripts/prod-compose.sh down
+```
+
+Do not remove volumes unless you intentionally want to delete the database:
+
+```bash
+scripts/prod-compose.sh down -v
+```
+
+---
+
+## 5. Docker Compose Structure
 
 Root `docker-compose.yml` should define:
 
@@ -101,7 +172,7 @@ Services:
 
 ---
 
-## 5. Local Development Workflow
+## 6. Local Development Workflow
 
 1. Clone repo
 2. Start stack:
@@ -118,19 +189,22 @@ docker-compose up --build
 
 ---
 
-## 6. Production Deployment Notes
+## 7. Production Deployment Notes
 
 Phase 1 production recommendations:
 
-* Use managed Postgres (AWS RDS/Supabase)
-* Use managed Redis
-* Run backend behind Nginx reverse proxy
+* Keep `.deploy/prod-vars.sh` backed up or move the values into a secret store
+* Do not commit `.deploy/`, `.env`, or any secret file
+* Point DNS for `paanguzo.iqsaccodigital.com` to the production server
+* Terminate HTTPS at the host reverse proxy or load balancer
+* Run backend behind a reverse proxy
 * Enable HTTPS
-* Store media assets in S3
+* Use managed Postgres and Redis when moving beyond single-server Docker
+* Store media assets in S3-compatible storage when moving beyond single-server Docker
 
 ---
 
-## 7. CI/CD Readiness
+## 8. CI/CD Readiness
 
 Recommended pipeline steps:
 
