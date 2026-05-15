@@ -4,12 +4,14 @@ set -euo pipefail
 SECRETS_FILE=".deploy/prod-vars.sh"
 
 if [[ ! -f "$SECRETS_FILE" ]]; then
-  echo "Missing $SECRETS_FILE." >&2
-  echo "Run: scripts/deploy-prod.sh paanguzo.iqsaccodigital.com --config" >&2
-  exit 1
+  echo "Missing $SECRETS_FILE. Creating production variables for paanguzo.iqsaccodigital.com..." >&2
 fi
 
-# shellcheck disable=SC1090
-source "$SECRETS_FILE"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/prod-env.sh"
+
+load_prod_env "$DEFAULT_PUBLIC_DOMAIN"
+write_prod_env
 
 COMPOSE_DISABLE_ENV_FILE=1 docker compose -f docker-compose.yml -f docker-compose.prod.yml "$@"

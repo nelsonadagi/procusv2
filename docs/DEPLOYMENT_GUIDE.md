@@ -87,8 +87,8 @@ Run these commands on the production server from the repository root.
 
 ```bash
 git pull
-scripts/deploy-prod.sh paanguzo.iqsaccodigital.com --config
-scripts/deploy-prod.sh paanguzo.iqsaccodigital.com
+scripts/deploy-prod.sh --config
+scripts/deploy-prod.sh
 ```
 
 ### Redeploy Existing Server
@@ -97,8 +97,8 @@ The first deploy creates `.deploy/prod-vars.sh`. Keep that file on the server so
 
 ```bash
 git pull
-scripts/deploy-prod.sh paanguzo.iqsaccodigital.com --config
-scripts/deploy-prod.sh paanguzo.iqsaccodigital.com
+scripts/deploy-prod.sh --config
+scripts/deploy-prod.sh
 ```
 
 ### Manual Export Alternative
