@@ -41,9 +41,10 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'db_name')\gexec
 SQL
 
 echo "Verifying Django database connection..."
-compose run --rm --no-deps --build \
+compose run --rm -T --no-deps --build \
   -e RUN_BOOTSTRAP_TASKS=0 \
-  backend python - <<'PY'
+  --entrypoint python \
+  backend - <<'PY'
 import os
 import sys
 
