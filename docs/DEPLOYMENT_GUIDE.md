@@ -71,6 +71,8 @@ scripts/deploy-prod.sh paanguzo.iqsaccodigital.com
 
 The script does not create a `.env` file. For local Docker deployments, it saves generated secrets in `.deploy/prod-vars.sh`, which is ignored by git, so redeploys reuse the same Postgres password and Django secret. The Postgres image creates the configured database automatically on first boot when the database volume is empty.
 
+During deployment, the helper also runs `scripts/prepare-postgres.sh`. That script starts Postgres, sets the `postgres` user password to the saved deployment password, creates the `marketplace` database if it does not exist, and verifies that Django can connect before the backend is started.
+
 For repeatable production redeploys, generate the exports once and save them in the host or CI/CD secret store:
 
 ```bash
@@ -119,6 +121,29 @@ make prod
 ```bash
 scripts/prod-compose.sh ps
 scripts/prod-compose.sh logs -f --tail=150
+```
+
+### Backend Stuck Waiting For Postgres
+
+If backend logs repeat this:
+
+```text
+Postgres is unavailable - sleeping
+```
+
+but `scripts/prod-compose.sh ps` shows Postgres is healthy, run the Postgres preparation script:
+
+```bash
+scripts/prepare-postgres.sh
+scripts/prod-compose.sh up -d --force-recreate backend celery-worker celery-beat
+scripts/prod-compose.sh logs backend --tail=120
+```
+
+Only use a volume reset when you intentionally want to delete and recreate the database:
+
+```bash
+scripts/prod-compose.sh down -v
+scripts/deploy-prod.sh
 ```
 
 ### Stop Production Stack

@@ -82,6 +82,8 @@ else
     echo "Generated secrets were saved to $SECRETS_FILE for repeatable redeploys."
     echo "Back up this file or move these values into your deployment platform's secret store before relying on this server long term."
   fi
+  echo "Preparing Postgres role and database..."
+  "$SCRIPT_DIR/prepare-postgres.sh"
   echo "Starting production stack..."
   COMPOSE_DISABLE_ENV_FILE=1 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 fi

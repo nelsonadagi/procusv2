@@ -30,8 +30,14 @@ PY
 log_step "⏳ Waiting for postgres"
 
 # Wait specifically for the database so other startup failures remain visible.
-until wait_for_database > /dev/null 2>&1; do
-  >&2 echo "Postgres is unavailable - sleeping"
+attempt=0
+until wait_for_database; do
+  attempt=$((attempt + 1))
+  if [ $attempt -lt 5 ]; then
+    >&2 echo "Postgres is unavailable - sleeping"
+  else
+    >&2 echo "Postgres is unavailable - sleeping (see database error above)"
+  fi
   sleep 1
 done
 

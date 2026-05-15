@@ -23,6 +23,11 @@ load_prod_env() {
   export PUBLIC_DOMAIN="${requested_domain:-${PUBLIC_DOMAIN:-$DEFAULT_PUBLIC_DOMAIN}}"
   export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(random_secret)}"
   export DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY:-$(random_secret)}"
+
+  # Keep generated database passwords URL-safe because DATABASE_URL embeds them.
+  if ! printf "%s" "$POSTGRES_PASSWORD" | grep -Eq '^[A-Za-z0-9]+$'; then
+    export POSTGRES_PASSWORD="$(random_secret)"
+  fi
 }
 
 write_prod_env() {
