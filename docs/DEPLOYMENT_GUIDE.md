@@ -73,6 +73,8 @@ The script does not create a `.env` file. For local Docker deployments, it saves
 
 During deployment, the helper also runs `scripts/prepare-postgres.sh`. That script starts Postgres, sets the `postgres` user password to the saved deployment password, creates the `marketplace` database if it does not exist, and verifies that Django can connect before the backend is started.
 
+The helper also runs `scripts/install-host-nginx.sh` when Nginx is installed and the command is running as root. It installs `infra/nginx/paanguzo.iqsaccodigital.com.conf`, enables it, tests Nginx, and reloads the host proxy.
+
 For repeatable production redeploys, generate the exports once and save them in the host or CI/CD secret store:
 
 ```bash
@@ -129,6 +131,34 @@ scripts/prod-compose.sh logs -f --tail=150
 curl -I http://localhost:5173
 curl -I http://localhost:8007/admin/
 curl -I http://localhost:8007/api/
+```
+
+### Host Nginx
+
+The production host Nginx config is:
+
+```bash
+infra/nginx/paanguzo.iqsaccodigital.com.conf
+```
+
+Install or refresh it manually with:
+
+```bash
+scripts/install-host-nginx.sh
+```
+
+It proxies:
+
+```text
+http://paanguzo.iqsaccodigital.com/      -> frontend container on 127.0.0.1:5173
+http://paanguzo.iqsaccodigital.com/api/  -> backend container on 127.0.0.1:8007
+http://paanguzo.iqsaccodigital.com/ws/   -> backend websocket endpoint on 127.0.0.1:8007
+```
+
+After DNS points to the server, enable HTTPS:
+
+```bash
+certbot --nginx -d paanguzo.iqsaccodigital.com
 ```
 
 If the backend local checks return `400 Bad Request`, Django is rejecting the request host. Pull the latest deployment config and recreate backend:

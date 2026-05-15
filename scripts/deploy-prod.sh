@@ -86,4 +86,6 @@ else
   "$SCRIPT_DIR/prepare-postgres.sh"
   echo "Starting production stack..."
   COMPOSE_DISABLE_ENV_FILE=1 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+  echo "Configuring host Nginx if available..."
+  "$SCRIPT_DIR/install-host-nginx.sh" || echo "Host Nginx install needs attention; Docker stack is still deployed."
 fi
