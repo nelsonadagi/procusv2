@@ -55,7 +55,7 @@ For this deployment, the derived values are:
 POSTGRES_DB=marketplace
 POSTGRES_USER=postgres
 DATABASE_URL=postgres://postgres:<POSTGRES_PASSWORD>@postgres:5432/marketplace
-ALLOWED_HOSTS=paanguzo.iqsaccodigital.com
+ALLOWED_HOSTS=paanguzo.iqsaccodigital.com,localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=https://paanguzo.iqsaccodigital.com
 CSRF_TRUSTED_ORIGINS=https://paanguzo.iqsaccodigital.com
 VITE_API_URL=https://paanguzo.iqsaccodigital.com/api
@@ -121,6 +121,21 @@ make prod
 ```bash
 scripts/prod-compose.sh ps
 scripts/prod-compose.sh logs -f --tail=150
+```
+
+### Local Health Checks
+
+```bash
+curl -I http://localhost:5173
+curl -I http://localhost:8007/admin/
+curl -I http://localhost:8007/api/
+```
+
+If the backend local checks return `400 Bad Request`, Django is rejecting the request host. Pull the latest deployment config and recreate backend:
+
+```bash
+git pull
+scripts/prod-compose.sh up -d --force-recreate backend celery-worker celery-beat
 ```
 
 ### Backend Stuck Waiting For Postgres
