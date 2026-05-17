@@ -220,10 +220,20 @@
             <div v-else-if="activeEditorSection === 'media'" class="pz-operator-form-body">
               <div v-if="property?.media_assets?.length" class="pz-existing-assets">
                 <div class="pz-existing-assets__title">Current Media And Documents</div>
-                <div class="pz-chip-list">
-                  <span v-for="asset in property.media_assets" :key="asset.id" class="pz-chip">
-                    {{ asset.media_type }} · {{ asset.title || asset.alt_text || 'Untitled asset' }}
-                  </span>
+                <div class="pz-existing-assets__grid">
+                  <div v-for="asset in property.media_assets" :key="asset.id" class="pz-existing-asset">
+                    <img
+                      v-if="asset.media_type === 'IMAGE' && (resolveMediaUrl(asset.media_url) || asset.external_url)"
+                      :src="resolveMediaUrl(asset.media_url) || asset.external_url"
+                      :alt="asset.alt_text || asset.title || 'Property image'"
+                      class="pz-existing-asset__thumb"
+                    />
+                    <div v-else class="pz-existing-asset__doc">
+                      <span class="pz-existing-asset__doc-icon">📄</span>
+                      <span class="pz-existing-asset__doc-name">{{ asset.title || asset.alt_text || 'Document' }}</span>
+                    </div>
+                    <div class="pz-existing-asset__meta">{{ asset.media_type }}</div>
+                  </div>
                 </div>
               </div>
 
@@ -238,6 +248,15 @@
                   </div>
                   <div v-if="selectedPropertyImageFiles.length" class="pz-upload-selection">
                     {{ selectedPropertyImageFiles.length }} image{{ selectedPropertyImageFiles.length === 1 ? '' : 's' }} selected.
+                  </div>
+                  <div v-if="selectedPropertyImagePreviews.length" class="pz-upload-preview-grid">
+                    <img
+                      v-for="(preview, idx) in selectedPropertyImagePreviews"
+                      :key="idx"
+                      :src="preview"
+                      class="pz-upload-preview-thumb"
+                      alt="Selected preview"
+                    />
                   </div>
                 </div>
 
@@ -359,10 +378,18 @@ const activeEditorSection = ref('listing');
 const propertyImageInput = ref(null);
 const propertyDocumentInput = ref(null);
 const selectedPropertyImageFiles = ref([]);
+const selectedPropertyImagePreviews = ref([]);
 const selectedPropertyDocumentFiles = ref([]);
 const propertyUploadDocumentType = ref('DOCUMENT');
 const defaultCurrencyCode = computed(() => configStore.activeCurrencyCode || 'KES');
 const operatorForm = ref(createDefaultOperatorForm());
+
+const mediaBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+function resolveMediaUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${mediaBaseUrl}${url}`;
+}
 
 const editorSectionIcons = {
   listing: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
@@ -649,6 +676,8 @@ function triggerPropertyDocumentUpload() {
 
 function handlePropertyImagesSelected(event) {
   selectedPropertyImageFiles.value = Array.from(event.target.files || []);
+  selectedPropertyImagePreviews.value.forEach((url) => URL.revokeObjectURL(url));
+  selectedPropertyImagePreviews.value = selectedPropertyImageFiles.value.map((file) => URL.createObjectURL(file));
 }
 
 function handlePropertyDocumentsSelected(event) {
@@ -656,7 +685,9 @@ function handlePropertyDocumentsSelected(event) {
 }
 
 function clearSelectedPropertyImages() {
+  selectedPropertyImagePreviews.value.forEach((url) => URL.revokeObjectURL(url));
   selectedPropertyImageFiles.value = [];
+  selectedPropertyImagePreviews.value = [];
   if (propertyImageInput.value) propertyImageInput.value.value = '';
 }
 
@@ -989,5 +1020,75 @@ onMounted(() => {
   .pz-editor-shell {
     grid-template-columns: 1fr;
   }
+}
+
+.pz-existing-assets__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.pz-existing-asset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pz-existing-asset__thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+}
+
+.pz-existing-asset__doc {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 8px;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: #f8f9fb;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.pz-existing-asset__doc-icon {
+  font-size: 1.25rem;
+}
+
+.pz-existing-asset__doc-name {
+  font-size: 0.65rem;
+  color: var(--pz-color-structural-steel);
+  word-break: break-word;
+}
+
+.pz-existing-asset__meta {
+  font-family: var(--pz-font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pz-color-concrete-grey);
+  text-align: center;
+}
+
+.pz-upload-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.pz-upload-preview-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(10, 10, 15, 0.1);
 }
 </style>

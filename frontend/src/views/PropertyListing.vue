@@ -230,8 +230,8 @@
             <!-- Image Section -->
             <div class="pz-property-card__image-wrap">
               <img
-                v-if="prop.primary_media?.media_url || prop.primary_media?.external_url"
-                :src="prop.primary_media?.media_url || prop.primary_media?.external_url"
+                v-if="resolveMediaUrl(prop.primary_media?.media_url) || prop.primary_media?.external_url"
+                :src="resolveMediaUrl(prop.primary_media?.media_url) || prop.primary_media?.external_url"
                 :alt="prop.primary_media?.alt_text || prop.title"
                 class="pz-property-card__image"
                 loading="lazy"
@@ -467,6 +467,13 @@ import { detectUserLocation, getStoredLocation } from '../utils/location';
 
 const configStore = useConfigStore();
 const router = useRouter();
+
+const mediaBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+function resolveMediaUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${mediaBaseUrl}${url}`;
+}
 
 const properties = ref([]);
 const loading = ref(true);

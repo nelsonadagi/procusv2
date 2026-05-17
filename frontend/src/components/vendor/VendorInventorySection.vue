@@ -86,11 +86,25 @@
 
     <Modal :isOpen="showProductModal" :title="editingProductId ? 'EDIT_MATERIAL_RECORD' : 'PUBLISH_NEW_MATERIAL'" size="xl" @close="closeProductModal">
       <form id="product-form" class="pz-product-form" @submit.prevent="saveProduct">
-        <section class="pz-form-section">
-          <div class="pz-form-section__header">
-            <div class="pz-form-section__eyebrow">Commercial Setup</div>
-            <h4>Core Listing</h4>
-          </div>
+        <div class="pz-modal-tabs">
+          <button
+            v-for="tab in materialFormTabs"
+            :key="tab.id"
+            type="button"
+            class="pz-modal-tab"
+            :class="{ 'pz-modal-tab--active': activeProductTab === tab.id }"
+            @click="activeProductTab = tab.id"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
+        <div v-show="activeProductTab === 'commercial'" class="pz-modal-panel">
+          <section class="pz-form-section">
+            <div class="pz-form-section__header">
+              <div class="pz-form-section__eyebrow">Commercial Setup</div>
+              <h4>Core Listing</h4>
+            </div>
           <div class="pz-l-grid pz-l-grid--md-cols-2 pz-l-grid--gap-4">
             <PzInput v-model="productForm.name" label="Material Name" required />
             <div class="pz-input-wrapper">
@@ -152,14 +166,16 @@
               <PzInput v-model="productForm.handling_instructions" label="Handling Instructions" type="textarea" />
             </div>
           </div>
-        </section>
+          </section>
+        </div>
 
-        <section class="pz-form-section">
-          <div class="pz-form-section__header">
-            <div class="pz-form-section__eyebrow">Technical Layer</div>
-            <h4>Structured Attributes</h4>
-            <Button size="sm" variant="ghost" type="button" @click="addAttribute">Add Attribute</Button>
-          </div>
+        <div v-show="activeProductTab === 'technical'" class="pz-modal-panel">
+          <section class="pz-form-section">
+            <div class="pz-form-section__header">
+              <div class="pz-form-section__eyebrow">Technical Layer</div>
+              <h4>Structured Attributes</h4>
+              <Button size="sm" variant="ghost" type="button" @click="addAttribute">Add Attribute</Button>
+            </div>
           <div v-if="productForm.attribute_entries.length" class="pz-repeaters">
             <div v-for="(attribute, index) in productForm.attribute_entries" :key="`attribute-${index}`" class="pz-repeater-row">
               <PzInput v-model="attribute.group" label="Group" />
@@ -177,14 +193,16 @@
             </div>
           </div>
           <p v-else class="pz-u-color-steel text-sm">No structured attributes added yet.</p>
-        </section>
+          </section>
+        </div>
 
-        <section class="pz-form-section">
-          <div class="pz-form-section__header">
-            <div class="pz-form-section__eyebrow">Compliance</div>
-            <h4>Certifications</h4>
-            <Button size="sm" variant="ghost" type="button" @click="addCertification">Add Certification</Button>
-          </div>
+        <div v-show="activeProductTab === 'compliance'" class="pz-modal-panel">
+          <section class="pz-form-section">
+            <div class="pz-form-section__header">
+              <div class="pz-form-section__eyebrow">Compliance</div>
+              <h4>Certifications</h4>
+              <Button size="sm" variant="ghost" type="button" @click="addCertification">Add Certification</Button>
+            </div>
           <div v-if="productForm.certification_entries.length" class="pz-repeaters">
             <div v-for="(certification, index) in productForm.certification_entries" :key="`certification-${index}`" class="pz-repeater-row">
               <div class="pz-input-wrapper">
@@ -210,14 +228,16 @@
             </div>
           </div>
           <p v-else class="pz-u-color-steel text-sm">No certification records added yet.</p>
-        </section>
+          </section>
+        </div>
 
-        <section class="pz-form-section">
-          <div class="pz-form-section__header">
-            <div class="pz-form-section__eyebrow">Procurement Pack</div>
-            <h4>Documents</h4>
-            <Button size="sm" variant="ghost" type="button" @click="addDocument">Add Document</Button>
-          </div>
+        <div v-show="activeProductTab === 'documents'" class="pz-modal-panel">
+          <section class="pz-form-section">
+            <div class="pz-form-section__header">
+              <div class="pz-form-section__eyebrow">Procurement Pack</div>
+              <h4>Documents</h4>
+              <Button size="sm" variant="ghost" type="button" @click="addDocument">Add Document</Button>
+            </div>
           <div v-if="productForm.documents.length" class="pz-repeaters">
             <div v-for="(document, index) in productForm.documents" :key="`document-${index}`" class="pz-repeater-row">
               <div class="pz-input-wrapper">
@@ -245,13 +265,15 @@
             </div>
           </div>
           <p v-else class="pz-u-color-steel text-sm">No supporting documents added yet.</p>
-        </section>
+          </section>
+        </div>
 
-        <section class="pz-form-section">
-          <div class="pz-form-section__header">
-            <div class="pz-form-section__eyebrow">Media Operations</div>
-            <h4>Images And File Uploads</h4>
-          </div>
+        <div v-show="activeProductTab === 'media'" class="pz-modal-panel">
+          <section class="pz-form-section">
+            <div class="pz-form-section__header">
+              <div class="pz-form-section__eyebrow">Media Operations</div>
+              <h4>Images And File Uploads</h4>
+            </div>
 
           <div v-if="editingProduct?.images?.length || editingProduct?.documents?.length" class="pz-existing-assets">
             <div v-if="editingProduct?.images?.length" class="pz-existing-assets__group">
@@ -339,7 +361,8 @@
               </div>
             </div>
           </div>
-        </section>
+          </section>
+        </div>
       </form>
       <template #footer>
         <Button variant="ghost" @click="closeProductModal">Cancel</Button>
@@ -468,6 +491,15 @@ const searchQuery = ref('');
 const selectedProductImageFiles = ref([]);
 const selectedProductDocumentFiles = ref([]);
 const uploadDocumentType = ref('DATASHEET');
+const activeProductTab = ref('commercial');
+
+const materialFormTabs = [
+  { id: 'commercial', label: 'Commercial' },
+  { id: 'technical', label: 'Technical' },
+  { id: 'compliance', label: 'Compliance' },
+  { id: 'documents', label: 'Documents' },
+  { id: 'media', label: 'Media' },
+];
 
 const inventoryAdjustmentForm = ref({
   quantity_delta: 0,
@@ -650,6 +682,7 @@ function removeDocument(index) {
 
 function openCreateModal() {
   editingProductId.value = null;
+  activeProductTab.value = 'commercial';
   selectedProductImageFiles.value = [];
   selectedProductDocumentFiles.value = [];
   uploadDocumentType.value = 'DATASHEET';
@@ -662,6 +695,7 @@ function openCreateModal() {
 
 function openEditModal(product) {
   editingProductId.value = product.id;
+  activeProductTab.value = 'commercial';
   selectedProductImageFiles.value = [];
   selectedProductDocumentFiles.value = [];
   uploadDocumentType.value = 'DATASHEET';
@@ -719,6 +753,7 @@ function openEditModal(product) {
 function closeProductModal() {
   showProductModal.value = false;
   editingProductId.value = null;
+  activeProductTab.value = 'commercial';
   selectedProductImageFiles.value = [];
   selectedProductDocumentFiles.value = [];
   uploadDocumentType.value = 'DATASHEET';
@@ -1028,6 +1063,61 @@ onMounted(async () => {
 .pz-repeaters {
   display: grid;
   gap: 1rem;
+}
+
+.pz-modal-tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.pz-modal-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.pz-modal-tab {
+  position: relative;
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--pz-font-display);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--pz-color-concrete-grey);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.pz-modal-tab:hover {
+  color: var(--pz-color-structural-steel);
+  background: rgba(10, 10, 15, 0.03);
+}
+.pz-modal-tab--active {
+  background: white;
+  color: var(--pz-color-earth-orange);
+  box-shadow: 0 2px 6px rgba(10, 10, 15, 0.08);
+}
+
+.pz-modal-panel {
+  animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .pz-existing-assets,

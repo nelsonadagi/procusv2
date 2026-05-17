@@ -101,8 +101,21 @@
         </div>
       </section>
 
-      <section class="pz-detail-grid u-mt-10">
-        <div class="pz-detail-main">
+      <section class="pz-detail-tabs-wrap u-mt-10">
+        <div class="pz-detail-tabs">
+          <button
+            v-for="tab in productDetailTabs"
+            :key="tab.id"
+            type="button"
+            class="pz-detail-tab"
+            :class="{ 'pz-detail-tab--active': activeDetailTab === tab.id }"
+            @click="activeDetailTab = tab.id"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
+        <div v-show="activeDetailTab === 'overview'" class="pz-detail-tab-panel">
           <div class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -112,7 +125,6 @@
             </div>
             <p class="pz-u-color-steel">{{ product.description }}</p>
           </div>
-
           <div v-if="highlightAttributes.length" class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -127,7 +139,9 @@
               </div>
             </div>
           </div>
+        </div>
 
+        <div v-show="activeDetailTab === 'specs'" class="pz-detail-tab-panel">
           <div class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -144,7 +158,6 @@
               </tbody>
             </table>
           </div>
-
           <div v-if="groupedAttributes.length" class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -166,7 +179,7 @@
           </div>
         </div>
 
-        <aside class="pz-detail-side">
+        <div v-show="activeDetailTab === 'compliance'" class="pz-detail-tab-panel">
           <div class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -183,7 +196,9 @@
             </div>
             <p v-else class="pz-u-color-steel">No structured certification records published yet.</p>
           </div>
+        </div>
 
+        <div v-show="activeDetailTab === 'documents'" class="pz-detail-tab-panel">
           <div class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -199,7 +214,9 @@
             </div>
             <p v-else class="pz-u-color-steel">Datasheets and brochures will appear here once published.</p>
           </div>
+        </div>
 
+        <div v-show="activeDetailTab === 'logistics'" class="pz-detail-tab-panel">
           <div class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -214,7 +231,6 @@
             </ul>
             <p v-if="product.handling_instructions" class="pz-u-color-steel u-mt-4">{{ product.handling_instructions }}</p>
           </div>
-
           <div class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -226,7 +242,7 @@
               <li v-for="item in applicationList" :key="item">{{ item }}</li>
             </ul>
           </div>
-        </aside>
+        </div>
       </section>
     </div>
   </div>
@@ -251,6 +267,17 @@ const product = ref(null);
 const loading = ref(true);
 const error = ref(null);
 const selectedImage = ref(null);
+const activeDetailTab = ref('overview');
+
+const productDetailTabs = computed(() => {
+  const tabs = [{ id: 'overview', label: 'Overview' }];
+  tabs.push({ id: 'specs', label: 'Specifications' });
+  tabs.push({ id: 'compliance', label: 'Compliance' });
+  tabs.push({ id: 'documents', label: 'Documents' });
+  tabs.push({ id: 'logistics', label: 'Logistics' });
+  return tabs;
+});
+
 const targetCurrencyCode = computed(() => {
   const routeCurrency = (route.query.currency || route.query.target_currency || '').toString().trim().toUpperCase();
   return routeCurrency || configStore.activeCurrencyCode || 'KES';
@@ -377,27 +404,40 @@ onMounted(fetchProduct);
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(10, 10, 15, 0.08);
-  background: #ffffff;
+  background: #f4f4f5;
   border-radius: 20px;
   box-shadow:
     0 1px 2px rgba(10, 10, 15, 0.02),
     0 8px 24px rgba(10, 10, 15, 0.06);
   aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pz-detail-gallery__main img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .pz-detail-gallery__main:hover img {
   transform: scale(1.03);
 }
+.pz-detail-gallery__thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f5;
+}
 .pz-detail-gallery__thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 .pz-detail-gallery__badges {
@@ -527,17 +567,63 @@ onMounted(fetchProduct);
   gap: 0.25rem;
 }
 
-.pz-detail-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+.pz-detail-tabs-wrap {
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
 }
 
-.pz-detail-main,
-.pz-detail-side,
-.pz-detail-stack {
+.pz-detail-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  width: fit-content;
+  max-width: 100%;
+}
+.pz-detail-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.pz-detail-tab {
+  position: relative;
+  padding: 0.7rem 1.1rem;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--pz-font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--pz-color-concrete-grey);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.pz-detail-tab:hover {
+  color: var(--pz-color-structural-steel);
+  background: rgba(10, 10, 15, 0.03);
+}
+.pz-detail-tab--active {
+  background: white;
+  color: var(--pz-color-earth-orange);
+  box-shadow: 0 2px 8px rgba(10, 10, 15, 0.08);
+}
+
+.pz-detail-tab-panel {
+  animation: fadeIn 0.25s ease;
   display: grid;
   gap: 1rem;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .pz-detail-card {
@@ -659,8 +745,8 @@ onMounted(fetchProduct);
 
 @media (max-width: 980px) {
   .pz-detail-hero,
-  .pz-detail-grid {
-    grid-template-columns: 1fr;
+  .pz-detail-tabs {
+    width: 100%;
   }
 
   .pz-detail-meta,

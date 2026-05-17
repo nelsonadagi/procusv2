@@ -4,8 +4,13 @@
     <nav class="pz-nav" :class="{ 'pz-nav--scrolled': isScrolled }">
       <div class="pz-nav__wrapper">
         <router-link to="/" class="pz-nav__logo">
-          <span class="pz-nav__logo-text">{{ $t('app.logoText') }}</span>
-          <span class="pz-nav__logo-line"></span>
+          <template v-if="platformLogoUrl">
+            <img :src="platformLogoUrl" alt="Platform logo" class="pz-nav__logo-img" />
+          </template>
+          <template v-else>
+            <span class="pz-nav__logo-text">{{ $t('app.logoText') }}</span>
+            <span class="pz-nav__logo-line"></span>
+          </template>
         </router-link>
 
         <div class="pz-nav__menu u-hide-tablet">
@@ -365,6 +370,15 @@
     role: '',
     roles: []
   });
+  const platformLogoUrl = computed(() => {
+    const logo = configStore.platformSettings?.logo;
+    if (!logo) return null;
+    if (logo.startsWith('http')) return logo;
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    const baseOrigin = apiBase.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    return `${baseOrigin}${logo}`;
+  });
+
   const formattedApprovedRoles = computed(() => {
     if (userForm.value.role === 'ADMIN') return 'Admin accounts do not carry additional non-admin roles.';
     const roles = userForm.value.roles || [];
@@ -539,6 +553,13 @@
     height: 2px;
     margin-left: 0.5rem;
     background: var(--pz-color-earth-orange);
+  }
+
+  .pz-nav__logo-img {
+    max-height: 32px;
+    width: auto;
+    object-fit: contain;
+    display: block;
   }
 
   .pz-nav__link {

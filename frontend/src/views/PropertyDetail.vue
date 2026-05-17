@@ -18,9 +18,51 @@
 
         <section class="pz-property-hero">
           <div class="pz-property-hero__media">
+            <!-- Multi-image slider -->
+            <div v-if="sliderImages.length > 1" class="pz-property-slider">
+              <div
+                class="pz-property-slider__track"
+                :style="{ transform: `translateX(-${currentSlide * 100}%)` }"
+              >
+                <div
+                  v-for="(img, idx) in sliderImages"
+                  :key="idx"
+                  class="pz-property-slider__slide"
+                >
+                  <img
+                    :src="resolveMediaUrl(img.media_url) || img.external_url"
+                    :alt="img.alt_text || img.title || property.title"
+                    class="pz-property-hero__image"
+                  />
+                </div>
+              </div>
+
+              <button class="pz-property-slider__arrow pz-property-slider__arrow--prev" @click="prevSlide">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <button class="pz-property-slider__arrow pz-property-slider__arrow--next" @click="nextSlide">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+
+              <div class="pz-property-slider__dots">
+                <button
+                  v-for="(_, idx) in sliderImages"
+                  :key="idx"
+                  class="pz-property-slider__dot"
+                  :class="{ 'pz-property-slider__dot--active': currentSlide === idx }"
+                  @click="currentSlide = idx"
+                />
+              </div>
+
+              <div class="pz-property-slider__counter">
+                {{ currentSlide + 1 }} / {{ sliderImages.length }}
+              </div>
+            </div>
+
+            <!-- Single image -->
             <img
-              v-if="heroMediaUrl"
-              :src="heroMediaUrl"
+              v-else-if="resolvedHeroMediaUrl"
+              :src="resolvedHeroMediaUrl"
               :alt="property.primary_media?.alt_text || property.title"
               class="pz-property-hero__image"
             />
@@ -114,7 +156,7 @@
               </div>
             </Card>
 
-            <div v-show="activeTab === 'overview'" class="pz-tab-panel pz-space-y-6">
+            <div v-show="activeTab === 'overview'" class="pz-tab-panel">
             <Card title="Overview" variant="premium" eyebrow="Property Details">
               <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
                 <div class="pz-property-detail__metric">
@@ -194,7 +236,7 @@
             </Card>
             </div>
 
-            <div v-show="activeTab === 'specs'" class="pz-tab-panel pz-space-y-6">
+            <div v-show="activeTab === 'specs'" class="pz-tab-panel">
             <Card title="Property Specification" variant="premium" eyebrow="Key Specs">
               <div v-if="specificationStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-3 pz-l-grid--gap-4">
                 <div v-for="stat in specificationStats" :key="stat.label" class="pz-property-detail__metric">
@@ -257,7 +299,7 @@
             </Card>
             </div>
 
-            <div v-show="activeTab === 'financials'" class="pz-tab-panel pz-space-y-6">
+            <div v-show="activeTab === 'financials'" class="pz-tab-panel">
             <Card title="Financial Structure" variant="premium" eyebrow="Pricing">
               <div v-if="financialStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
                 <div v-for="stat in financialStats" :key="stat.label" class="pz-property-detail__metric">
@@ -285,21 +327,21 @@
             </Card>
             </div>
 
-            <div v-show="activeTab === 'links'" class="pz-tab-panel pz-space-y-6">
+            <div v-show="activeTab === 'links'" class="pz-tab-panel">
             <Card v-if="mediaGallery.length" title="Media" variant="elevated" eyebrow="Gallery">
               <div class="pz-property-gallery">
                 <a
                   v-for="asset in mediaGallery"
                   :key="asset.id"
-                  :href="asset.media_url || asset.external_url"
+                  :href="resolveMediaUrl(asset.media_url) || asset.external_url"
                   class="pz-property-gallery__item"
                   target="_blank"
                   rel="noreferrer"
                 >
                   <div class="pz-property-gallery__preview">
                     <img
-                      v-if="asset.media_type === 'IMAGE' && (asset.media_url || asset.external_url)"
-                      :src="asset.media_url || asset.external_url"
+                      v-if="asset.media_type === 'IMAGE' && (resolveMediaUrl(asset.media_url) || asset.external_url)"
+                      :src="resolveMediaUrl(asset.media_url) || asset.external_url"
                       :alt="asset.alt_text || asset.title"
                     />
                     <div v-else class="pz-property-gallery__placeholder">
@@ -336,139 +378,89 @@
             </div>
           </section>
 
-          <aside class="pz-space-y-6">
-            <Card title="Showings And Visits">
-              <!-- Upcoming Showings -->
-              <div class="pz-showing-section">
-                <div class="pz-showing-section__header">
-                  <span class="pz-showing-section__title">Upcoming Showings</span>
-                  <span v-if="property.showings?.length" class="pz-showing-section__count">{{ property.showings.length }}</span>
-                </div>
+          <aside>
+            <div class="pz-sidebar-tabs">
+              <button
+                v-for="tab in sidebarTabs"
+                :key="tab.id"
+                type="button"
+                class="pz-sidebar-tab"
+                :class="{ 'pz-sidebar-tab--active': activeSidebarTab === tab.id }"
+                @click="activeSidebarTab = tab.id"
+              >
+                <span class="pz-sidebar-tab__label">{{ tab.label }}</span>
+                <span v-if="tab.badge" class="pz-sidebar-tab__badge">{{ tab.badge }}</span>
+              </button>
+            </div>
 
-                <div v-if="property.showings?.length" class="pz-showing-list">
-                  <div v-for="showing in property.showings.slice(0, 3)" :key="showing.id" class="pz-showing-item">
-                    <div class="pz-showing-item__date">
-                      <span class="pz-showing-item__day">{{ new Date(showing.start_at).toLocaleDateString(undefined, { weekday: 'short' }) }}</span>
-                      <span class="pz-showing-item__date-num">{{ new Date(showing.start_at).getDate() }}</span>
+            <div v-show="activeSidebarTab === 'showings'" class="pz-sidebar-panel">
+              <Card title="Showings And Visits">
+                <div class="pz-showing-section">
+                  <div class="pz-showing-section__header">
+                    <span class="pz-showing-section__title">Upcoming Showings</span>
+                    <span v-if="property.showings?.length" class="pz-showing-section__count">{{ property.showings.length }}</span>
+                  </div>
+                  <div v-if="property.showings?.length" class="pz-showing-list">
+                    <div v-for="showing in property.showings.slice(0, 3)" :key="showing.id" class="pz-showing-item">
+                      <div class="pz-showing-item__date">
+                        <span class="pz-showing-item__day">{{ new Date(showing.start_at).toLocaleDateString(undefined, { weekday: 'short' }) }}</span>
+                        <span class="pz-showing-item__date-num">{{ new Date(showing.start_at).getDate() }}</span>
+                      </div>
+                      <div class="pz-showing-item__info">
+                        <strong>{{ readableShowingType(showing.event_type) }}</strong>
+                        <span>{{ new Date(showing.start_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
+                        <span v-if="showing.instructions" class="pz-showing-item__note">{{ showing.instructions }}</span>
+                      </div>
                     </div>
-                    <div class="pz-showing-item__info">
-                      <strong>{{ readableShowingType(showing.event_type) }}</strong>
-                      <span>{{ new Date(showing.start_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
-                      <span v-if="showing.instructions" class="pz-showing-item__note">{{ showing.instructions }}</span>
+                    <div v-if="property.showings.length > 3" class="pz-showing-more">
+                      +{{ property.showings.length - 3 }} more showing{{ property.showings.length - 3 > 1 ? 's' : '' }}
                     </div>
                   </div>
-                  <div v-if="property.showings.length > 3" class="pz-showing-more">
-                    +{{ property.showings.length - 3 }} more showing{{ property.showings.length - 3 > 1 ? 's' : '' }}
+                  <p v-else class="pz-showing-empty">No upcoming showings scheduled.</p>
+                </div>
+                <div v-if="property.showings?.length && availableSlots.length" class="pz-showing-divider"></div>
+                <div class="pz-showing-section">
+                  <div class="pz-showing-section__header">
+                    <span class="pz-showing-section__title">Book a Visit</span>
+                    <span v-if="availableSlots.length" class="pz-showing-section__count pz-showing-section__count--available">{{ availableSlots.length }} slot{{ availableSlots.length > 1 ? 's' : '' }}</span>
                   </div>
-                </div>
-                <p v-else class="pz-showing-empty">No upcoming showings scheduled.</p>
-              </div>
-
-              <!-- Divider -->
-              <div v-if="property.showings?.length && availableSlots.length" class="pz-showing-divider"></div>
-
-              <!-- Book a Visit -->
-              <div class="pz-showing-section">
-                <div class="pz-showing-section__header">
-                  <span class="pz-showing-section__title">Book a Visit</span>
-                  <span v-if="availableSlots.length" class="pz-showing-section__count pz-showing-section__count--available">{{ availableSlots.length }} slot{{ availableSlots.length > 1 ? 's' : '' }}</span>
-                </div>
-
-                <div v-if="availableSlots.length" class="pz-slot-list">
-                  <button
-                    v-for="slot in availableSlots"
-                    :key="slot.start_at"
-                    type="button"
-                    class="pz-slot-card"
-                    :class="{ 'pz-slot-card--selected': selectedSlot?.start_at === slot.start_at }"
-                    @click="selectedSlot = slot"
-                  >
-                    <span class="pz-slot-card__day">{{ new Date(slot.start_at).toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase() }}</span>
-                    <span class="pz-slot-card__date">{{ new Date(slot.start_at).getDate() }}</span>
-                    <span class="pz-slot-card__time">{{ new Date(slot.start_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
-                  </button>
-                </div>
-
-                <!-- Selected Slot Summary -->
-                <div v-if="selectedSlot" class="pz-slot-selected">
-                  <span class="pz-slot-selected__label">Selected</span>
-                  <span class="pz-slot-selected__value">{{ formatSlot(selectedSlot) }}</span>
-                  <button type="button" class="pz-slot-selected__clear" @click="selectedSlot = null">×</button>
-                </div>
-
-                <!-- Booking Form -->
-                <form v-if="selectedSlot" class="pz-booking-form" @submit.prevent="submitAppointment">
-                  <div class="pz-booking-form__row">
-                    <PzInput v-model="appointmentForm.full_name" label="Full Name" required size="sm" />
-                    <PzInput v-model="appointmentForm.email" label="Email" type="email" size="sm" />
+                  <div v-if="availableSlots.length" class="pz-slot-list">
+                    <button
+                      v-for="slot in availableSlots"
+                      :key="slot.start_at"
+                      type="button"
+                      class="pz-slot-card"
+                      :class="{ 'pz-slot-card--selected': selectedSlot?.start_at === slot.start_at }"
+                      @click="selectedSlot = slot"
+                    >
+                      <span class="pz-slot-card__day">{{ new Date(slot.start_at).toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase() }}</span>
+                      <span class="pz-slot-card__date">{{ new Date(slot.start_at).getDate() }}</span>
+                      <span class="pz-slot-card__time">{{ new Date(slot.start_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
+                    </button>
                   </div>
-                  <PzInput v-model="appointmentForm.phone_number" label="Phone Number" size="sm" />
-                  <textarea v-model="appointmentForm.notes" class="pz-input" rows="2" placeholder="Add visit notes or questions" />
-                  <Button type="submit" variant="primary" fullWidth size="sm" :loading="submittingAppointment">Confirm Booking</Button>
-                </form>
-
-                <p v-else-if="!availableSlots.length" class="pz-showing-empty">No public appointment slots are currently available. Check back soon or send an inquiry.</p>
-              </div>
-            </Card>
-
-            <Card title="Availability Snapshot" eyebrow="Status">
-              <div class="pz-space-y-3">
-                <div v-for="stat in availabilityStats" :key="stat.label" class="pz-property-detail__metric">
-                  <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
-                  <div class="pz-metric__content">
-                    <span class="pz-property-detail__label">{{ stat.label }}</span>
-                    <span class="pz-property-detail__value">{{ stat.value }}</span>
+                  <div v-if="selectedSlot" class="pz-slot-selected">
+                    <span class="pz-slot-selected__label">Selected</span>
+                    <span class="pz-slot-selected__value">{{ formatSlot(selectedSlot) }}</span>
+                    <button type="button" class="pz-slot-selected__clear" @click="selectedSlot = null">×</button>
                   </div>
+                  <form v-if="selectedSlot" class="pz-booking-form" @submit.prevent="submitAppointment">
+                    <div class="pz-booking-form__row">
+                      <PzInput v-model="appointmentForm.full_name" label="Full Name" required size="sm" />
+                      <PzInput v-model="appointmentForm.email" label="Email" type="email" size="sm" />
+                    </div>
+                    <PzInput v-model="appointmentForm.phone_number" label="Phone Number" size="sm" />
+                    <textarea v-model="appointmentForm.notes" class="pz-input" rows="2" placeholder="Add visit notes or questions" />
+                    <Button type="submit" variant="primary" fullWidth size="sm" :loading="submittingAppointment">Confirm Booking</Button>
+                  </form>
+                  <p v-else-if="!availableSlots.length" class="pz-showing-empty">No public appointment slots are currently available. Check back soon or send an inquiry.</p>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
 
-            <Card title="Inquiry" variant="accent" eyebrow="Get In Touch">
-              <div v-if="property.inquiry_enabled !== false" class="pz-space-y-4">
-                <form class="pz-space-y-4" @submit.prevent="submitInquiry">
-                  <PzInput v-model="inquiryForm.full_name" label="Full Name" required />
-                  <PzInput v-model="inquiryForm.email" label="Email" type="email" />
-                  <PzInput v-model="inquiryForm.phone_number" label="Phone Number" />
-                  <select v-model="inquiryForm.inquiry_type" class="pz-input">
-                    <option value="GENERAL">General</option>
-                    <option value="VIEWING">Viewing</option>
-                    <option value="FINANCING">Financing</option>
-                    <option value="MATERIALS">Materials</option>
-                    <option value="SERVICE">Service</option>
-                  </select>
-                  <textarea v-model="inquiryForm.message" class="pz-input" rows="4" placeholder="How can the owner or manager help?" />
-                  <Button type="submit" variant="primary" fullWidth :loading="submittingInquiry">Send Inquiry</Button>
-                </form>
-              </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Inquiries are currently disabled for this property.</p>
-            </Card>
-
-            <Card title="Financing" variant="accent" eyebrow="Funding">
-              <div v-if="financeProducts.length" class="pz-space-y-4">
-                <div class="pz-property-side-note">
-                  <span class="pz-u-text-mono text-xs pz-u-color-concrete">Finance target</span>
-                  <strong>{{ property.financing_allowed ? 'Property-ready application' : 'Project-linked finance only' }}</strong>
-                </div>
-                <select v-model="financeForm.product" class="pz-input">
-                  <option disabled value="">Select financing product</option>
-                  <option v-for="product in financeProducts" :key="product.id" :value="product.id">{{ product.name }}</option>
-                </select>
-                <select v-model="financeForm.purpose_category" class="pz-input">
-                  <option value="ACQUISITION">Acquisition</option>
-                  <option value="COMPLETION">Completion</option>
-                  <option value="RENOVATION">Renovation</option>
-                </select>
-                <PzInput v-model="financeForm.requested_amount" type="number" label="Requested Amount" />
-                <textarea v-model="financeForm.purpose" class="pz-input" rows="3" placeholder="Describe what the financing will support" />
-                <Button variant="primary" fullWidth :loading="submittingFinance" @click="submitFinance">Apply For Financing</Button>
-              </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Financing products are not available at the moment.</p>
-            </Card>
-
-            <Card v-if="operatorView" title="Operator Feed" variant="elevated">
-              <div class="pz-space-y-4">
-                <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
-                  <div v-for="stat in operatorStats" :key="stat.label" class="pz-property-detail__metric">
+            <div v-show="activeSidebarTab === 'status'" class="pz-sidebar-panel">
+              <Card title="Availability Snapshot" eyebrow="Status">
+                <div class="pz-space-y-3">
+                  <div v-for="stat in availabilityStats" :key="stat.label" class="pz-property-detail__metric">
                     <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
                     <div class="pz-metric__content">
                       <span class="pz-property-detail__label">{{ stat.label }}</span>
@@ -476,30 +468,92 @@
                     </div>
                   </div>
                 </div>
-                <div>
-                  <div class="pz-u-text-mono text-xs pz-u-color-earth u-mb-2">Recent Inquiries</div>
-                  <div v-if="operatorInquiries.length" class="pz-space-y-2">
-                    <div v-for="inquiry in operatorInquiries.slice(0, 4)" :key="inquiry.id" class="pz-property-detail__feed">
-                      <strong>{{ inquiry.full_name }}</strong>
-                      <span>{{ inquiry.inquiry_type }}</span>
-                      <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ inquiry.email || inquiry.phone_number || 'No contact provided' }}</span>
+              </Card>
+            </div>
+
+            <div v-show="activeSidebarTab === 'inquiry'" class="pz-sidebar-panel">
+              <Card title="Inquiry" variant="accent" eyebrow="Get In Touch">
+                <div v-if="property.inquiry_enabled !== false" class="pz-space-y-4">
+                  <form class="pz-space-y-4" @submit.prevent="submitInquiry">
+                    <PzInput v-model="inquiryForm.full_name" label="Full Name" required />
+                    <PzInput v-model="inquiryForm.email" label="Email" type="email" />
+                    <PzInput v-model="inquiryForm.phone_number" label="Phone Number" />
+                    <select v-model="inquiryForm.inquiry_type" class="pz-input">
+                      <option value="GENERAL">General</option>
+                      <option value="VIEWING">Viewing</option>
+                      <option value="FINANCING">Financing</option>
+                      <option value="MATERIALS">Materials</option>
+                      <option value="SERVICE">Service</option>
+                    </select>
+                    <textarea v-model="inquiryForm.message" class="pz-input" rows="4" placeholder="How can the owner or manager help?" />
+                    <Button type="submit" variant="primary" fullWidth :loading="submittingInquiry">Send Inquiry</Button>
+                  </form>
+                </div>
+                <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Inquiries are currently disabled for this property.</p>
+              </Card>
+            </div>
+
+            <div v-show="activeSidebarTab === 'financing'" class="pz-sidebar-panel">
+              <Card title="Financing" variant="accent" eyebrow="Funding">
+                <div v-if="financeProducts.length" class="pz-space-y-4">
+                  <div class="pz-property-side-note">
+                    <span class="pz-u-text-mono text-xs pz-u-color-concrete">Finance target</span>
+                    <strong>{{ property.financing_allowed ? 'Property-ready application' : 'Project-linked finance only' }}</strong>
+                  </div>
+                  <select v-model="financeForm.product" class="pz-input">
+                    <option disabled value="">Select financing product</option>
+                    <option v-for="product in financeProducts" :key="product.id" :value="product.id">{{ product.name }}</option>
+                  </select>
+                  <select v-model="financeForm.purpose_category" class="pz-input">
+                    <option value="ACQUISITION">Acquisition</option>
+                    <option value="COMPLETION">Completion</option>
+                    <option value="RENOVATION">Renovation</option>
+                  </select>
+                  <PzInput v-model="financeForm.requested_amount" type="number" label="Requested Amount" />
+                  <textarea v-model="financeForm.purpose" class="pz-input" rows="3" placeholder="Describe what the financing will support" />
+                  <Button variant="primary" fullWidth :loading="submittingFinance" @click="submitFinance">Apply For Financing</Button>
+                </div>
+                <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Financing products are not available at the moment.</p>
+              </Card>
+            </div>
+
+            <div v-show="activeSidebarTab === 'operator'" class="pz-sidebar-panel">
+              <Card v-if="operatorView" title="Operator Feed" variant="elevated">
+                <div class="pz-space-y-4">
+                  <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
+                    <div v-for="stat in operatorStats" :key="stat.label" class="pz-property-detail__metric">
+                      <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
+                      <div class="pz-metric__content">
+                        <span class="pz-property-detail__label">{{ stat.label }}</span>
+                        <span class="pz-property-detail__value">{{ stat.value }}</span>
+                      </div>
                     </div>
                   </div>
-                  <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No inquiries yet.</p>
-                </div>
-                <div>
-                  <div class="pz-u-text-mono text-xs pz-u-color-earth u-mb-2">Upcoming Appointments</div>
-                  <div v-if="operatorAppointments.length" class="pz-space-y-2">
-                    <div v-for="appointment in operatorAppointments.slice(0, 4)" :key="appointment.id" class="pz-property-detail__feed">
-                      <strong>{{ appointment.full_name }}</strong>
-                      <span>{{ formatDateTime(appointment.scheduled_start) }}</span>
-                      <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ appointment.email || appointment.phone_number || 'No contact provided' }}</span>
+                  <div>
+                    <div class="pz-u-text-mono text-xs pz-u-color-earth u-mb-2">Recent Inquiries</div>
+                    <div v-if="operatorInquiries.length" class="pz-space-y-2">
+                      <div v-for="inquiry in operatorInquiries.slice(0, 4)" :key="inquiry.id" class="pz-property-detail__feed">
+                        <strong>{{ inquiry.full_name }}</strong>
+                        <span>{{ inquiry.inquiry_type }}</span>
+                        <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ inquiry.email || inquiry.phone_number || 'No contact provided' }}</span>
+                      </div>
                     </div>
+                    <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No inquiries yet.</p>
                   </div>
-                  <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No appointments scheduled.</p>
+                  <div>
+                    <div class="pz-u-text-mono text-xs pz-u-color-earth u-mb-2">Upcoming Appointments</div>
+                    <div v-if="operatorAppointments.length" class="pz-space-y-2">
+                      <div v-for="appointment in operatorAppointments.slice(0, 4)" :key="appointment.id" class="pz-property-detail__feed">
+                        <strong>{{ appointment.full_name }}</strong>
+                        <span>{{ formatDateTime(appointment.scheduled_start) }}</span>
+                        <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ appointment.email || appointment.phone_number || 'No contact provided' }}</span>
+                      </div>
+                    </div>
+                    <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No appointments scheduled.</p>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           </aside>
         </div>
       </div>
@@ -538,6 +592,20 @@ const propertyTabs = computed(() => [
   { id: 'financials', label: 'Financials', badge: null },
   { id: 'links', label: 'Projects & Media', badge: property.value?.linked_projects?.length || null },
 ]);
+
+const activeSidebarTab = ref('showings');
+const sidebarTabs = computed(() => {
+  const tabs = [
+    { id: 'showings', label: 'Showings', badge: property.value?.showings?.length || null },
+    { id: 'status', label: 'Status' },
+    { id: 'inquiry', label: 'Inquiry' },
+    { id: 'financing', label: 'Financing' },
+  ];
+  if (operatorView.value) {
+    tabs.push({ id: 'operator', label: 'Operator' });
+  }
+  return tabs;
+});
 const submittingInquiry = ref(false);
 const submittingAppointment = ref(false);
 const submittingFinance = ref(false);
@@ -597,9 +665,33 @@ const canVerifyProperty = computed(() => {
   return authStore.hasPermission('property:verify_property');
 });
 
-const heroMediaUrl = computed(() => property.value?.primary_media?.media_url || property.value?.primary_media?.external_url || '');
+const mediaBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+
+function resolveMediaUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${mediaBaseUrl}${url}`;
+}
+
+const resolvedHeroMediaUrl = computed(() => resolveMediaUrl(property.value?.primary_media?.media_url) || property.value?.primary_media?.external_url || '');
 
 const mediaGallery = computed(() => property.value?.media_assets || []);
+
+const sliderImages = computed(() =>
+  mediaGallery.value.filter((a) => a.media_type === 'IMAGE' && (resolveMediaUrl(a.media_url) || a.external_url))
+);
+
+const currentSlide = ref(0);
+
+function nextSlide() {
+  if (!sliderImages.value.length) return;
+  currentSlide.value = (currentSlide.value + 1) % sliderImages.value.length;
+}
+
+function prevSlide() {
+  if (!sliderImages.value.length) return;
+  currentSlide.value = (currentSlide.value - 1 + sliderImages.value.length) % sliderImages.value.length;
+}
 
 const displayPrice = computed(() => {
   const pricing = property.value?.pricing_profile;
@@ -986,7 +1078,7 @@ onMounted(loadProperty);
 .pz-property-hero {
   display: grid;
   gap: 2.5rem;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: auto 1fr;
   padding: 0;
   border-radius: 24px;
   background: #ffffff;
@@ -1010,7 +1102,8 @@ onMounted(loadProperty);
 .pz-property-hero__media {
   overflow: hidden;
   position: relative;
-  min-height: 28rem;
+  width: 1024px;
+  height: 512px;
 }
 .pz-property-hero__image {
   width: 100%;
@@ -1022,14 +1115,122 @@ onMounted(loadProperty);
 .pz-property-hero:hover .pz-property-hero__image {
   transform: scale(1.04);
 }
+
+/* Single-image hero should still use cover for consistency */
+.pz-property-hero__media > .pz-property-hero__image {
+  object-fit: cover;
+}
 .pz-property-hero__fallback {
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, var(--pz-color-structural-steel), var(--pz-color-foundation-black));
   color: var(--pz-color-limestone-white);
-  min-height: 28rem;
+  width: 1024px;
+  height: 512px;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Slider */
+.pz-property-slider {
+  position: relative;
+  width: 1024px;
+  height: 512px;
+  overflow: hidden;
+}
+
+.pz-property-slider__track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.pz-property-slider__slide {
+  min-width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+}
+
+.pz-property-slider__slide .pz-property-hero__image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  min-height: auto;
+  object-fit: contain;
+}
+
+.pz-property-slider__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--pz-color-foundation-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: background 0.2s, transform 0.2s;
+}
+.pz-property-slider__arrow:hover {
+  background: #ffffff;
+  transform: translateY(-50%) scale(1.05);
+}
+.pz-property-slider__arrow--prev {
+  left: 1rem;
+}
+.pz-property-slider__arrow--next {
+  right: 1rem;
+}
+
+.pz-property-slider__dots {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pz-property-slider__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.pz-property-slider__dot--active {
+  background: #ffffff;
+  transform: scale(1.3);
+}
+
+.pz-property-slider__counter {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-family: var(--pz-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .pz-property-hero__content {
@@ -1186,6 +1387,7 @@ onMounted(loadProperty);
   align-items: flex-start;
   gap: 0.85rem;
   padding: 1.1rem 1.25rem;
+  height: 100%;
 }
 
 .pz-metric__icon {
@@ -1387,6 +1589,13 @@ onMounted(loadProperty);
   display: grid;
   gap: 2.5rem;
   grid-template-columns: minmax(0, 1.6fr) minmax(22rem, 1fr);
+  align-items: start;
+}
+
+.pz-property-layout > aside {
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
 }
 
 /* Tab Navigation */
@@ -1452,9 +1661,79 @@ onMounted(loadProperty);
   font-weight: 600;
 }
 
+/* Sidebar Tabs */
+.pz-sidebar-tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  border: 1px solid rgba(10, 10, 15, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.pz-sidebar-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.pz-sidebar-tab {
+  position: relative;
+  flex: 1;
+  padding: 0.55rem 0.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--pz-font-display);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--pz-color-concrete-grey);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.pz-sidebar-tab:hover {
+  color: var(--pz-color-structural-steel);
+  background: rgba(10, 10, 15, 0.03);
+}
+.pz-sidebar-tab--active {
+  background: white;
+  color: var(--pz-color-earth-orange);
+  box-shadow: 0 2px 6px rgba(10, 10, 15, 0.08);
+}
+
+.pz-sidebar-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(212, 101, 42, 0.12);
+  color: var(--pz-color-earth-orange);
+  font-family: var(--pz-font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.pz-sidebar-panel {
+  animation: fadeIn 0.25s ease;
+}
+
 /* Tab Panels */
 .pz-tab-panel {
   animation: fadeIn 0.25s ease;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
 }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
@@ -1463,7 +1742,7 @@ onMounted(loadProperty);
 
 /* Sticky Sidebar */
 .pz-property-sidebar,
-aside.pz-space-y-6 {
+.pz-property-layout > aside {
   position: sticky;
   top: 2rem;
   align-self: start;
@@ -1739,6 +2018,12 @@ aside.pz-space-y-6 {
     grid-template-columns: 1fr;
   }
 
+  .pz-property-layout > aside {
+    position: static;
+    top: auto;
+    align-self: auto;
+  }
+
   .pz-editor-shell {
     grid-template-columns: 1fr;
   }
@@ -1755,9 +2040,15 @@ aside.pz-space-y-6 {
     padding: 0 2rem 2rem;
   }
   .pz-property-hero__media,
-  .pz-property-hero__fallback {
-    min-height: 20rem;
+  .pz-property-hero__fallback,
+  .pz-property-slider {
+    width: 100%;
+    height: auto;
+    min-height: 16rem;
     border-radius: 24px 24px 0 0;
+  }
+  .pz-property-hero__fallback {
+    min-height: 16rem;
   }
 }
 </style>

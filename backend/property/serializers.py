@@ -67,6 +67,9 @@ class PropertyMediaAssetSerializer(serializers.ModelSerializer):
             return obj.external_url
         if obj.file:
             try:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(obj.file.url)
                 return obj.file.url
             except ValueError:
                 return ''

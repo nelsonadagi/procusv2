@@ -424,38 +424,78 @@ class ProductViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def import_products(self, request):
         """Import products from CSV file"""
-        # Ensure user is a vendor (redundant with permission classes but safe)
         if not hasattr(request.user, 'vendor_profile'):
-             return Response({'error': 'Only vendors can import products'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Only vendors can import products'}, status=status.HTTP_403_FORBIDDEN)
 
         file_obj = request.FILES.get('file')
         if not file_obj:
-             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check file extension
-        # Using encoding='utf-8-sig' to handle BOM if present
         if not file_obj.name.lower().endswith('.csv'):
-             return Response({'error': 'Only CSV files are supported at this time.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Only CSV files are supported at this time.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        def _get_val(row, *keys, default=''):
+            for k in keys:
+                if k in row and row[k] is not None and str(row[k]).strip() != '':
+                    return str(row[k]).strip()
+            return default
+
+        def _parse_int(row, *keys, default=None):
+            val = _get_val(row, *keys, default='')
+            if val == '':
+                return default
+            try:
+                return int(float(val))
+            except (ValueError, TypeError):
+                return default
+
+        def _parse_decimal(row, *keys, default=None):
+            val = _get_val(row, *keys, default='')
+            if val == '':
+                return default
+            try:
+                return Decimal(val.replace(',', ''))
+            except (ValueError, TypeError, InvalidOperation):
+                return default
+
+        def _parse_bool(row, *keys, default=False):
+            val = _get_val(row, *keys, default='').lower()
+            if val in ('1', 'true', 'yes', 'y'):
+                return True
+            if val in ('0', 'false', 'no', 'n'):
+                return False
+            return default
+
+        def _parse_date(row, *keys, default=None):
+            val = _get_val(row, *keys, default='')
+            if not val:
+                return default
+            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y'):
+                try:
+                    return datetime.strptime(val, fmt).date()
+                except ValueError:
+                    continue
+            return default
 
         try:
-            # Decode file content
+            from decimal import Decimal, InvalidOperation
+            from datetime import datetime
+
             decoded_file = file_obj.read().decode('utf-8-sig')
             io_string = io.StringIO(decoded_file)
             reader = csv.DictReader(io_string)
 
             created_count = 0
             errors = []
-
-            # Get vendor profile
             vendor = request.user.vendor_profile
 
             for row_idx, row in enumerate(reader, start=1):
                 try:
-                    name = row.get('name') or row.get('Name') or row.get('Product Name')
+                    name = _get_val(row, 'Name', 'name', 'Product Name')
                     if not name:
-                        continue # Skip empty rows or rows without name
+                        continue
 
-                    category_field = (row.get('category') or row.get('Category') or '').strip()
+                    category_field = _get_val(row, 'Category', 'category')
                     category = None
                     if category_field:
                         category = Category.objects.filter(
@@ -463,28 +503,59 @@ class ProductViewSet(viewsets.ModelViewSet):
                             taxonomy_type='MATERIAL'
                         ).first()
                         if not category:
-                            raise ValueError(f"Category '{category_field}' not found. Please verify category name.")
+                            raise ValueError(f"Category '{category_field}' not found.")
                     else:
                         category = Category.objects.filter(taxonomy_type='MATERIAL', active=True).order_by('name').first()
                         if not category:
-                            raise ValueError('No active material category exists for minimal import.')
+                            raise ValueError('No active material category exists for import.')
 
-                    # Create product
-                    # Basic fields
-                    product = Product.objects.create(
-                        vendor=vendor,
-                        category=category,
-                        name=name.strip(),
-                        description=row.get('description', '') or row.get('Description', '') or name.strip(),
-                        short_description=row.get('short_description', '') or row.get('Short Description', ''),
-                        unit=row.get('unit') or row.get('Unit') or 'unit',
-                        currency=(row.get('currency') or row.get('Currency') or getattr(getattr(vendor, 'country', None), 'default_currency', None) or 'KES').upper(),
-                        base_price=row.get('base_price') or row.get('Price', 0),
-                        stock_quantity=int(row.get('stock_quantity') or row.get('Stock', 0) or 0),
-                        brand=row.get('brand', '') or row.get('Brand', ''),
-                        status='ACTIVE'
-                    )
+                    product_data = {
+                        'vendor': vendor,
+                        'category': category,
+                        'name': name,
+                        'description': _get_val(row, 'Description', 'description') or name,
+                        'short_description': _get_val(row, 'Short Description', 'short_description'),
+                        'unit': _get_val(row, 'Unit', 'unit') or 'unit',
+                        'currency': (_get_val(row, 'Currency', 'currency') or getattr(getattr(vendor, 'country', None), 'default_currency', None) or 'KES').upper(),
+                        'base_price': _parse_decimal(row, 'Price', 'Base Price', 'base_price', default=Decimal('0')),
+                        'stock_quantity': _parse_int(row, 'Stock', 'Stock Quantity', 'stock_quantity', default=0) or 0,
+                        'brand': _get_val(row, 'Brand', 'brand'),
+                        'status': _get_val(row, 'Status', 'status') or 'ACTIVE',
+                        'min_order_quantity': _parse_int(row, 'Min Order Quantity', 'min_order_quantity', 'Min Order', default=1),
+                        'max_order_quantity': _parse_int(row, 'Max Order Quantity', 'max_order_quantity', 'Max Order'),
+                        'bulk_price': _parse_decimal(row, 'Bulk Price', 'bulk_price'),
+                        'bulk_threshold': _parse_int(row, 'Bulk Threshold', 'bulk_threshold'),
+                        'reorder_level': _parse_int(row, 'Reorder Level', 'reorder_level', default=0),
+                        'quality_grade': _get_val(row, 'Quality Grade', 'quality_grade'),
+                        'model_number': _get_val(row, 'Model Number', 'model_number', 'SKU'),
+                        'country_of_origin': _get_val(row, 'Country of Origin', 'country_of_origin'),
+                        'packaging_details': _get_val(row, 'Packaging Details', 'packaging_details'),
+                        'weight': _parse_decimal(row, 'Weight', 'weight'),
+                        'dimensions': _get_val(row, 'Dimensions', 'dimensions'),
+                        'color': _get_val(row, 'Color', 'color'),
+                        'material_composition': _get_val(row, 'Material Composition', 'material_composition'),
+                        'estimated_delivery_days': _parse_int(row, 'Estimated Delivery Days', 'estimated_delivery_days'),
+                        'handling_instructions': _get_val(row, 'Handling Instructions', 'handling_instructions'),
+                        'features': _get_val(row, 'Features', 'features'),
+                        'applications': _get_val(row, 'Applications', 'applications'),
+                        'certifications': _get_val(row, 'Certifications', 'certifications'),
+                        'warranty_period': _get_val(row, 'Warranty Period', 'warranty_period'),
+                        'meta_keywords': _get_val(row, 'Meta Keywords', 'meta_keywords'),
+                        'is_featured': _parse_bool(row, 'Is Featured', 'is_featured'),
+                        'is_new_arrival': _parse_bool(row, 'Is New Arrival', 'is_new_arrival'),
+                        'is_on_sale': _parse_bool(row, 'Is On Sale', 'is_on_sale'),
+                        'requires_special_handling': _parse_bool(row, 'Requires Special Handling', 'requires_special_handling'),
+                        'shipping_weight': _parse_decimal(row, 'Shipping Weight', 'shipping_weight'),
+                        'manufacturing_date': _parse_date(row, 'Manufacturing Date', 'manufacturing_date'),
+                        'expiry_date': _parse_date(row, 'Expiry Date', 'expiry_date'),
+                    }
+
+                    # Remove None values so model defaults apply
+                    product_data = {k: v for k, v in product_data.items() if v is not None}
+
+                    product = Product.objects.create(**product_data)
                     created_count += 1
+
                     if product.stock_quantity:
                         product.record_inventory_movement(
                             movement_type=ProductInventoryMovement.MovementType.IMPORT,
@@ -505,28 +576,95 @@ class ProductViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-            # Catch file reading errors
             return Response({'error': f'Failed to process file: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'])
     def download_template(self, request):
-        """Download a CSV template for product import"""
-        # Create the HttpResponse object with the appropriate CSV header.
+        """Download a comprehensive CSV template for product import"""
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="product_import_template.csv"'
 
         writer = csv.writer(response)
-        # The template intentionally contains only the minimal fields needed for import.
-        headers = ['Name', 'Description', 'Price', 'Unit']
+
+        headers = [
+            'Name', 'Category', 'Description', 'Short Description',
+            'Unit', 'Currency', 'Price', 'Stock',
+            'Brand', 'Status', 'Min Order Quantity', 'Max Order Quantity',
+            'Bulk Price', 'Bulk Threshold', 'Reorder Level',
+            'Quality Grade', 'Model Number', 'Country of Origin',
+            'Packaging Details', 'Weight', 'Dimensions', 'Color',
+            'Material Composition', 'Estimated Delivery Days',
+            'Handling Instructions', 'Features', 'Applications',
+            'Certifications', 'Warranty Period', 'Meta Keywords',
+            'Is Featured', 'Is New Arrival', 'Is On Sale',
+            'Requires Special Handling', 'Shipping Weight',
+            'Manufacturing Date', 'Expiry Date',
+        ]
         writer.writerow(headers)
 
-        example_row = [
-            'Example Cement 50kg',
-            'High strength portland cement for structural works',
-            '650',
-            'bag',
-        ]
-        writer.writerow(example_row)
+        # Example row 1: Construction material
+        writer.writerow([
+            'Portland Cement 50kg', 'Cement', 'High-strength Portland cement suitable for structural concrete, mortar, and plastering works. Complies with BS EN 197-1.',
+            'Premium Portland cement for construction',
+            'bag', 'KES', '750', '120',
+            'Bamburi Cement', 'ACTIVE', '10', '500',
+            '720', '50', '20',
+            'Grade A', 'CEM-50-STD', 'Kenya',
+            '50kg paper bag, palletized 40 bags per pallet',
+            '50', '60x40x15', 'Grey',
+            'Clinker (95%), Gypsum (5%)',
+            '2',
+            'Store in dry conditions. Avoid moisture contact.',
+            'High early strength|Low alkali|Consistent quality',
+            'Structural concrete|Block making|Plastering',
+            'KEBS Certified|ISO 9001',
+            '12 months',
+            'cement, portland, construction, building material, bamburi',
+            'TRUE', 'FALSE', 'FALSE',
+            'FALSE', '52',
+            '2024-01-15', '2025-01-15',
+        ])
+
+        # Example row 2: Hardware
+        writer.writerow([
+            'Galvanized Roofing Nails 3 Inch', 'Hardware', 'Hot-dip galvanized roofing nails with large flat head for secure sheet metal fastening. Rust-resistant.',
+            'Rust-resistant galvanized roofing nails',
+            'kg', 'KES', '180', '50',
+            'Devki Steel', 'ACTIVE', '1', '100',
+            '160', '10', '5',
+            'Standard', 'RN-3-GALV', 'Kenya',
+            '1kg box, 25 boxes per carton',
+            '1', '8x8x10', 'Silver',
+            'Carbon steel, zinc coating',
+            '1',
+            'Keep dry to prevent surface oxidation.',
+            'Corrosion resistant|Large flat head|Sharp point',
+            'Roofing installation|Sheet metal work',
+            'KEBS Certified',
+            '6 months',
+            'roofing nails, galvanized, hardware, steel nails',
+            'FALSE', 'TRUE', 'FALSE',
+            'FALSE', '1.2',
+            '', '',
+        ])
+
+        # Example row 3: Minimal required fields only
+        writer.writerow([
+            'Timber Pine Plank 2x4', 'Timber', 'Kiln-dried pine timber plank suitable for framing and general carpentry.',
+            '',
+            'piece', 'KES', '450', '0',
+            '', 'ACTIVE', '1', '',
+            '', '', '',
+            '', '', '',
+            '', '', '',
+            '', '', '',
+            '', '', '',
+            '', '', '',
+            '', '', '',
+            'FALSE', 'FALSE', 'FALSE',
+            'FALSE', '',
+            '', '',
+        ])
 
         return response
 

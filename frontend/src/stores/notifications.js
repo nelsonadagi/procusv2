@@ -10,7 +10,9 @@ export const useNotificationStore = defineStore('notifications', () => {
   function getWebSocketUrl(token) {
     const explicitWsUrl = import.meta.env.VITE_WS_URL;
     if (explicitWsUrl) {
-      return `${explicitWsUrl.replace(/\/$/, '')}/ws/notifications/?token=${token}`;
+      const url = new URL(explicitWsUrl);
+      url.searchParams.set('token', token);
+      return url.toString();
     }
 
     const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';

@@ -68,6 +68,23 @@
               </div>
             </div>
             <div class="pz-config-field pz-config-field--full">
+              <label class="pz-config-field__label">Platform Logo</label>
+              <div class="pz-config-logo-row">
+                <div v-if="logoPreview || platformConfig.logo" class="pz-config-logo-preview">
+                  <img :src="logoPreview || getMediaUrl(platformConfig.logo)" alt="Platform logo preview" />
+                </div>
+                <div class="pz-config-logo-actions">
+                  <input ref="logoInput" type="file" accept="image/*" class="u-sr-only" @change="handleLogoSelected" />
+                  <Button type="button" variant="outline" size="sm" @click="logoInput?.click()">
+                    {{ platformConfig.logo || logoPreview ? 'Change Logo' : 'Upload Logo' }}
+                  </Button>
+                  <Button v-if="platformConfig.logo || logoPreview" type="button" variant="danger" size="sm" @click="removeLogo">
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div class="pz-config-field pz-config-field--full">
               <label class="pz-config-field__label">Physical Address</label>
               <textarea v-model="platformConfig.address" class="pz-config-field__input" rows="2"
                 placeholder="Street, City, Country"></textarea>
@@ -656,8 +673,11 @@
   const platformConfig = ref({
     platform_name: '', tagline: '', support_email: '', support_phone: '',
     website: '', address: '', default_currency: 'KES', default_region: 'KE',
-    primary_color: '#FF6B2B', secondary_color: '#1A1A2E',
+    primary_color: '#FF6B2B', secondary_color: '#1A1A2E', logo: null,
   });
+  const logoFile = ref(null);
+  const logoPreview = ref(null);
+  const logoInput = ref(null);
   const currencies = ref([]);
   const exchangeRateConfigs = ref([]);
   const paymentGateways = ref([]);
@@ -781,11 +801,52 @@
   }
 
   // Business Logic Methods (CRUDs)
+  function getMediaUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    const baseOrigin = apiBase.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    return `${baseOrigin}${path}`;
+  }
+
+  function handleLogoSelected(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (logoPreview.value) URL.revokeObjectURL(logoPreview.value);
+    logoFile.value = file;
+    logoPreview.value = URL.createObjectURL(file);
+  }
+
+  function removeLogo() {
+    if (logoPreview.value) URL.revokeObjectURL(logoPreview.value);
+    logoFile.value = null;
+    logoPreview.value = null;
+    platformConfig.value.logo = null;
+    if (logoInput.value) logoInput.value.value = '';
+  }
+
   async function savePlatformSettings() {
     configSaving.value = true; configSaved.value = false;
     try {
-      const res = await api.patch('/platform_settings/platform/', platformConfig.value);
+      const editableFields = ['platform_name', 'tagline', 'support_email', 'support_phone', 'website', 'address', 'default_currency', 'default_region', 'primary_color', 'secondary_color'];
+      let payload;
+      if (logoFile.value) {
+        payload = new FormData();
+        editableFields.forEach((key) => {
+          const value = platformConfig.value[key];
+          if (value !== null && value !== undefined) payload.append(key, value);
+        });
+        payload.append('logo', logoFile.value);
+      } else {
+        payload = {};
+        editableFields.forEach((key) => payload[key] = platformConfig.value[key]);
+        if (platformConfig.value.logo === null) payload.logo = null;
+      }
+      const res = await api.patch('/platform_settings/platform/', payload);
       Object.assign(platformConfig.value, res.data);
+      if (logoPreview.value) URL.revokeObjectURL(logoPreview.value);
+      logoFile.value = null;
+      logoPreview.value = null;
       configSaved.value = true;
       setTimeout(() => configSaved.value = false, 3000);
       showAlert('Platform settings saved successfully.', 'success');
@@ -1383,6 +1444,37 @@
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .pz-config-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .pz-config-logo-preview {
+    width: 120px;
+    height: 120px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pz-config-logo-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .pz-config-logo-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   .pz-config-add-row {
