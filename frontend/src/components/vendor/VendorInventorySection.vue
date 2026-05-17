@@ -85,7 +85,7 @@
     </div>
 
     <Modal :isOpen="showProductModal" :title="editingProductId ? 'EDIT_MATERIAL_RECORD' : 'PUBLISH_NEW_MATERIAL'" size="xl" @close="closeProductModal">
-      <form id="product-form" class="pz-product-form" @submit.prevent="saveProduct">
+      <form id="product-form" class="pz-product-form" novalidate @submit.prevent="saveProduct">
         <div class="pz-modal-tabs">
           <button
             v-for="tab in materialFormTabs"
@@ -109,7 +109,7 @@
             <PzInput v-model="productForm.name" label="Material Name" required />
             <div class="pz-input-wrapper">
               <label class="pz-input__label">Category</label>
-              <select v-model="productForm.category" class="pz-input" required>
+              <select v-model="productForm.category" name="category" class="pz-input" required>
                 <option disabled value="">Select category</option>
                 <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
               </select>
@@ -118,7 +118,7 @@
             <PzInput v-model.number="productForm.base_price" label="Base Price" type="number" required />
             <div class="pz-input-wrapper">
               <label class="pz-input__label">Currency</label>
-              <select v-model="productForm.currency" class="pz-input" required>
+              <select v-model="productForm.currency" name="currency" class="pz-input" required>
                 <option v-for="currency in supportedCurrencies" :key="currency.currency_code" :value="currency.currency_code">
                   {{ currency.currency_code }}{{ currency.symbol ? ` (${currency.symbol})` : '' }}
                 </option>
@@ -893,7 +893,29 @@ function buildPayload() {
   };
 }
 
+function validateProductForm() {
+  const requiredFields = [
+    [productForm.value.name, 'Material Name'],
+    [productForm.value.category, 'Category'],
+    [productForm.value.unit, 'Unit of Sale'],
+    [productForm.value.base_price, 'Base Price'],
+    [productForm.value.stock_quantity, 'Stock Quantity'],
+    [productForm.value.description, 'Detailed Description'],
+  ];
+  const missingField = requiredFields.find(([value]) => value === '' || value === null || value === undefined);
+  if (missingField) {
+    activeProductTab.value = 'commercial';
+    showAlert?.(`${missingField[1]} is required before saving the material.`, 'warning');
+    return false;
+  }
+  return true;
+}
+
 async function saveProduct() {
+  if (!validateProductForm()) {
+    return;
+  }
+
   saving.value = true;
   try {
     const payload = buildPayload();

@@ -11,6 +11,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         slug_field='uuid'
     )
     product_details = ProductSerializer(source='product', read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
     class Meta:
         model = QuoteItem
         fields = '__all__'

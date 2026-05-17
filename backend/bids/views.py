@@ -5,6 +5,8 @@ from .models import Bid
 from .serializers import BidSerializer
 from contracts.models import Contract
 from rbac.permissions import HasRequiredPermission
+from notifications.models import Notification
+from notifications.services import notify_user
 
 class BidViewSet(viewsets.ModelViewSet):
     queryset = Bid.objects.all()
@@ -55,6 +57,7 @@ class BidViewSet(viewsets.ModelViewSet):
         contract = bid.contract
 
         # Auto-reject all other bids on this contract
+        rejected_bids = list(contract.bids.exclude(pk=bid.pk).select_related('contractor__user'))
         contract.bids.exclude(pk=bid.pk).update(status=Bid.Status.REJECTED)
 
         bid.status = Bid.Status.AWARDED
@@ -62,5 +65,21 @@ class BidViewSet(viewsets.ModelViewSet):
 
         contract.status = contract.Status.AWARDED
         contract.save()
+
+        notify_user(
+            bid.contractor.user,
+            Notification.Type.BID,
+            "Bid awarded",
+            f"Your bid for {contract.title} was awarded.",
+            data={"contract_id": contract.id, "bid_id": bid.id},
+        )
+        for rejected_bid in rejected_bids:
+            notify_user(
+                rejected_bid.contractor.user,
+                Notification.Type.BID,
+                "Bid not selected",
+                f"Your bid for {contract.title} was not selected.",
+                data={"contract_id": contract.id, "bid_id": rejected_bid.id},
+            )
 
         return Response({"status": "Bid awarded", "contract_status": contract.status})

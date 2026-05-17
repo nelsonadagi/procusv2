@@ -4,6 +4,8 @@ from .models import Vendor
 from .serializers import VendorSerializer, VendorOnboardingSerializer
 from rbac.permissions import HasRequiredPermission, IsVendorOwner
 from accounts.models import User
+from notifications.models import Notification
+from notifications.services import notify_user
 
 class VendorViewSet(viewsets.ModelViewSet):
     queryset = Vendor.objects.all()
@@ -98,8 +100,22 @@ class VendorViewSet(viewsets.ModelViewSet):
         if self._is_admin() and previous_status != vendor.verified_status:
             if vendor.verified_status == Vendor.Status.APPROVED:
                 vendor.user.grant_role(User.Role.VENDOR)
+                notify_user(
+                    vendor.user,
+                    Notification.Type.SYSTEM,
+                    "Vendor workspace approved",
+                    "Your vendor profile was approved. You can now manage inventory and respond to quotes.",
+                    data={"vendor_id": str(vendor.uuid)},
+                )
             elif vendor.verified_status in [Vendor.Status.REJECTED, Vendor.Status.SUSPENDED]:
                 vendor.user.revoke_role(User.Role.VENDOR)
+                notify_user(
+                    vendor.user,
+                    Notification.Type.SYSTEM,
+                    "Vendor workspace not approved",
+                    "Your vendor profile status changed. Review your vendor onboarding details.",
+                    data={"vendor_id": str(vendor.uuid), "status": vendor.verified_status},
+                )
 
     @decorators.action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
@@ -127,6 +143,13 @@ class VendorViewSet(viewsets.ModelViewSet):
         vendor.verified_status = Vendor.Status.APPROVED
         vendor.save(update_fields=['verified_status'])
         vendor.user.grant_role(User.Role.VENDOR)
+        notify_user(
+            vendor.user,
+            Notification.Type.SYSTEM,
+            "Vendor workspace approved",
+            "Your vendor profile was approved. You can now manage inventory and respond to quotes.",
+            data={"vendor_id": str(vendor.uuid)},
+        )
         return Response(self.get_serializer(vendor).data)
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
@@ -137,4 +160,11 @@ class VendorViewSet(viewsets.ModelViewSet):
         vendor.verified_status = Vendor.Status.REJECTED
         vendor.save(update_fields=['verified_status'])
         vendor.user.revoke_role(User.Role.VENDOR)
+        notify_user(
+            vendor.user,
+            Notification.Type.SYSTEM,
+            "Vendor workspace rejected",
+            "Your vendor profile was rejected. Review your onboarding details and contact support if needed.",
+            data={"vendor_id": str(vendor.uuid)},
+        )
         return Response(self.get_serializer(vendor).data)

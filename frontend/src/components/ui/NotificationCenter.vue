@@ -14,7 +14,7 @@
         </div>
         <div class="notification-content">
           <p class="notification-message">{{ notification.message }}</p>
-          <span class="notification-time">{{ new Date(notification.timestamp).toLocaleTimeString() }}</span>
+          <span class="notification-time">{{ formatTime(notification.timestamp) }}</span>
         </div>
       </div>
     </transition-group>
@@ -35,6 +35,12 @@ const getVariantClass = (type) => {
     case 'PAYMENT': return 'notification-toast--success';
     default: return 'notification-toast--default';
   }
+};
+
+const formatTime = (timestamp) => {
+  const value = timestamp ? new Date(timestamp) : new Date();
+  if (Number.isNaN(value.getTime())) return new Date().toLocaleTimeString();
+  return value.toLocaleTimeString();
 };
 
 const handleClick = (notification) => {

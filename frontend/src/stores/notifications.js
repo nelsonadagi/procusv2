@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import api from '../services/api';
 
 export const useNotificationStore = defineStore('notifications', () => {
   const notifications = ref([]);
+  const notificationFeed = ref([]);
   const socket = ref(null);
   const isConnected = ref(false);
   const reconnectInterval = 5000;
@@ -15,7 +17,10 @@ export const useNotificationStore = defineStore('notifications', () => {
       return url.toString();
     }
 
-    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    const fallbackApi = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? `${window.location.protocol}//${window.location.hostname}:8007/api`
+      : `${window.location.origin}/api`;
+    const apiBase = import.meta.env.VITE_API_URL || fallbackApi;
     const apiUrl = new URL(apiBase, window.location.origin);
     const protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${apiUrl.host}/ws/notifications/?token=${token}`;
@@ -25,6 +30,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     const token = localStorage.getItem('token');
     
     if (!token) return;
+    if (socket.value && [WebSocket.OPEN, WebSocket.CONNECTING].includes(socket.value.readyState)) return;
 
     const wsUrl = getWebSocketUrl(token);
     
@@ -54,11 +60,18 @@ export const useNotificationStore = defineStore('notifications', () => {
   function addNotification(notification) {
     // Add unique ID if missing
     const id = Date.now() + Math.random().toString(36).substr(2, 9);
-    notifications.value.push({ ...notification, id, read: false });
+    const item = {
+      timestamp: new Date().toISOString(),
+      ...notification,
+      id: notification.id || id,
+      read: false
+    };
+    notifications.value.push(item);
+    notificationFeed.value = [item, ...notificationFeed.value.filter((entry) => entry.id !== item.id)].slice(0, 20);
     
     // Auto remove after 5 seconds if it's a toast
     setTimeout(() => {
-        removeNotification(id);
+        removeNotification(notification.id || id);
     }, 5000);
   }
 
@@ -76,11 +89,34 @@ export const useNotificationStore = defineStore('notifications', () => {
     }
   }
 
+  async function fetchNotifications() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      notificationFeed.value = [];
+      return [];
+    }
+    const res = await api.get('/notifications/');
+    const items = res.data.results || res.data || [];
+    notificationFeed.value = items.map((item) => ({
+      id: item.id,
+      type: item.type,
+      subject: item.subject,
+      message: item.message,
+      status: item.status,
+      timestamp: item.created_at || item.sent_at || new Date().toISOString(),
+      data: { notification_id: item.id },
+      read: item.status === 'SENT'
+    }));
+    return notificationFeed.value;
+  }
+
   return {
     notifications,
+    notificationFeed,
     isConnected,
     connect,
     disconnect,
+    fetchNotifications,
     addNotification,
     removeNotification
   };

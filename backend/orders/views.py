@@ -10,7 +10,10 @@ from rbac.utils import log_action
 from django.db import models, transaction
 from decimal import Decimal
 from catalog.models import ProductInventoryMovement, Product
+from notifications.models import Notification
+from notifications.services import notify_user, notify_users
 from platform_settings.models import PaymentGatewayConfig
+from .services import initiate_delivery_for_paid_order
 import json
 
 # Temporary test view for debugging
@@ -46,6 +49,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = serializer.save(buyer=self.request.user)
         log_action(self.request.user, 'CREATE_ORDER', 'order', order.id)
         notify_vendor_new_order.delay(order.id)
+        notify_user(
+            order.vendor.user,
+            Notification.Type.SYSTEM,
+            "New order received",
+            f"Order #{order.id} was placed and is waiting for review.",
+            data={"order_id": order.id},
+        )
 
     def _resolve_vendor_origin_address(self, order):
         vendor = order.vendor
@@ -139,6 +149,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.save()
         log_action(request.user, f'ORDER_FULFILLMENT_{new_status}', 'order', order.id)
         notify_delivery_update.delay(order.id, new_status)
+        notify_user(
+            order.buyer,
+            Notification.Type.SYSTEM,
+            f"Order {new_status.lower()}",
+            f"Order #{order.id} status changed to {new_status}.",
+            data={"order_id": order.id, "status": new_status},
+        )
         if new_status == 'CONFIRMED':
             from .tasks import notify_buyer_order_confirmed
             notify_buyer_order_confirmed.delay(order.id)
@@ -158,6 +175,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.save()
         log_action(request.user, 'ORDER_COMPLETED', 'order', order.id)
         update_vendor_performance_metrics.delay(order.vendor.id)
+        notify_user(
+            order.vendor.user,
+            Notification.Type.SYSTEM,
+            "Order completed",
+            f"Buyer confirmed delivery for order #{order.id}.",
+            data={"order_id": order.id},
+        )
         return Response(OrderSerializer(order).data)
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsOrderOwner])
@@ -189,6 +213,13 @@ class OrderViewSet(viewsets.ModelViewSet):
             order.status = 'CANCELLED'
             order.save()
         log_action(request.user, 'ORDER_CANCELLED', 'order', order.id)
+        notify_users(
+            [order.buyer, order.vendor.user],
+            Notification.Type.SYSTEM,
+            "Order cancelled",
+            f"Order #{order.id} was cancelled and eligible stock was restored.",
+            data={"order_id": order.id},
+        )
         return Response(OrderSerializer(order).data)
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsOrderOwner])
@@ -210,9 +241,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         payment.paid_at = timezone.now()
         payment.save(update_fields=['status', 'transaction_reference', 'metadata', 'paid_at'])
 
+        order.refresh_from_db()
         order.payment_status = 'PAID'
         order.status = 'CONFIRMED' if order.status == 'PLACED' else order.status
         order.save(update_fields=['payment_status', 'status', 'updated_at'])
+        shipment = initiate_delivery_for_paid_order(order)
 
         log_action(request.user, 'ORDER_PAYMENT_SIMULATED', 'order', order.id, metadata={'provider': payment.provider})
         return Response(OrderSerializer(order).data)
@@ -231,6 +264,13 @@ class OrderViewSet(viewsets.ModelViewSet):
             reason=reason
         )
         log_action(request.user, 'DISPUTE_OPENED', 'order', order.id)
+        notify_user(
+            order.vendor.user if request.user == order.buyer else order.buyer,
+            Notification.Type.DISPUTE,
+            "Order dispute opened",
+            f"A dispute was opened for order #{order.id}.",
+            data={"order_id": order.id, "dispute_id": dispute.id},
+        )
         return Response({"id": dispute.id, "status": dispute.status}, status=status.HTTP_201_CREATED)
 
     @decorators.action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
@@ -261,9 +301,25 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if self.request.user.is_staff:
             return self.queryset
-        if hasattr(self.request.user, 'vendor_profile'):
+        if self.action in {'vendor_quotes', 'respond'} and hasattr(self.request.user, 'vendor_profile'):
             return self.queryset.filter(items__product__vendor=self.request.user.vendor_profile).distinct()
         return self.queryset.filter(buyer=self.request.user)
+
+    def perform_create(self, serializer):
+        quote_request = serializer.save()
+        vendors = {}
+        for item in quote_request.items.select_related('product__vendor__user').all():
+            if item.product and item.product.vendor:
+                vendors[item.product.vendor_id] = item.product.vendor
+
+        for vendor in vendors.values():
+            notify_user(
+                vendor.user,
+                Notification.Type.SYSTEM,
+                "Quote request waiting",
+                f"Quote request #{quote_request.id} needs your commercial response.",
+                data={"quote_request_id": quote_request.id, "action": "respond_quote"},
+            )
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def respond(self, request, pk=None):
@@ -321,6 +377,13 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
         quote_request.save()
 
         log_action(request.user, 'CONFIRM_QUOTE', 'quote_request', quote_request.id)
+        notify_user(
+            quote_request.buyer,
+            Notification.Type.SYSTEM,
+            "Quote response received",
+            f"{vendor.business_name} responded to your quote request.",
+            data={"quote_request_id": quote_request.id, "quote_response_id": quote_response.id},
+        )
 
         return Response(QuoteResponseSerializer(quote_response).data, status=status.HTTP_201_CREATED)
 
@@ -343,12 +406,16 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
         active_gateways = list(
             PaymentGatewayConfig.objects.filter(active=True).values_list('provider', flat=True)
         )
-        if not active_gateways:
-            return Response({"error": "No active payment methods configured."}, status=status.HTTP_400_BAD_REQUEST)
 
         if not payment_provider:
-            payment_provider = PaymentGatewayConfig.objects.filter(active=True, is_default=True).order_by('display_order', 'label').values_list('provider', flat=True).first() or active_gateways[0]
-        if payment_provider not in active_gateways:
+            payment_provider = (
+                PaymentGatewayConfig.objects.filter(active=True, is_default=True)
+                .order_by('display_order', 'label')
+                .values_list('provider', flat=True)
+                .first()
+                or (active_gateways[0] if active_gateways else 'SIMULATED')
+            )
+        if active_gateways and payment_provider not in active_gateways:
             return Response({"error": "Selected payment method is not available."}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
@@ -401,11 +468,18 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
                 status='PENDING',
                 metadata={
                     'gateway_label': PaymentGatewayConfig.objects.filter(provider=payment_provider).values_list('label', flat=True).first() or payment_provider,
-                    'simulation': True,
+                    'simulation': payment_provider == 'SIMULATED',
                 }
             )
 
         log_action(request.user, 'CHECKOUT_ORDER', 'order', order.id)
+        notify_user(
+            order.vendor.user,
+            Notification.Type.SYSTEM,
+            "Quote checked out",
+            f"Quote request #{quote_request.id} was checked out into order #{order.id}.",
+            data={"quote_request_id": quote_request.id, "order_id": order.id},
+        )
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
     @decorators.action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])

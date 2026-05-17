@@ -19,6 +19,8 @@ from platform_settings.utils import resolve_request_country_code
 
 from rbac.permissions import HasRequiredPermission
 from rbac.utils import log_action
+from notifications.models import Notification
+from notifications.services import notify_user
 
 class ContractViewSet(viewsets.ModelViewSet):
     queryset = Contract.objects.all().order_by('-created_at')
@@ -170,7 +172,15 @@ class ContractViewSet(viewsets.ModelViewSet):
 
         serializer = MilestoneSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(contract=contract)
+            milestone = serializer.save(contract=contract)
+            if awarded_bid:
+                notify_user(
+                    awarded_bid.contractor.user,
+                    Notification.Type.MILESTONE,
+                    "New milestone defined",
+                    f"A new milestone was added to {contract.title}: {milestone.title}.",
+                    data={"contract_id": contract.id, "milestone_id": milestone.id},
+                )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

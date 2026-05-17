@@ -65,6 +65,47 @@
           </template>
 
           <template v-else>
+            <div class="pz-nav__notification-wrapper">
+              <button
+                class="pz-nav__notification-trigger"
+                type="button"
+                aria-label="Notifications"
+                :aria-expanded="showNotificationDropdown"
+                @click.stop="toggleNotificationDropdown"
+              >
+                <span class="pz-nav__notification-glyph" aria-hidden="true">!</span>
+                <span v-if="notificationCount" class="pz-nav__notification-badge">{{ notificationCount }}</span>
+              </button>
+
+              <transition name="dropdown-slide">
+                <div
+                  v-if="showNotificationDropdown"
+                  class="pz-nav__notification-dropdown"
+                  v-click-outside="() => showNotificationDropdown = false"
+                >
+                  <div class="pz-nav__notification-header">
+                    <span>Notifications</span>
+                    <button type="button" @click.stop="refreshNotificationFeed">Refresh</button>
+                  </div>
+                  <div v-if="notificationFeed.length === 0" class="pz-nav__notification-empty">
+                    No workflow notifications yet.
+                  </div>
+                  <button
+                    v-for="notification in notificationFeed"
+                    :key="notification.id"
+                    type="button"
+                    class="pz-nav__notification-item"
+                    @click="openNotification(notification)"
+                  >
+                    <span class="pz-nav__notification-type">{{ notification.type || 'SYSTEM' }}</span>
+                    <strong>{{ notification.subject || notification.message }}</strong>
+                    <span>{{ notification.message }}</span>
+                    <time>{{ formatNotificationTime(notification.timestamp) }}</time>
+                  </button>
+                </div>
+              </transition>
+            </div>
+
             <!-- Premium Profile Dropdown -->
             <div class="pz-nav__dropdown-wrapper">
               <div
@@ -361,6 +402,7 @@
   const mobileMenuOpen = ref(false);
   const showProfileModal = ref(false);
   const showSettingsDropdown = ref(false);
+  const showNotificationDropdown = ref(false);
   const loading = ref(false);
 
   const userForm = ref({
@@ -384,6 +426,8 @@
     const roles = userForm.value.roles || [];
     return roles.length ? roles.join(', ') : 'No additional approved roles yet.';
   });
+  const notificationFeed = computed(() => notificationStore.notificationFeed.slice(0, 10));
+  const notificationCount = computed(() => Math.min(notificationStore.notificationFeed.length, 99));
 
   // Workspace detection for nav indicator
   const workspaceLabel = computed(() => {
@@ -455,6 +499,45 @@
 
   provide('showAlert', showAlert);
 
+  async function refreshNotificationFeed() {
+    try {
+      await notificationStore.fetchNotifications();
+    } catch (err) {
+      console.error('Failed to fetch notifications', err);
+    }
+  }
+
+  async function toggleNotificationDropdown() {
+    showNotificationDropdown.value = !showNotificationDropdown.value;
+    if (showNotificationDropdown.value) {
+      await refreshNotificationFeed();
+    }
+  }
+
+  function formatNotificationTime(timestamp) {
+    const value = timestamp ? new Date(timestamp) : new Date();
+    if (Number.isNaN(value.getTime())) return '';
+    return value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function openNotification(notification) {
+    const data = notification.data || {};
+    showNotificationDropdown.value = false;
+    if (notification.type === 'CHAT' && data.room_id) {
+      uiStore.openChat(data.room_id);
+      return;
+    }
+    if (data.action === 'respond_quote' || data.quote_request_id) {
+      router.push(authStore.hasRole('VENDOR') ? '/vendor/dashboard' : '/buyer/dashboard');
+      return;
+    }
+    if (data.order_id) {
+      router.push('/buyer/dashboard');
+      return;
+    }
+    router.push('/buyer/dashboard');
+  }
+
   async function saveProfile() {
     loading.value = true;
     try {
@@ -483,6 +566,7 @@
   watch(() => authStore.isAuthenticated, (newVal) => {
     if (newVal) {
       notificationStore.connect();
+      refreshNotificationFeed();
     } else {
       notificationStore.disconnect();
     }
@@ -507,6 +591,7 @@
       // Connect if already authenticated
       if (authStore.isAuthenticated) {
         notificationStore.connect();
+        refreshNotificationFeed();
       }
     }
   });
@@ -699,6 +784,145 @@
   }
 
   /* Dropdown System */
+  .pz-nav__notification-wrapper {
+    position: relative;
+  }
+
+  .pz-nav__notification-trigger {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(10, 10, 15, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 250, 243, 0.72));
+    box-shadow: 8px 8px 0 rgba(10, 10, 15, 0.04);
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+  }
+
+  .pz-nav__notification-trigger:hover {
+    border-color: rgba(10, 10, 15, 0.14);
+    background: rgba(255, 255, 255, 0.92);
+  }
+
+  .pz-nav__notification-glyph {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--pz-color-foundation-black);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--pz-font-mono);
+    font-size: 0.72rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .pz-nav__notification-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--pz-color-earth-orange);
+    color: white;
+    border: 2px solid rgba(248, 246, 240, 0.98);
+    font-family: var(--pz-font-mono);
+    font-size: 0.62rem;
+    font-weight: 900;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pz-nav__notification-dropdown {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: min(360px, calc(100vw - 24px));
+    max-height: 480px;
+    overflow: auto;
+    background: rgba(248, 246, 240, 0.98);
+    border: 2px solid var(--pz-color-foundation-black);
+    box-shadow: 12px 12px 0 rgba(10, 10, 15, 0.1);
+    z-index: 1000;
+  }
+
+  .pz-nav__notification-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: var(--pz-space-3) var(--pz-space-4);
+    background: var(--pz-color-foundation-black);
+    color: white;
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .pz-nav__notification-header button {
+    border: 0;
+    background: transparent;
+    color: var(--pz-color-earth-orange);
+    font: inherit;
+    font-size: 0.62rem;
+    cursor: pointer;
+  }
+
+  .pz-nav__notification-empty {
+    padding: var(--pz-space-5);
+    color: var(--pz-color-concrete-grey);
+    font-family: var(--pz-font-mono);
+    font-size: 0.75rem;
+  }
+
+  .pz-nav__notification-item {
+    width: 100%;
+    display: grid;
+    gap: 5px;
+    padding: var(--pz-space-4);
+    border: 0;
+    border-bottom: 1px solid rgba(10, 10, 15, 0.08);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pz-nav__notification-item:hover {
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .pz-nav__notification-item strong {
+    color: var(--pz-color-foundation-black);
+    font-size: 0.88rem;
+  }
+
+  .pz-nav__notification-item span:not(.pz-nav__notification-type),
+  .pz-nav__notification-item time {
+    color: var(--pz-color-concrete-grey);
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  .pz-nav__notification-type {
+    width: fit-content;
+    padding: 2px 6px;
+    background: rgba(10, 10, 15, 0.06);
+    color: var(--pz-color-earth-orange);
+    font-family: var(--pz-font-mono);
+    font-size: 0.58rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
   .pz-nav__dropdown-wrapper {
     position: relative;
     box-sizing: border-box;

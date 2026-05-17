@@ -7,6 +7,8 @@ from .models import ChatRoom, ChatMessage, ChatAttachment
 from .serializers import ChatRoomSerializer, ChatMessageSerializer, ChatAttachmentSerializer
 from orders.models import Order
 from contracts.models import Contract
+from notifications.models import Notification
+from notifications.services import notify_users
 
 class IsRoomParticipant(permissions.BasePermission):
     """
@@ -14,7 +16,14 @@ class IsRoomParticipant(permissions.BasePermission):
     """
     def has_object_permission(self, request, view, obj):
         if request.user and request.user.is_authenticated:
-            return request.user in obj.participants.all()
+            room = obj
+            if isinstance(obj, ChatMessage):
+                room = obj.room
+            elif isinstance(obj, ChatAttachment):
+                room = obj.message.room if obj.message else None
+            if not room:
+                return False
+            return room.participants.filter(id=request.user.id).exists()
         return False
 
 class ChatRoomViewSet(viewsets.ModelViewSet):
@@ -113,7 +122,15 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         # Ensure the creating user is a participant of the room
         if not self.request.user in room.participants.all():
             raise permissions.PermissionDenied("You are not a participant of this chat room.")
-        serializer.save(sender=self.request.user)
+        message = serializer.save(sender=self.request.user)
+        recipients = room.participants.exclude(id=self.request.user.id)
+        notify_users(
+            recipients,
+            Notification.Type.CHAT,
+            f"New message from {self.request.user.username}",
+            message.content[:120] or "New chat message",
+            data={"room_id": room.id, "message_id": message.id},
+        )
 
     def get_queryset(self):
         # Custom queryset to ensure users only see messages from rooms they are part of

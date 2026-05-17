@@ -87,6 +87,14 @@ class ContractorProfile(models.Model):
     def __str__(self):
         return self.company_name
 
+    @property
+    def operating_region(self):
+        return self.location_text
+
+    @operating_region.setter
+    def operating_region(self, value):
+        self.location_text = value
+
 
 class ContractorCertification(models.Model):
     contractor = models.ForeignKey(

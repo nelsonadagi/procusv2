@@ -29,20 +29,47 @@ def notify_on_milestone_update(sender, instance, created, **kwargs):
                 message=f"Please review and approve the milestone for project {instance.contract.title}."
             )
         elif instance.status == 'APPROVED':
-             # Notify awarded contractor if possible
-             # For now we'll notify the owner as well or log it
-             pass
+             awarded_bid = instance.contract.bids.filter(status='AWARDED').select_related('contractor__user').first()
+             if awarded_bid:
+                notify_user(
+                    user=awarded_bid.contractor.user,
+                    notification_type=Notification.Type.MILESTONE,
+                    subject=f"Milestone approved: {instance.title}",
+                    message=f"The owner approved {instance.title}. Payment is pending release."
+                )
 
 @receiver(post_save, sender=Payment)
 def notify_on_payment_status(sender, instance, created, **kwargs):
     if not created:
-        user = instance.order.user
+        user = instance.order.buyer
         if instance.status == 'PAID':
+            order = instance.order
+            update_fields = []
+            if order.payment_status != 'PAID':
+                order.payment_status = 'PAID'
+                update_fields.append('payment_status')
+            if order.status == 'PLACED':
+                order.status = 'CONFIRMED'
+                update_fields.append('status')
+            if update_fields:
+                order.save(update_fields=[*update_fields, 'updated_at'])
+
+            from orders.services import initiate_delivery_for_paid_order
+            shipment = initiate_delivery_for_paid_order(order)
+
             notify_user(
                 user=user,
                 notification_type=Notification.Type.PAYMENT,
                 subject="Payment Successful",
-                message=f"Your payment of {instance.amount} for order {instance.order.id} has been confirmed."
+                message=f"Your payment of {instance.amount} for order {order.id} has been confirmed.",
+                data={"order_id": order.id, "shipment_id": shipment.id, "tracking_number": shipment.tracking_number},
+            )
+            notify_user(
+                user=order.vendor.user,
+                notification_type=Notification.Type.SYSTEM,
+                subject="Payment confirmed",
+                message=f"Order #{order.id} has been paid. Start fulfillment and delivery preparation.",
+                data={"order_id": order.id, "shipment_id": shipment.id, "tracking_number": shipment.tracking_number},
             )
         elif instance.status == 'FAILED':
             notify_user(
@@ -55,9 +82,10 @@ def notify_on_payment_status(sender, instance, created, **kwargs):
 @receiver(post_save, sender=EscrowHold)
 def notify_on_escrow_freeze(sender, instance, created, **kwargs):
     if created:
-        # Notify both parties
+        awarded_bid = instance.escrow_account.contract.bids.filter(status='AWARDED').select_related('contractor__user').first()
         users = [instance.escrow_account.buyer]
-        # Contractor should also be notified if we can reach them
+        if awarded_bid:
+            users.append(awarded_bid.contractor.user)
         for user in users:
             notify_user(
                 user=user,

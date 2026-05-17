@@ -4,6 +4,8 @@ from rest_framework import status
 from orders.models import Order, QuoteRequest, QuoteResponse, QuoteItem
 from vendors.models import Vendor
 from catalog.models import Product, ProductInventoryMovement
+from logistics.models import Carrier, Shipment
+from payments.models import Payment
 from taxonomy.models import Category
 from django.utils import timezone
 from datetime import timedelta
@@ -103,6 +105,25 @@ class TestOrdersAPI:
         assert prod.stock_quantity == 80
         movement = ProductInventoryMovement.objects.get(product=prod, movement_type=ProductInventoryMovement.MovementType.ORDER_RESTOCK)
         assert movement.quantity_delta == 5
+
+    def test_simulate_payment_initiates_delivery(self, api_client, project_owner, vendor):
+        v_profile = self.setup_vendor(vendor)
+        Carrier.objects.create(name="G4S", code="G4S", is_active=True)
+        order = Order.objects.create(buyer=project_owner, vendor=v_profile, total_amount=1000, status='PLACED')
+        Payment.objects.create(order=order, provider='SIMULATED', amount=1000, status='PENDING')
+
+        api_client.force_authenticate(user=project_owner)
+        url = reverse('orders-simulate-payment', args=[order.id])
+        response = api_client.post(url, {}, format='json')
+
+        assert response.status_code == status.HTTP_200_OK
+        order.refresh_from_db()
+        assert order.payment_status == 'PAID'
+        assert order.status == 'CONFIRMED'
+        shipment = Shipment.objects.get(order=order)
+        assert shipment.tracking_number
+        assert order.tracking_number == shipment.tracking_number
+        assert shipment.events.filter(status='PENDING').exists()
 
     def test_confirm_delivery(self, api_client, project_owner, vendor):
         v_profile = self.setup_vendor(vendor)

@@ -10,6 +10,7 @@
         items: [
           { id: 'projects', label: 'Overview', icon: '◰' },
           { id: 'properties', label: 'My Properties', icon: '◰' },
+          { id: 'quotes', label: 'Quote Requests', icon: '□' },
           { id: 'escrow', label: 'Payments', icon: '◈' },
           { id: 'logs', label: 'Activity Logs', icon: '⧇' }
         ]
@@ -137,6 +138,54 @@
       <PropertiesSection scope="mine" />
     </div>
 
+    <div v-else-if="activeTab === 'quotes'" class="pz-tab-enter-active">
+      <div class="pz-admin-card pz-glass-panel">
+        <div class="pz-admin-card__header">
+          <div>
+            <h3 class="pz-admin-card__title">My Quote Requests</h3>
+            <p class="pz-section-note">Material quotes you requested from the marketplace.</p>
+          </div>
+          <button class="pz-btn-glass pz-u-text-mono text-xs" @click="fetchOwnerData">Refresh</button>
+        </div>
+
+        <div v-if="quotes.length === 0" class="pz-empty-quote-state">
+          <div class="pz-empty-quote-state__kicker">No quote requests</div>
+          <p>Request material quotes from product pages and they will appear here for tracking and checkout.</p>
+          <button class="pz-btn-glass" @click="$router.push('/')">Find Materials</button>
+        </div>
+
+        <div v-else class="pz-owner-quote-list">
+          <article v-for="quote in quotes" :key="quote.id" class="pz-owner-quote-card">
+            <div class="pz-owner-quote-card__header">
+              <div>
+                <div class="pz-u-text-mono text-xs pz-u-color-concrete">REQUEST #{{ quote.id }}</div>
+                <strong>{{ quote.items?.length || 0 }} material line{{ (quote.items?.length || 0) === 1 ? '' : 's' }}</strong>
+              </div>
+              <Badge :variant="quote.status === 'REQUESTED' ? 'warning' : 'success'" size="sm">{{ quote.status }}</Badge>
+            </div>
+
+            <div class="pz-owner-quote-card__items">
+              <div v-for="item in quote.items" :key="item.id">
+                {{ item.quantity }}x {{ item.product_details?.name || item.product_name || 'Material item' }}
+              </div>
+            </div>
+
+            <div v-if="quote.responses?.length" class="pz-owner-quote-card__responses">
+              <div v-for="response in quote.responses" :key="response.id" class="pz-owner-quote-response">
+                <div>
+                  <strong>{{ response.vendor_name || `Vendor #${response.vendor}` }}</strong>
+                  <span>{{ configStore.formatPrice(Number(response.confirmed_price || 0) + Number(response.delivery_fee || 0), response.quote_currency || 'KES') }}</span>
+                </div>
+                <Badge v-if="response.has_order" variant="success" size="sm">ORDER #{{ response.order_id }}</Badge>
+                <button v-else class="pz-action-btn" @click="$router.push('/buyer/dashboard')">Checkout</button>
+              </div>
+            </div>
+            <div v-else class="pz-owner-quote-card__waiting">Waiting for vendor response.</div>
+          </article>
+        </div>
+      </div>
+    </div>
+
     <div v-else-if="activeTab === 'escrow'" class="pz-tab-enter-active">
       <div class="pz-l-grid pz-l-grid--md-cols-3 pz-l-grid--gap-6 u-mb-8">
         <div class="pz-finance-card pz-glass-surface">
@@ -246,6 +295,7 @@ const PropertiesSection = defineAsyncComponent(() => import('../components/admin
 const configStore = useConfigStore();
 const activeTab = ref('projects');
 const projects = ref([]);
+const quotes = ref([]);
 
 function formatMoney(value) {
   return configStore.formatPrice(Number(value || 0), 'KES');
@@ -290,13 +340,21 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString();
 }
 
-onMounted(async () => {
+async function fetchOwnerData() {
   try {
-    const res = await api.get('/v4/projects/', { params: { owner: 'me' } });
-    projects.value = res.data.results || res.data;
+    const [projectRes, quoteRes] = await Promise.all([
+      api.get('/v4/projects/', { params: { owner: 'me' } }),
+      api.get('/orders/quote-requests/')
+    ]);
+    projects.value = projectRes.data.results || projectRes.data;
+    quotes.value = quoteRes.data.results || quoteRes.data;
   } catch (e) {
     console.error(e);
   }
+}
+
+onMounted(async () => {
+  await fetchOwnerData();
 });
 </script>
 
@@ -412,6 +470,80 @@ onMounted(async () => {
   font-family: var(--pz-font-display);
   font-size: 1.1rem;
   font-weight: 700;
+}
+
+.pz-section-note {
+  margin: 0.25rem 0 0;
+  color: var(--pz-color-concrete-grey);
+  font-size: 0.82rem;
+}
+
+.pz-empty-quote-state {
+  padding: var(--pz-space-8);
+  display: grid;
+  gap: var(--pz-space-3);
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-empty-quote-state__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--pz-color-earth-orange);
+  text-transform: uppercase;
+}
+
+.pz-owner-quote-list {
+  display: grid;
+  gap: var(--pz-space-4);
+  padding: var(--pz-space-6);
+}
+
+.pz-owner-quote-card {
+  display: grid;
+  gap: var(--pz-space-4);
+  padding: var(--pz-space-5);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(10, 10, 15, 0.08);
+}
+
+.pz-owner-quote-card__header,
+.pz-owner-quote-response {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pz-space-4);
+}
+
+.pz-owner-quote-card__items {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--pz-color-structural-steel);
+  font-size: 0.9rem;
+}
+
+.pz-owner-quote-card__responses {
+  display: grid;
+  gap: var(--pz-space-3);
+  padding-top: var(--pz-space-3);
+  border-top: 1px solid rgba(10, 10, 15, 0.08);
+}
+
+.pz-owner-quote-response {
+  padding: var(--pz-space-3);
+  background: rgba(10, 10, 15, 0.03);
+}
+
+.pz-owner-quote-response div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.pz-owner-quote-response span,
+.pz-owner-quote-card__waiting {
+  color: var(--pz-color-concrete-grey);
+  font-size: 0.82rem;
 }
 
 /* Projects Flow */

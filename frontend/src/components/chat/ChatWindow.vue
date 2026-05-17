@@ -319,12 +319,25 @@ onMounted(() => {
 
   fetchHistoricalMessages();
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = 'localhost:8000'; 
   const token = localStorage.getItem('token');
   
   if (token) {
-      const wsUrl = `${protocol}//${host}/ws/chat/${props.roomId}/?token=${token}`;
+      const explicitWsUrl = import.meta.env.VITE_WS_URL;
+      let wsUrl;
+      if (explicitWsUrl) {
+        const url = new URL(explicitWsUrl);
+        url.pathname = `/ws/chat/${props.roomId}/`;
+        url.searchParams.set('token', token);
+        wsUrl = url.toString();
+      } else {
+        const fallbackApi = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          ? `${window.location.protocol}//${window.location.hostname}:8007/api`
+          : `${window.location.origin}/api`;
+        const apiBase = import.meta.env.VITE_API_URL || fallbackApi;
+        const apiUrl = new URL(apiBase, window.location.origin);
+        const protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${apiUrl.host}/ws/chat/${props.roomId}/?token=${token}`;
+      }
       webSocket.value = new WebSocket(wsUrl);
 
       webSocket.value.onopen = () => { wsStatus.value = 'open'; };

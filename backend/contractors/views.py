@@ -6,6 +6,8 @@ from .serializers import ContractorProfileSerializer
 from accounts.permissions import user_has_role
 from accounts.models import User
 from rbac.permissions import HasRequiredPermission
+from notifications.models import Notification
+from notifications.services import notify_user
 
 class IsContractor(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -74,8 +76,22 @@ class ContractorViewSet(viewsets.ModelViewSet):
         if self._is_admin() and previous_status != contractor.verified_status:
             if contractor.verified_status == ContractorProfile.Status.APPROVED:
                 contractor.user.grant_role(User.Role.CONTRACTOR)
+                notify_user(
+                    contractor.user,
+                    Notification.Type.SYSTEM,
+                    "Contractor workspace approved",
+                    "Your contractor profile was approved. You can now bid on eligible contracts.",
+                    data={"contractor_id": contractor.id},
+                )
             elif contractor.verified_status == ContractorProfile.Status.REJECTED:
                 contractor.user.revoke_role(User.Role.CONTRACTOR)
+                notify_user(
+                    contractor.user,
+                    Notification.Type.SYSTEM,
+                    "Contractor workspace rejected",
+                    "Your contractor profile was rejected. Review your onboarding details and contact support if needed.",
+                    data={"contractor_id": contractor.id},
+                )
 
     @action(detail=False, methods=['post'], url_path='register')
     def register(self, request):
@@ -104,6 +120,13 @@ class ContractorViewSet(viewsets.ModelViewSet):
         contractor.verified_status = ContractorProfile.Status.APPROVED
         contractor.save(update_fields=['verified_status'])
         contractor.user.grant_role(User.Role.CONTRACTOR)
+        notify_user(
+            contractor.user,
+            Notification.Type.SYSTEM,
+            "Contractor workspace approved",
+            "Your contractor profile was approved. You can now bid on eligible contracts.",
+            data={"contractor_id": contractor.id},
+        )
         return Response(self.get_serializer(contractor).data)
 
     @action(detail=True, methods=['post'])
@@ -114,4 +137,11 @@ class ContractorViewSet(viewsets.ModelViewSet):
         contractor.verified_status = ContractorProfile.Status.REJECTED
         contractor.save(update_fields=['verified_status'])
         contractor.user.revoke_role(User.Role.CONTRACTOR)
+        notify_user(
+            contractor.user,
+            Notification.Type.SYSTEM,
+            "Contractor workspace rejected",
+            "Your contractor profile was rejected. Review your onboarding details and contact support if needed.",
+            data={"contractor_id": contractor.id},
+        )
         return Response(self.get_serializer(contractor).data)

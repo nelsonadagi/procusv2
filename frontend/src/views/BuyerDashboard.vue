@@ -1,5 +1,6 @@
 <template>
-  <DashboardShell
+  <div class="buyer-dashboard-page">
+    <DashboardShell
     v-model:active-section="activeSection"
     accent="earth"
     title="Buyer Dashboard"
@@ -115,7 +116,7 @@
               <Badge :variant="quote.status === 'REQUESTED' ? 'warning' : 'success'">{{ quote.status }}</Badge>
             </div>
             <div class="pz-quote-card__items">
-              <div v-for="item in quote.items" :key="item.id">• {{ item.quantity }}x {{ item.product_name || 'Material item' }}</div>
+              <div v-for="item in quote.items" :key="item.id">• {{ item.quantity }}x {{ item.product_name || item.product_details?.name || 'Material item' }}</div>
             </div>
             <div v-if="quote.responses && quote.responses.length > 0">
               <h4 class="pz-quote-card__responses-title">Vendor Responses</h4>
@@ -228,10 +229,10 @@
         </div>
       </Card>
     </div>
-  </DashboardShell>
+    </DashboardShell>
 
-  <!-- Rate Modal -->
-  <Modal :isOpen="showRateModal" title="Rate Vendor" size="md" @close="showRateModal = false">
+    <!-- Rate Modal -->
+    <Modal :isOpen="showRateModal" title="Rate Vendor" size="md" @close="showRateModal = false">
     <div class="text-center mb-4">
       <p class="mb-2">How was your experience with order #{{ selectedOrder?.id }}?</p>
       <div class="flex justify-center gap-2">
@@ -243,10 +244,10 @@
       <Button variant="outline" @click="showRateModal = false">Cancel</Button>
       <Button @click="submitRating" variant="primary">Submit Review</Button>
     </template>
-  </Modal>
+    </Modal>
 
-  <!-- Address Modal -->
-  <Modal :isOpen="showAddressModal" title="Add Delivery Hub" size="lg" @close="showAddressModal = false">
+    <!-- Address Modal -->
+    <Modal :isOpen="showAddressModal" title="Add Delivery Hub" size="lg" @close="showAddressModal = false">
     <div class="pz-l-grid pz-l-grid--md-cols-2 pz-l-grid--gap-6">
       <form id="addr-form" @submit.prevent="saveAddress" class="pz-l-flex pz-l-flex--column pz-l-flex--gap-4">
         <div class="pz-u-text-mono text-xs pz-u-color-earth u-mb-2">Hub Identification</div>
@@ -275,20 +276,20 @@
       <Button variant="outline" @click="showAddressModal = false">Cancel</Button>
       <Button type="submit" form="addr-form" variant="primary">Save Hub</Button>
     </template>
-  </Modal>
+    </Modal>
 
-  <!-- Tracking Modal -->
-  <Modal :isOpen="showTrackingModal" title="Tracking Details" size="xl" @close="showTrackingModal = false">
-    <LogisticsTracker :trackingNumber="activeTrackingNumber" />
-  </Modal>
+    <!-- Tracking Modal -->
+    <Modal :isOpen="showTrackingModal" title="Tracking Details" size="xl" @close="showTrackingModal = false">
+      <LogisticsTracker :trackingNumber="activeTrackingNumber" />
+    </Modal>
 
-  <!-- Chat Modal -->
-  <Modal :isOpen="showChatModal" title="Message Vendor" size="lg" @close="showChatModal = false">
-    <ChatWindow v-if="activeChatRoomId" :roomId="String(activeChatRoomId)" />
-  </Modal>
+    <!-- Chat Modal -->
+    <Modal :isOpen="showChatModal" title="Message Vendor" size="lg" @close="showChatModal = false">
+      <ChatWindow v-if="activeChatRoomId" :roomId="String(activeChatRoomId)" />
+    </Modal>
 
-  <!-- Confirm Modal -->
-  <Modal :isOpen="showActionConfirm" :title="confirmActionTitle" size="sm" @close="closeActionConfirm">
+    <!-- Confirm Modal -->
+    <Modal :isOpen="showActionConfirm" :title="confirmActionTitle" size="sm" @close="closeActionConfirm">
     <div class="pz-confirm-panel">
       <p class="pz-confirm-panel__title">{{ confirmActionMessage }}</p>
       <p class="pz-confirm-panel__body">This action updates the order workflow immediately and may affect dispatch or fulfillment.</p>
@@ -297,10 +298,10 @@
       <Button variant="outline" @click="closeActionConfirm">Cancel</Button>
       <Button variant="primary" :loading="confirmActionLoading" @click="confirmAction">Continue</Button>
     </template>
-  </Modal>
+    </Modal>
 
-  <!-- Checkout Modal -->
-  <Modal :isOpen="showCheckoutModal" title="Choose Payment Method" size="lg" @close="closeCheckoutModal">
+    <!-- Checkout Modal -->
+    <Modal :isOpen="showCheckoutModal" title="Choose Payment Method" size="lg" @close="closeCheckoutModal">
     <div class="pz-checkout-modal">
       <div class="pz-checkout-modal__summary">
         <div>
@@ -345,7 +346,8 @@
       <Button variant="outline" @click="closeCheckoutModal">Cancel</Button>
       <Button variant="primary" :loading="checkoutLoading" :disabled="!selectedPaymentProvider || paymentMethods.length === 0" @click="confirmCheckout">Place Order</Button>
     </template>
-  </Modal>
+    </Modal>
+  </div>
 </template>
 
 <script setup>
