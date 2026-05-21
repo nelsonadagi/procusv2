@@ -38,11 +38,50 @@
       </div>
     </template>
 
+    <div class="pz-contractor-workflow-card pz-glass-panel">
+      <div class="pz-contractor-workflow-card__summary">
+        <div class="pz-contractor-workflow-card__kicker">{{ contractorWorkflow.stage }}</div>
+        <h3 class="pz-contractor-workflow-card__title">{{ contractorWorkflow.title }}</h3>
+        <p class="pz-contractor-workflow-card__body">{{ contractorWorkflow.body }}</p>
+        <div class="pz-contractor-workflow-card__actions">
+          <button class="pz-btn-glass" @click="contractorWorkflow.primaryAction.handler">{{ contractorWorkflow.primaryAction.label }}</button>
+          <button v-if="contractorWorkflow.secondaryAction" class="pz-btn-glass" @click="contractorWorkflow.secondaryAction.handler">{{ contractorWorkflow.secondaryAction.label }}</button>
+        </div>
+      </div>
+      <div class="pz-contractor-workflow-card__metrics">
+        <div class="pz-contractor-workflow-metric">
+          <span>Active Bids</span>
+          <strong>{{ pendingBids.length }}</strong>
+        </div>
+        <div class="pz-contractor-workflow-metric">
+          <span>Active Jobs</span>
+          <strong>{{ activeJobs.length }}</strong>
+        </div>
+        <div class="pz-contractor-workflow-metric">
+          <span>Posted Tenders</span>
+          <strong>{{ myContracts.length }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <WorkflowGuide title="Contractor CTA" eyebrow="Action">
+      <ModuleCTA
+        eyebrow="Contractor Growth"
+        title="Ready to bid, or need to open your contractor profile?"
+        body="Complete contractor onboarding to respond to tenders, then use this workspace to manage bids, awards, and delivery readiness."
+        primary-label="Complete Onboarding"
+        primary-to="/contractors/register"
+        secondary-label="Find Tenders"
+        secondary-to="/contracts"
+        tone="savanna"
+      />
+    </WorkflowGuide>
+
     <div v-if="needsOnboarding" class="pz-onboarding-state">
       <div class="pz-onboarding-state__kicker">CONTRACTOR_PROFILE_REQUIRED</div>
       <h3 class="pz-onboarding-state__title">Your contractor workspace needs a verified company profile.</h3>
       <p class="pz-onboarding-state__body">
-        Submit your contractor registration to unlock bids, jobs, and tender management in this console.
+        Submit your contractor registration first. Once approved, you can browse tenders, submit bids, and manage active jobs from this console.
       </p>
       <Button variant="primary" @click="$router.push('/contractors/register')">Complete Contractor Onboarding</Button>
     </div>
@@ -227,6 +266,8 @@ import { useRouter } from 'vue-router';
 import api from '../services/api';
 import Button from '../components/ui/Button.vue';
 import Badge from '../components/ui/Badge.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import EmptyState from '../components/ui/EmptyState.vue';
 import DashboardShell from '../components/layout/DashboardShell.vue';
 import { useAuthStore } from '../stores/auth';
@@ -258,6 +299,46 @@ provide('showAlert', showAlert);
 
 const pendingBids = computed(() => bids.value.filter(b => b.status !== 'AWARDED'));
 const activeJobs = computed(() => bids.value.filter(b => b.status === 'AWARDED'));
+
+const contractorWorkflow = computed(() => {
+  if (needsOnboarding.value) {
+    return {
+      stage: 'SETUP',
+      title: 'Complete contractor onboarding',
+      body: 'Submit your business profile first so bids, tenders, and active jobs become available.',
+      primaryAction: { label: 'Complete Onboarding', handler: () => { window.location.href = '/contractors/register'; } },
+      secondaryAction: null,
+    };
+  }
+
+  if (profile.value?.verified_status !== 'APPROVED') {
+    return {
+      stage: 'PENDING',
+      title: 'Wait for verification before bidding',
+      body: 'Your company profile exists, but approval is still required before live work opens up.',
+      primaryAction: { label: 'View Profile', handler: () => { activeSection.value = 'profile'; } },
+      secondaryAction: { label: 'Browse Tenders', handler: () => { router.push('/tenders'); } },
+    };
+  }
+
+  if (!pendingBids.value.length) {
+    return {
+      stage: 'BIDDING',
+      title: 'Find tenders and submit proposals',
+      body: 'Approved contractors should move from profile to bids, then into active jobs and tender follow-up.',
+      primaryAction: { label: 'View Bids', handler: () => { activeSection.value = 'bids'; } },
+      secondaryAction: { label: 'Find Tenders', handler: () => { router.push('/tenders'); } },
+    };
+  }
+
+  return {
+    stage: 'ACTIVE',
+    title: 'Manage bids and keep jobs moving',
+    body: 'Review submissions, inspect live jobs, and keep your tender pipeline active.',
+    primaryAction: { label: 'Review Bids', handler: () => { activeSection.value = 'bids'; } },
+    secondaryAction: { label: 'Open Jobs', handler: () => { activeSection.value = 'jobs'; } },
+  };
+});
 
 const fetchData = async () => {
   loading.value = true;
@@ -327,6 +408,72 @@ onMounted(() => fetchData());
   margin-bottom: 1rem;
   color: var(--pz-color-text-secondary);
   line-height: 1.6;
+}
+
+.pz-contractor-workflow-card {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: var(--pz-space-8);
+  padding: var(--pz-space-6);
+}
+
+.pz-contractor-workflow-card__summary {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.pz-contractor-workflow-card__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-contractor-workflow-card__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: 1.25rem;
+}
+
+.pz-contractor-workflow-card__body {
+  max-width: 58ch;
+  margin: 0;
+  color: var(--pz-color-text-secondary);
+  line-height: 1.55;
+}
+
+.pz-contractor-workflow-card__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pz-contractor-workflow-card__metrics {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pz-contractor-workflow-metric {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.pz-contractor-workflow-metric span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-contractor-workflow-metric strong {
+  font-family: var(--pz-font-display);
+  font-size: 1rem;
 }
 
 .pz-command-node {

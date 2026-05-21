@@ -9,6 +9,19 @@
     />
 
     <main class="pz-l-container u-py-12">
+      <WorkflowGuide title="Tender CTA" eyebrow="Action">
+        <ModuleCTA
+          eyebrow="Tender Participation"
+          title="Want to publish work or bid as a contractor?"
+          body="Post a tender when you need delivery partners, or complete contractor onboarding before responding to open opportunities."
+          primary-label="Post Tender"
+          primary-to="/contracts/new"
+          secondary-label="Contractor Onboarding"
+          secondary-to="/contractors/register"
+          tone="savanna"
+        />
+      </WorkflowGuide>
+
       <!-- Unified Discovery Filters -->
       <div class="pz-filter-bar">
         <div class="pz-l-flex pz-l-flex--gap-6 pz-l-flex--align-center pz-l-flex--wrap">
@@ -106,6 +119,8 @@
   import Button from '../components/ui/Button.vue';
   import Badge from '../components/ui/Badge.vue';
   import EntryHero from '../components/ui/EntryHero.vue';
+  import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+  import ModuleCTA from '../components/ui/ModuleCTA.vue';
   import { useAuthStore } from '../stores/auth';
   import { useConfigStore } from '../stores/config';
 

@@ -21,6 +21,7 @@ class PropertyListing(models.Model):
 
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
+        PENDING_REVIEW = 'PENDING_REVIEW', 'Pending Review'
         ACTIVE = 'ACTIVE', 'Active'
         SOLD = 'SOLD', 'Sold'
         LEASED = 'LEASED', 'Leased'
@@ -141,8 +142,18 @@ class PropertyMediaAsset(models.Model):
         DOCUMENT = 'DOCUMENT', 'Document'
         VIRTUAL_TOUR = 'VIRTUAL_TOUR', 'Virtual Tour'
 
+    class DocumentCategory(models.TextChoices):
+        GENERAL = 'GENERAL', 'General'
+        DEED = 'DEED', 'Title Deed'
+        FLOOR_PLAN = 'FLOOR_PLAN', 'Floor Plan'
+        COMPLIANCE = 'COMPLIANCE', 'Compliance Certificate'
+        SURVEY = 'SURVEY', 'Survey'
+        VALUATION = 'VALUATION', 'Valuation'
+        BROCHURE = 'BROCHURE', 'Brochure'
+
     property = models.ForeignKey(PropertyListing, on_delete=models.CASCADE, related_name='media_assets')
     media_type = models.CharField(max_length=20, choices=MediaType.choices, default=MediaType.IMAGE)
+    document_category = models.CharField(max_length=20, choices=DocumentCategory.choices, blank=True, default='')
     file = models.FileField(upload_to='property/media/', null=True, blank=True)
     external_url = models.URLField(blank=True, default='')
     title = models.CharField(max_length=255, blank=True, default='')
@@ -308,3 +319,52 @@ class PropertyAppointment(models.Model):
 
     class Meta:
         ordering = ['scheduled_start']
+
+
+class PropertyEvent(models.Model):
+    class EventType(models.TextChoices):
+        PROPERTY_CREATED = 'PROPERTY_CREATED', 'Property Created'
+        PUBLISHED = 'PUBLISHED', 'Published'
+        INQUIRY_RECEIVED = 'INQUIRY_RECEIVED', 'Inquiry Received'
+        INQUIRY_REPLIED = 'INQUIRY_REPLIED', 'Inquiry Replied'
+        SLOT_ADDED = 'SLOT_ADDED', 'Slot Added'
+        VISIT_BOOKED = 'VISIT_BOOKED', 'Visit Booked'
+        VISIT_UPDATED = 'VISIT_UPDATED', 'Visit Updated'
+        FINANCE_REVIEW_STARTED = 'FINANCE_REVIEW_STARTED', 'Finance Review Started'
+        PROJECT_LINKED = 'PROJECT_LINKED', 'Project Linked'
+        MODERATION_UPDATED = 'MODERATION_UPDATED', 'Moderation Updated'
+        ARCHIVED = 'ARCHIVED', 'Archived'
+
+    property = models.ForeignKey(PropertyListing, on_delete=models.CASCADE, related_name='events')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='property_events')
+    event_type = models.CharField(max_length=40, choices=EventType.choices)
+    title = models.CharField(max_length=255)
+    message = models.TextField(blank=True, default='')
+    data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class PropertyInterest(models.Model):
+    property = models.ForeignKey(PropertyListing, on_delete=models.CASCADE, related_name='interests')
+    email = models.EmailField()
+    full_name = models.CharField(max_length=255, blank=True, default='')
+    reason = models.CharField(max_length=80, blank=True, default='availability')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('property', 'email', 'reason')]
+
+
+class SavedPropertySearch(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='saved_property_searches')
+    email = models.EmailField(blank=True, default='')
+    name = models.CharField(max_length=255, blank=True, default='Property search')
+    filters = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']

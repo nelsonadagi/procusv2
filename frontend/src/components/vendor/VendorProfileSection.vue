@@ -2,12 +2,12 @@
   <div class="pz-profile-section">
     <div class="pz-admin-card pz-u-mb-8">
       <div class="pz-admin-card__header">
-        <h3 class="pz-admin-card__title">OFFICIAL_REGISTRY_DATA</h3>
+        <h3 class="pz-admin-card__title">Business Profile</h3>
       </div>
       <form @submit.prevent="saveProfile" class="pz-p-6">
         <div class="pz-l-grid pz-l-grid--md-cols-2 pz-l-grid--gap-6">
-          <PzInput v-model="form.business_name" label="BUSINESS_NAME" required />
-          <PzInput v-model="form.registration_number" label="REGISTRATION_NO" required />
+          <PzInput v-model="form.business_name" label="Business Name" required />
+          <PzInput v-model="form.registration_number" label="Registration Number" required />
         </div>
 
         <!-- Advanced Map Integration via LocationInterface -->
@@ -17,23 +17,23 @@
 
         <!-- Logistical Capabilities -->
         <div class="pz-divider u-my-8"></div>
-        <h4 class="pz-u-text-mono text-sm font-bold u-mb-4">LOGISTICAL_CAPABILITIES</h4>
+        <h4 class="pz-u-text-mono text-sm font-bold u-mb-4">Delivery Options</h4>
 
         <div class="pz-l-grid pz-l-grid--md-cols-2 pz-l-grid--gap-6">
           <div class="pz-input-wrapper">
             <label class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-3 cursor-pointer">
               <input type="checkbox" v-model="form.provides_delivery" />
-              <span class="pz-input__label">OFFER_DELIVERY_SERVICES</span>
+              <span class="pz-input__label">I offer delivery</span>
             </label>
           </div>
 
-          <PzInput v-if="form.provides_delivery" v-model.number="form.delivery_radius_km" label="DELIVERY_RADIUS (KM)"
+          <PzInput v-if="form.provides_delivery" v-model.number="form.delivery_radius_km" label="Delivery Radius (km)"
             type="number" />
         </div>
 
         <!-- Industrial Specialization (Multi-category) -->
         <div class="u-mt-8">
-          <label class="pz-input__label u-mb-4">INDUSTRIAL_SPECIALIZATION (CATEGORIES)</label>
+          <label class="pz-input__label u-mb-4">Product Categories</label>
           <div class="pz-category-chip-grid">
             <label v-for="cat in categories" :key="cat.id" class="pz-category-chip"
               :class="{ 'pz-category-chip--active': isCategorySelected(cat.name) }">
@@ -44,7 +44,7 @@
         </div>
 
         <div class="u-mt-10 pz-l-flex pz-l-flex--justify-end">
-          <Button type="submit" variant="primary" :loading="saving">UPDATE_PROFILE</Button>
+          <Button type="submit" variant="primary" :loading="saving">Save Changes</Button>
         </div>
       </form>
     </div>

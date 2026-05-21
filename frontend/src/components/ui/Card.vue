@@ -61,14 +61,14 @@
 
 <style scoped>
     .pz-card {
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 249, 245, 0.96));
-        border: 1px solid rgba(10, 10, 15, 0.07);
-        border-radius: 20px;
+        background: #ffffff;
+        border: 1px solid rgba(10, 10, 15, 0.12);
+        border-radius: 14px;
         transition: border-color 0.35s ease, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow:
-            0 1px 2px rgba(10, 10, 15, 0.03),
-            0 4px 8px rgba(10, 10, 15, 0.04),
-            0 12px 24px rgba(10, 10, 15, 0.05);
+            10px 10px 0 rgba(10, 10, 15, 0.03),
+            0 2px 4px rgba(10, 10, 15, 0.03),
+            0 10px 24px rgba(10, 10, 15, 0.04);
         height: 100%;
         overflow: hidden;
         position: relative;
@@ -76,12 +76,12 @@
 
     /* Premium variant */
     .pz-card--premium {
-        background: linear-gradient(180deg, #ffffff 0%, #faf9f5 100%);
-        border: 1px solid rgba(10, 10, 15, 0.06);
+        background: #ffffff;
+        border: 1px solid rgba(10, 10, 15, 0.1);
         box-shadow:
-            0 1px 3px rgba(10, 10, 15, 0.02),
-            0 8px 20px rgba(10, 10, 15, 0.06),
-            0 24px 48px rgba(10, 10, 15, 0.04);
+            10px 10px 0 rgba(10, 10, 15, 0.02),
+            0 6px 16px rgba(10, 10, 15, 0.04),
+            0 18px 36px rgba(10, 10, 15, 0.04);
     }
 
     /* Glass variant */
@@ -105,10 +105,9 @@
     .pz-card--elevated {
         background: #ffffff;
         box-shadow:
-            0 2px 4px rgba(10, 10, 15, 0.02),
-            0 8px 16px rgba(10, 10, 15, 0.04),
-            0 20px 40px rgba(10, 10, 15, 0.06),
-            0 40px 80px rgba(10, 10, 15, 0.04);
+            12px 12px 0 rgba(10, 10, 15, 0.03),
+            0 8px 20px rgba(10, 10, 15, 0.04),
+            0 24px 48px rgba(10, 10, 15, 0.05);
     }
 
     /* Top accent line */
@@ -175,13 +174,13 @@
 
     /* Header */
     .pz-card__header {
-        padding: 1.1rem 1.5rem 0.9rem;
-        border-bottom: 1px solid rgba(10, 10, 15, 0.06);
+        padding: 1rem 1.35rem 0.85rem;
+        border-bottom: 1px solid rgba(10, 10, 15, 0.08);
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
         gap: 0.75rem;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
     }
 
     .pz-card__header-main {
@@ -237,8 +236,8 @@
     }
 
     .pz-card__footer {
-        padding: 1rem 1.5rem 1.2rem;
-        border-top: 1px solid rgba(10, 10, 15, 0.06);
-        background: linear-gradient(180deg, rgba(250, 249, 245, 0.4), rgba(255, 255, 255, 0.6));
+        padding: 0.95rem 1.35rem 1.1rem;
+        border-top: 1px solid rgba(10, 10, 15, 0.08);
+        background: linear-gradient(180deg, rgba(250, 249, 245, 0.3), rgba(255, 255, 255, 0.65));
     }
 </style>

@@ -33,12 +33,14 @@ const router = createRouter({
         {
             path: '/vendors/register',
             name: 'vendor-register',
-            component: () => import('../views/VendorRegistration.vue')
+            component: () => import('../views/VendorRegistration.vue'),
+            meta: { requiresAuth: true, activationFlow: 'vendor' }
         },
         {
             path: '/contractors/register',
             name: 'contractor-register',
-            component: () => import('../views/ContractorRegistration.vue')
+            component: () => import('../views/ContractorRegistration.vue'),
+            meta: { requiresAuth: true, activationFlow: 'contractor' }
         },
         {
             path: '/contracts',
@@ -48,7 +50,8 @@ const router = createRouter({
         {
             path: '/contracts/new',
             name: 'post-contract',
-            component: () => import('../views/PostContract.vue')
+            component: () => import('../views/PostContract.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/contracts/:id',
@@ -63,7 +66,8 @@ const router = createRouter({
         {
             path: '/projects/new',
             name: 'create-project',
-            component: () => import('../views/CreateProject.vue')
+            component: () => import('../views/CreateProject.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/projects/:id',
@@ -185,12 +189,28 @@ const router = createRouter({
 router.beforeEach((to) => {
     const authStore = useAuthStore();
 
+    if (!authStore.isAuthenticated) {
+        if (to.name === 'buyer-dashboard') return true;
+        if (to.name === 'login' || to.name === 'register') {
+            return true;
+        }
+        if (to.meta.requiresAuth || to.meta.requiresAdmin) {
+            return {
+                name: 'login',
+                query: { redirect: to.fullPath }
+            };
+        }
+    }
+
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-        return { name: 'login' };
+        return {
+            name: 'login',
+            query: { redirect: to.fullPath }
+        };
     }
 
     if (to.meta.requiresAdmin && !authStore.isAdmin) {
-        return authStore.isAuthenticated ? { name: 'home' } : { name: 'login' };
+        return authStore.isAuthenticated ? { name: 'home' } : { name: 'buyer-dashboard' };
     }
 
     return true;

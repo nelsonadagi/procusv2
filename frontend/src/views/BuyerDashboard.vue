@@ -26,12 +26,56 @@
     <template #headerActions>
       <div class="pz-l-flex pz-l-flex--gap-4 pz-l-flex--align-center">
         <div class="u-text-right u-hide-mobile">
-          <div class="pz-u-text-mono font-bold">{{ authStore.user?.first_name }} {{ authStore.user?.last_name }}</div>
+          <div class="pz-u-text-mono font-bold">{{ buyerIdentityLabel }}</div>
           <div class="pz-u-text-uppercase text-xs pz-u-color-earth">{{ userRole }}</div>
         </div>
         <Badge variant="primary">{{ userRole }}</Badge>
       </div>
     </template>
+
+    <WorkflowGuide title="Workflow Path" eyebrow="Start Here">
+      <div class="buyer-workflow-banner">
+        <div class="buyer-workflow-banner__summary">
+          <div class="buyer-workflow-banner__kicker">{{ workflowSummary.stage }}</div>
+          <h2 class="buyer-workflow-banner__title">{{ workflowSummary.title }}</h2>
+          <p class="buyer-workflow-banner__body">{{ workflowSummary.body }}</p>
+        </div>
+        <div class="buyer-workflow-banner__actions">
+          <Button v-if="workflowSummary.primaryAction" variant="primary" size="sm" @click="workflowSummary.primaryAction.handler">
+            {{ workflowSummary.primaryAction.label }}
+          </Button>
+          <Button v-if="workflowSummary.secondaryAction" variant="outline" size="sm" @click="workflowSummary.secondaryAction.handler">
+            {{ workflowSummary.secondaryAction.label }}
+          </Button>
+        </div>
+      </div>
+      <div class="buyer-workflow-banner__steps">
+        <div
+          v-for="step in workflowSteps"
+          :key="step.label"
+          class="buyer-workflow-step"
+          :class="{ 'buyer-workflow-step--done': step.done, 'buyer-workflow-step--active': step.active }"
+        >
+          <span class="buyer-workflow-step__index">{{ step.index }}</span>
+          <div class="buyer-workflow-step__content">
+            <strong>{{ step.label }}</strong>
+            <span>{{ step.help }}</span>
+          </div>
+        </div>
+      </div>
+    
+
+    <ModuleCTA
+      eyebrow="Supplier Path"
+      title="Buying today, but also have materials to sell?"
+      body="Activate vendor onboarding from the same account, publish your catalog, and keep buyer orders separate from supplier quotes."
+      primary-label="Become a Vendor"
+      primary-to="/vendors/register"
+      secondary-label="Open Vendor Workspace"
+      secondary-to="/vendor/dashboard"
+      tone="earth"
+    />
+</WorkflowGuide>
 
     <!-- ORDERS SECTION -->
     <div v-if="activeSection === 'orders'">
@@ -47,11 +91,12 @@
           v-else-if="orders.length === 0"
           icon="📦"
           title="No orders yet"
-          description="Browse the marketplace and request quotes to get started."
+          description="No paid or confirmed orders exist yet."
+          next-step="Browse the marketplace, request quotes, and accept a response to create your first order."
+          action-label="Browse Marketplace"
+          action-variant="primary"
+          @action="$router.push('/')"
         >
-          <template #action>
-            <Button variant="primary" @click="$router.push('/')">Browse Marketplace</Button>
-          </template>
         </EmptyState>
         <div v-else class="c-table-container pz-table-shell">
           <table class="c-table">
@@ -103,11 +148,12 @@
           v-else-if="quotes.length === 0"
           icon="📝"
           title="No quote requests"
-          description="Request quotes from vendors to compare prices and delivery terms."
+          description="No quote requests have been sent from this account yet."
+          next-step="Request a quote from the marketplace so vendors can respond with pricing and delivery terms."
+          action-label="Find Materials"
+          action-variant="primary"
+          @action="$router.push('/')"
         >
-          <template #action>
-            <Button variant="primary" @click="$router.push('/')">Find Materials</Button>
-          </template>
         </EmptyState>
         <div v-else class="pz-quote-list">
           <div v-for="quote in quotes" :key="quote.id" class="pz-quote-card">
@@ -155,11 +201,12 @@
             v-else-if="addresses.length === 0"
             icon="📍"
             title="No delivery hubs"
-            description="Add your construction sites and warehouses so vendors know where to deliver materials."
+            description="No delivery locations have been saved for this buyer profile."
+            next-step="Add a construction site or warehouse so vendors can deliver materials without delay."
+            action-label="Add First Hub"
+            action-variant="primary"
+            @action="openAddressModal"
           >
-            <template #action>
-              <Button variant="primary" @click="openAddressModal">Add First Hub</Button>
-            </template>
           </EmptyState>
           <div v-else class="grid grid-cols-1 gap-4">
             <Card v-for="addr in addresses" :key="addr.id" class="relative hover:shadow-md transition-shadow">
@@ -179,7 +226,7 @@
     </div>
 
     <!-- PROFILE SECTION -->
-    <div v-if="activeSection === 'profile'">
+    <div v-if="activeSection === 'profile' && !isGuest">
       <Card title="My Profile" class="max-w-2xl">
         <form @submit.prevent="updateProfile" class="l-grid l-grid--cols-1 l-grid--gap-4">
           <div class="l-grid l-grid--cols-2 l-grid--gap-4">
@@ -226,6 +273,21 @@
             <div class="pz-role-launcher__title">{{ hub.label }}</div>
             <div class="pz-role-launcher__body">{{ hub.body }}</div>
           </button>
+        </div>
+      </Card>
+    </div>
+
+    <div v-else-if="activeSection === 'profile' && isGuest">
+      <Card title="Buyer Access" class="max-w-2xl">
+        <div class="pz-guest-panel">
+          <div class="pz-guest-panel__title">You are browsing as a buyer.</div>
+          <p class="pz-guest-panel__body">
+            Sign in to save your profile, delivery hubs, quote requests, and order history. Until then, browse the marketplace and use the buyer dashboard as your main workspace.
+          </p>
+          <div class="pz-guest-panel__actions">
+            <Button variant="primary" @click="$router.push('/login')">Sign In</Button>
+            <Button variant="outline" @click="$router.push('/')">Browse Marketplace</Button>
+          </div>
         </div>
       </Card>
     </div>
@@ -357,6 +419,8 @@ import { useAuthStore } from '../stores/auth';
 import { useConfigStore } from '../stores/config';
 import { useNotificationStore } from '../stores/notifications';
 import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import Button from '../components/ui/Button.vue';
 import Badge from '../components/ui/Badge.vue';
 import Modal from '../components/ui/Modal.vue';
@@ -387,7 +451,14 @@ const selectedCheckoutQuote = ref(null);
 const selectedCheckoutResponse = ref(null);
 const selectedPaymentProvider = ref('');
 
-const userRole = computed(() => authStore.user?.role || 'User');
+const isGuest = computed(() => !authStore.isAuthenticated);
+const userRole = computed(() => (isGuest.value ? 'Buyer' : authStore.user?.role || 'User'));
+const buyerIdentityLabel = computed(() => {
+  if (isGuest.value) return 'Guest Buyer';
+  const first = authStore.user?.first_name || '';
+  const last = authStore.user?.last_name || '';
+  return `${first} ${last}`.trim() || authStore.user?.email || 'Buyer Account';
+});
 const approvedRoleSummary = computed(() => {
   if (profile.value.role === 'ADMIN') return 'Admin accounts do not carry additional non-admin roles.';
   const roles = profile.value.roles || [];
@@ -411,6 +482,133 @@ const onboardingHubs = [
   { label: 'Courier Workspace', path: '/courier/dashboard', kicker: 'COURIER', body: 'Register your courier company profile and activate logistics operations.' },
   { label: 'Government Workspace', path: '/government/dashboard', kicker: 'GOVERNMENT', body: 'Review public tender access and government procurement guidance.' }
 ];
+
+const workflowSummary = computed(() => {
+  if (loading.value) {
+    return {
+      stage: 'SYNCING',
+      title: 'Loading buyer activity',
+      body: 'Fetching your orders, quote requests, delivery hubs, and payment methods so the next action is visible right away.',
+      primaryAction: null,
+      secondaryAction: null,
+    };
+  }
+
+  if (isGuest.value) {
+    return {
+      stage: 'BROWSE',
+      title: 'Start as a buyer',
+      body: 'Browse materials and properties as a buyer. Sign in when you want to save delivery hubs, quote requests, and order history.',
+      primaryAction: { label: 'Sign In', handler: () => { window.location.href = '/login'; } },
+      secondaryAction: { label: 'Browse Marketplace', handler: () => { window.location.href = '/'; } },
+    };
+  }
+
+  if (!addresses.value.length) {
+    return {
+      stage: 'SETUP',
+      title: 'Add a delivery hub first',
+      body: 'Saved addresses unlock checkout, vendor delivery, and shipping tracking. Add one site or warehouse before placing your next order.',
+      primaryAction: { label: 'Add Delivery Hub', handler: openAddressModal },
+      secondaryAction: { label: 'Browse Marketplace', handler: () => { window.location.href = '/'; } },
+    };
+  }
+
+  if (!quotes.value.length) {
+    return {
+      stage: 'REQUESTS',
+      title: 'Request quotes before placing orders',
+      body: 'Quote requests let vendors respond with pricing and delivery terms. Accept a quote to create the order and start payment.',
+      primaryAction: { label: 'Browse Marketplace', handler: () => { window.location.href = '/'; } },
+      secondaryAction: { label: 'Add Delivery Hub', handler: openAddressModal },
+    };
+  }
+
+  const pendingOrder = orders.value.find((order) => order.payment_status !== 'PAID' || order.status === 'PLACED' || order.status === 'CONFIRMED');
+  if (pendingOrder) {
+    return {
+      stage: 'ACTION',
+      title: 'Complete payment or confirm delivery',
+      body: 'There is at least one active order that needs attention. Finish payment, track delivery, or confirm receipt so the workflow can close cleanly.',
+      primaryAction: { label: 'View Orders', handler: () => { activeSection.value = 'orders'; } },
+      secondaryAction: { label: 'View Quotes', handler: () => { activeSection.value = 'quotes'; } },
+    };
+  }
+
+  return {
+    stage: 'READY',
+    title: 'Keep your purchasing workflow moving',
+    body: 'Your buyer workspace is ready. Use quote requests for comparison, orders for fulfillment, and delivery hubs for dispatch visibility.',
+    primaryAction: { label: 'View Orders', handler: () => { activeSection.value = 'orders'; } },
+    secondaryAction: { label: 'View Quotes', handler: () => { activeSection.value = 'quotes'; } },
+  };
+});
+
+const workflowSteps = computed(() => {
+  if (isGuest.value) {
+    return [
+      {
+        index: '01',
+        label: 'Browse marketplace',
+        help: 'Explore materials and property listings before you sign in.',
+        done: true,
+        active: true,
+      },
+      {
+        index: '02',
+        label: 'Sign in',
+        help: 'Sign in to save orders, quotes, and delivery hubs.',
+        done: false,
+        active: false,
+      },
+      {
+        index: '03',
+        label: 'Save delivery hubs',
+        help: 'Checkout and delivery routing unlock after sign-in.',
+        done: false,
+        active: false,
+      },
+      {
+        index: '04',
+        label: 'Request quotes',
+        help: 'Send quote requests once your buyer account is active.',
+        done: false,
+        active: false,
+      },
+    ];
+  }
+
+  return [
+    {
+      index: '01',
+      label: 'Set delivery hubs',
+      help: 'Addresses unlock checkout and delivery routing.',
+      done: Boolean(addresses.value.length),
+      active: !addresses.value.length,
+    },
+    {
+      index: '02',
+      label: 'Request quotes',
+      help: 'Ask vendors to price the items or materials you need.',
+      done: Boolean(quotes.value.length),
+      active: activeSection.value === 'quotes',
+    },
+    {
+      index: '03',
+      label: 'Place and pay orders',
+      help: 'Accept a response, place the order, and complete payment.',
+      done: Boolean(orders.value.some((order) => order.payment_status === 'PAID')),
+      active: activeSection.value === 'orders',
+    },
+    {
+      index: '04',
+      label: 'Track delivery and close out',
+      help: 'Use tracking, chat, confirmation, and disputes to finish the workflow.',
+      done: Boolean(orders.value.some((order) => order.status === 'COMPLETED')),
+      active: Boolean(orders.value.some((order) => order.status === 'SHIPPED' || order.tracking_number)),
+    },
+  ];
+});
 
 // Modals
 const showRateModal = ref(false);
@@ -477,6 +675,15 @@ const confirmAction = async () => {
 const fetchData = async () => {
   loading.value = true;
   try {
+    if (isGuest.value) {
+      orders.value = [];
+      quotes.value = [];
+      addresses.value = [];
+      profile.value = { profile: {} };
+      paymentMethods.value = [];
+      selectedPaymentProvider.value = '';
+      return;
+    }
     const [ordRes, quoteRes, addrRes, profRes, paymentMethodsRes] = await Promise.all([
       api.get('/orders/'),
       api.get('/orders/quote-requests/'),
@@ -608,6 +815,10 @@ const submitRating = async () => {
 };
 
 const updateProfile = async () => {
+  if (isGuest.value) {
+    showAlert('Sign in to save profile changes.', 'info');
+    return;
+  }
   try {
     const res = await api.patch('/accounts/profile/', {
       first_name: profile.value.first_name,
@@ -624,6 +835,10 @@ const updateProfile = async () => {
 };
 
 const openAddressModal = () => {
+  if (isGuest.value) {
+    showAlert('Sign in to save delivery hubs to your account.', 'info');
+    return;
+  }
   newAddress.value = {
     name: '',
     address_line_1: '',
@@ -645,6 +860,10 @@ const handleHubLocationChange = (loc) => {
 };
 
 const saveAddress = async () => {
+  if (isGuest.value) {
+    showAlert('Sign in to save delivery hubs to your account.', 'info');
+    return;
+  }
   if (!newAddress.value.latitude) {
     return showAlert('Please select a location on the map.', 'error');
   }
@@ -698,6 +917,140 @@ onMounted(fetchData);
   border: 1px solid rgba(10, 10, 15, 0.08);
   background: rgba(255, 255, 255, 0.82);
   overflow-x: auto;
+}
+
+.pz-guest-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.pz-guest-panel__title {
+  font-family: var(--pz-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-guest-panel__body {
+  margin: 0;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.pz-guest-panel__actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.buyer-workflow-banner {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.buyer-workflow-banner__summary {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.buyer-workflow-banner__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.buyer-workflow-banner__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.55rem);
+  line-height: 1.2;
+  color: var(--pz-color-foundation-black);
+}
+
+.buyer-workflow-banner__body {
+  max-width: 70ch;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.buyer-workflow-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.buyer-workflow-banner__steps {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.buyer-workflow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.buyer-workflow-step__index {
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(247, 244, 239, 0.95);
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  color: var(--pz-color-foundation-black);
+  flex-shrink: 0;
+}
+
+.buyer-workflow-step__content {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.buyer-workflow-step__content strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.buyer-workflow-step__content span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.5;
+}
+
+.buyer-workflow-step--done {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: rgba(250, 255, 252, 0.95);
+}
+
+.buyer-workflow-step--done .buyer-workflow-step__index {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #047857;
+}
+
+.buyer-workflow-step--active {
+  border-color: rgba(212, 101, 42, 0.34);
+  box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
 }
 
 .c-table {
@@ -1058,6 +1411,20 @@ onMounted(fetchData);
   }
   .pz-l-grid__col-md-5 {
     grid-column: span 5 / span 5;
+  }
+}
+
+@media (max-width: 768px) {
+  .buyer-workflow-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .buyer-workflow-banner__actions {
+    justify-content: flex-start;
+  }
+
+  .buyer-workflow-banner__steps {
+    grid-template-columns: 1fr;
   }
 }
 </style>

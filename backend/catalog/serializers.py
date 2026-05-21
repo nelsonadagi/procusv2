@@ -194,6 +194,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     certification_highlights = serializers.SerializerMethodField()
     attribute_highlights = serializers.SerializerMethodField()
     effective_currency = serializers.SerializerMethodField()
+    days_until_stockout = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -204,7 +205,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             'stock_quantity', 'available_quantity', 'min_order_quantity', 'is_in_stock',
             'brand', 'quality_grade', 'primary_image_url', 'inventory_signal',
             'country_of_origin', 'packaging_details', 'vendor_country_currency',
-            'certification_highlights', 'attribute_highlights',
+            'certification_highlights', 'attribute_highlights', 'days_until_stockout',
             'is_featured', 'is_new_arrival', 'is_on_sale',
             'status', 'created_at'
         ]
@@ -220,7 +221,11 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def get_certification_highlights(self, obj):
         entries = obj.certification_entries.all()[:3]
-        return [entry.display_name or entry.registry_name or entry.registry.name for entry in entries if (entry.display_name or entry.registry)]
+        return [
+            entry.display_name or (entry.registry.name if entry.registry else None)
+            for entry in entries
+            if (entry.display_name or entry.registry)
+        ]
 
     def get_attribute_highlights(self, obj):
         entries = obj.attribute_entries.filter(is_highlight=True)[:4]
@@ -244,6 +249,23 @@ class ProductListSerializer(serializers.ModelSerializer):
         if vendor_currency:
             return vendor_currency
         return stored_currency or 'KES'
+
+    def get_days_until_stockout(self, obj):
+        """Predict days until stock runs out based on 30-day quote volume."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Sum
+
+        if obj.stock_quantity <= 0:
+            return 0
+        since = timezone.now() - timedelta(days=30)
+        total_quoted = obj.quoteitem_set.filter(
+            quote_request__requested_at__gte=since
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        if total_quoted <= 0:
+            return None
+        daily_rate = total_quoted / 30
+        return max(1, int(obj.stock_quantity / daily_rate))
 
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
@@ -339,27 +361,67 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         return product
 
     def _save_nested(self, product, certification_entries, attribute_entries, documents):
+        """Diff-based nested updates to preserve PKs and avoid churn."""
         if certification_entries is not None:
-            product.certification_entries.all().delete()
-            ProductCertification.objects.bulk_create([
-                ProductCertification(product=product, **entry)
-                for entry in certification_entries
-                if entry.get('display_name') or entry.get('registry')
-            ])
+            incoming_by_registry = {}
+            incoming_unnamed = []
+            for entry in certification_entries:
+                if entry.get('registry'):
+                    incoming_by_registry[entry['registry']] = entry
+                elif entry.get('display_name'):
+                    incoming_unnamed.append(entry)
+
+            existing_by_registry = {c.registry: c for c in product.certification_entries.filter(registry__isnull=False)}
+            for registry, entry in incoming_by_registry.items():
+                if registry in existing_by_registry:
+                    obj = existing_by_registry[registry]
+                    for k, v in entry.items():
+                        setattr(obj, k, v)
+                    obj.save()
+                else:
+                    ProductCertification.objects.create(product=product, **entry)
+            product.certification_entries.filter(registry__in=set(existing_by_registry.keys()) - set(incoming_by_registry.keys())).delete()
+
+            if incoming_unnamed:
+                existing_unnamed = list(product.certification_entries.filter(registry__isnull=True))
+                for entry in incoming_unnamed:
+                    matched = next((e for e in existing_unnamed if e.display_name == entry.get('display_name')), None)
+                    if matched:
+                        for k, v in entry.items():
+                            setattr(matched, k, v)
+                        matched.save()
+                    else:
+                        ProductCertification.objects.create(product=product, **entry)
+                product.certification_entries.filter(
+                    registry__isnull=True,
+                    display_name__in=[e.display_name for e in existing_unnamed if e.display_name not in {i.get('display_name') for i in incoming_unnamed}]
+                ).delete()
+
         if attribute_entries is not None:
-            product.attribute_entries.all().delete()
-            ProductAttribute.objects.bulk_create([
-                ProductAttribute(product=product, **entry)
-                for entry in attribute_entries
-                if entry.get('name') and entry.get('value')
-            ])
+            incoming = {entry['name']: entry for entry in attribute_entries if entry.get('name') and entry.get('value')}
+            existing = {a.name: a for a in product.attribute_entries.all()}
+            for name, entry in incoming.items():
+                if name in existing:
+                    obj = existing[name]
+                    for k, v in entry.items():
+                        setattr(obj, k, v)
+                    obj.save()
+                else:
+                    ProductAttribute.objects.create(product=product, **entry)
+            product.attribute_entries.exclude(name__in=incoming.keys()).delete()
+
         if documents is not None:
-            product.documents.all().delete()
-            ProductDocument.objects.bulk_create([
-            ProductDocument(product=product, **entry)
-                for entry in documents
-                if entry.get('title') and (entry.get('external_url') or entry.get('file'))
-            ])
+            incoming = {entry['title']: entry for entry in documents if entry.get('title')}
+            existing = {d.title: d for d in product.documents.all()}
+            for title, entry in incoming.items():
+                if title in existing:
+                    obj = existing[title]
+                    for k, v in entry.items():
+                        setattr(obj, k, v)
+                    obj.save()
+                else:
+                    ProductDocument.objects.create(product=product, **entry)
+            product.documents.exclude(title__in=incoming.keys()).delete()
 
 
 class ProductInventoryMovementSerializer(serializers.ModelSerializer):

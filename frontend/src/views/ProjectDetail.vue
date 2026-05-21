@@ -63,6 +63,50 @@
           </div>
         </section>
 
+        <WorkflowGuide title="Workflow Path" eyebrow="Start Here">
+          <div class="pz-project-workflow-banner">
+            <div class="pz-project-workflow-banner__summary">
+              <div class="pz-project-workflow-banner__kicker">{{ workflowBanner.stage }}</div>
+              <h2 class="pz-project-workflow-banner__title">{{ workflowBanner.title }}</h2>
+              <p class="pz-project-workflow-banner__body">{{ workflowBanner.body }}</p>
+            </div>
+            <div class="pz-project-workflow-banner__actions">
+              <Button v-if="workflowBanner.primaryAction" variant="primary" size="sm" @click="workflowBanner.primaryAction.handler">
+                {{ workflowBanner.primaryAction.label }}
+              </Button>
+              <Button v-if="workflowBanner.secondaryAction" variant="outline" size="sm" @click="workflowBanner.secondaryAction.handler">
+                {{ workflowBanner.secondaryAction.label }}
+              </Button>
+            </div>
+          </div>
+          <div class="pz-project-workflow-banner__steps">
+            <div
+              v-for="step in workflowSteps"
+              :key="step.label"
+              class="pz-project-workflow-step"
+              :class="{ 'pz-project-workflow-step--done': step.done, 'pz-project-workflow-step--active': step.active }"
+            >
+              <div class="pz-project-workflow-step__index">{{ step.index }}</div>
+              <div class="pz-project-workflow-step__content">
+                <strong>{{ step.label }}</strong>
+                <span>{{ step.help }}</span>
+              </div>
+            </div>
+          </div>
+        
+
+        <ModuleCTA
+          eyebrow="Project Action"
+          title="Use this project pattern for your own build."
+          body="Create a project workspace, then connect property, tender, materials, finance, and delivery workflows as the plan matures."
+          primary-label="Start Project"
+          primary-to="/projects/new"
+          secondary-label="Post Tender"
+          secondary-to="/contracts/new"
+          tone="savanna"
+        />
+</WorkflowGuide>
+
         <!-- Layout -->
         <div class="pz-project-layout">
           <section class="pz-space-y-6">
@@ -149,6 +193,11 @@
                   </div>
                   <Button variant="primary" @click="addRequirement">Add requirement</Button>
                 </div>
+
+                <ProjectMaterialSuggestions
+                  :project="project"
+                  @show-alert="(msg, type) => $emit('show-alert', msg, type)"
+                />
               </Card>
             </div>
 
@@ -450,7 +499,10 @@ import { useConfigStore } from '../stores/config';
 import Badge from '../components/ui/Badge.vue';
 import Button from '../components/ui/Button.vue';
 import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import PzInput from '../components/PzInput.vue';
+import ProjectMaterialSuggestions from '../components/projects/ProjectMaterialSuggestions.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -653,6 +705,101 @@ const activeSectionLabel = computed(() => {
   const current = sections.value.find((section) => section.id === activeSection.value);
   return current?.label || 'Summary';
 });
+
+function openSection(sectionId) {
+  activeSection.value = sectionId;
+}
+
+const workflowBanner = computed(() => {
+  if (!project.value) {
+    return {
+      stage: 'LOADING',
+      title: 'Preparing the project workspace',
+      body: 'Loading the project, commitments, contracts, and activity feed so you can continue without hunting for the next step.',
+      primaryAction: null,
+      secondaryAction: null,
+    };
+  }
+
+  if (!project.value.requirements?.length) {
+    return {
+      stage: 'SCOPE',
+      title: 'Define the project scope first',
+      body: 'Add requirements so the project has a clear procurement path. This unlocks planning, bids, and milestone tracking.',
+      primaryAction: { label: 'Open Requirements', handler: () => openSection('requirements') },
+      secondaryAction: { label: 'View Overview', handler: () => openSection('overview') },
+    };
+  }
+
+  if (!linkedContracts.value.length) {
+    return {
+      stage: 'PROCUREMENT',
+      title: 'Link the awarded contracts',
+      body: 'Contracts connect the project to execution, milestones, and delivery. Until they are linked, the project stays partially visible.',
+      primaryAction: { label: 'Open Contracts', handler: () => openSection('contracts') },
+      secondaryAction: { label: 'Open Requirements', handler: () => openSection('requirements') },
+    };
+  }
+
+  if (project.value.funding_required && fundingProgress.value < 100) {
+    return {
+      stage: 'FUNDING',
+      title: 'Track the funding position',
+      body: 'Use the funding section to review commitments and keep the project moving toward full coverage.',
+      primaryAction: { label: 'Open Funding', handler: () => openSection('funding') },
+      secondaryAction: { label: 'View Milestones', handler: () => openSection('milestones') },
+    };
+  }
+
+  if (!project.value.updates?.length) {
+    return {
+      stage: 'UPDATE',
+      title: 'Publish a project update',
+      body: 'Add a short progress note so owners, investors, and operators can see the latest state without asking for an update.',
+      primaryAction: { label: 'Open Updates', handler: () => openSection('updates') },
+      secondaryAction: { label: 'View Activity', handler: () => openSection('activity') },
+    };
+  }
+
+  return {
+    stage: 'EXECUTION',
+    title: 'Keep execution visible',
+    body: 'The project has the core pieces in place. Use milestones, updates, and the activity feed to keep progress visible and recover quickly when something slips.',
+    primaryAction: { label: 'View Activity', handler: () => openSection('activity') },
+    secondaryAction: { label: 'Open Risks', handler: () => openSection('risks') },
+  };
+});
+
+const workflowSteps = computed(() => [
+  {
+    index: '01',
+    label: 'Define scope',
+    help: 'Requirements turn a project into a clear execution brief.',
+    done: Boolean(project.value?.requirements?.length),
+    active: activeSection.value === 'requirements' || !project.value?.requirements?.length,
+  },
+  {
+    index: '02',
+    label: 'Link procurement',
+    help: 'Contracts and awards connect the project to actual delivery.',
+    done: Boolean(linkedContracts.value.length),
+    active: activeSection.value === 'contracts',
+  },
+  {
+    index: '03',
+    label: 'Track funding',
+    help: 'Commitments and finance keep execution moving.',
+    done: !project.value?.funding_required || fundingProgress.value === 100,
+    active: activeSection.value === 'funding',
+  },
+  {
+    index: '04',
+    label: 'Publish progress',
+    help: 'Updates and activity show what changed and what happens next.',
+    done: Boolean(project.value?.updates?.length),
+    active: activeSection.value === 'updates' || activeSection.value === 'activity',
+  },
+]);
 
 const canPledge = computed(() => {
   return project.value?.funding_required && project.value?.status === 'FUNDING_OPEN' && !isOwner.value;
@@ -1049,6 +1196,117 @@ onMounted(loadProject);
   font-weight: 800;
   color: var(--pz-color-foundation-black);
   letter-spacing: -0.02em;
+}
+
+.pz-project-workflow-banner {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.pz-project-workflow-banner__summary {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.pz-project-workflow-banner__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-project-workflow-banner__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.55rem);
+  line-height: 1.2;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-project-workflow-banner__body {
+  max-width: 70ch;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.pz-project-workflow-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.pz-project-workflow-banner__steps {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pz-project-workflow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.pz-project-workflow-step__index {
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(247, 244, 239, 0.95);
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  color: var(--pz-color-foundation-black);
+  flex-shrink: 0;
+}
+
+.pz-project-workflow-step__content {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.pz-project-workflow-step__content strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.pz-project-workflow-step__content span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.5;
+}
+
+.pz-project-workflow-step--done {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: rgba(250, 255, 252, 0.95);
+}
+
+.pz-project-workflow-step--done .pz-project-workflow-step__index {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #047857;
+}
+
+.pz-project-workflow-step--active {
+  border-color: rgba(212, 101, 42, 0.34);
+  box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
 }
 
 /* Summary Grid */
@@ -1609,6 +1867,15 @@ onMounted(loadProject);
   }
   .pz-project-sidebar {
     position: static;
+  }
+  .pz-project-workflow-banner {
+    grid-template-columns: 1fr;
+  }
+  .pz-project-workflow-banner__actions {
+    justify-content: flex-start;
+  }
+  .pz-project-workflow-banner__steps {
+    grid-template-columns: 1fr;
   }
   .pz-project-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

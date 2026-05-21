@@ -32,6 +32,45 @@
       </div>
     </template>
 
+    <div class="pz-owner-workflow-card pz-glass-panel">
+      <div class="pz-owner-workflow-card__summary">
+        <div class="pz-owner-workflow-card__kicker">START HERE</div>
+        <h3 class="pz-owner-workflow-card__title">{{ ownerWorkflow.title }}</h3>
+        <p class="pz-owner-workflow-card__body">{{ ownerWorkflow.body }}</p>
+        <div class="pz-owner-workflow-card__actions">
+          <button class="pz-btn-glass" @click="ownerWorkflow.primaryAction.handler">{{ ownerWorkflow.primaryAction.label }}</button>
+          <button v-if="ownerWorkflow.secondaryAction" class="pz-btn-glass" @click="ownerWorkflow.secondaryAction.handler">{{ ownerWorkflow.secondaryAction.label }}</button>
+        </div>
+      </div>
+      <div class="pz-owner-workflow-card__metrics">
+        <div class="pz-owner-workflow-metric">
+          <span>Projects</span>
+          <strong>{{ projects.length }}</strong>
+        </div>
+        <div class="pz-owner-workflow-metric">
+          <span>Quote Requests</span>
+          <strong>{{ quotes.length }}</strong>
+        </div>
+        <div class="pz-owner-workflow-metric">
+          <span>Portfolio Updates</span>
+          <strong>{{ recentUpdates.length }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <WorkflowGuide title="Owner CTA" eyebrow="Action">
+      <ModuleCTA
+        eyebrow="Asset Action"
+        title="Have property, materials, or a brief that should become a project?"
+        body="Start a project, publish a tender, or open the property workspace so the asset can move into procurement and delivery."
+        primary-label="Start Project"
+        primary-to="/projects/new"
+        secondary-label="List Property"
+        secondary-to="/property-manager/dashboard"
+        tone="steel"
+      />
+    </WorkflowGuide>
+
     <div v-if="activeTab === 'projects'" class="pz-tab-enter-active">
       <!-- Command Nodes (Stats) -->
       <div class="pz-l-grid pz-l-grid--md-cols-3 pz-l-grid--gap-6 u-mb-12">
@@ -285,14 +324,18 @@
 
 <script setup>
 import { computed, ref, onMounted, defineAsyncComponent } from 'vue';
+import { useRouter } from 'vue-router';
 import api from '../services/api';
 import { useConfigStore } from '../stores/config';
 import Badge from '../components/ui/Badge.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import DashboardShell from '../components/layout/DashboardShell.vue';
 
 const PropertiesSection = defineAsyncComponent(() => import('../components/admin/PropertiesSection.vue'));
 
 const configStore = useConfigStore();
+const router = useRouter();
 const activeTab = ref('projects');
 const projects = ref([]);
 const quotes = ref([]);
@@ -336,6 +379,33 @@ const recentUpdates = computed(() =>
     .slice(0, 5)
 );
 
+const ownerWorkflow = computed(() => {
+  if (!projects.value.length) {
+    return {
+      title: 'Create your first project',
+      body: 'Start a project or post a tender so the owner workspace has something to track.',
+      primaryAction: { label: 'Start New Project', handler: () => { activeTab.value = 'projects'; router.push('/projects/new'); } },
+      secondaryAction: { label: 'Post a Tender', handler: () => router.push('/contracts/new') },
+    };
+  }
+
+  if (!quotes.value.length) {
+    return {
+      title: 'Review your properties and quote requests',
+      body: 'Your portfolio is active. Check properties, then use quote requests and updates to keep work moving.',
+      primaryAction: { label: 'Open Properties', handler: () => { activeTab.value = 'properties'; } },
+      secondaryAction: { label: 'View Activity', handler: () => { activeTab.value = 'logs'; } },
+    };
+  }
+
+  return {
+    title: 'Portfolio operations are active',
+    body: 'Use the dashboard to review updates, manage quote responses, and follow the work as it moves through escrow.',
+    primaryAction: { label: 'View Quote Requests', handler: () => { activeTab.value = 'quotes'; } },
+    secondaryAction: { label: 'View Escrow', handler: () => { activeTab.value = 'escrow'; } },
+  };
+});
+
 function formatDate(value) {
   return new Date(value).toLocaleDateString();
 }
@@ -374,6 +444,72 @@ onMounted(async () => {
   -webkit-backdrop-filter: var(--pz-blur-lg);
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: var(--pz-shadow-lg);
+}
+
+.pz-owner-workflow-card {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+}
+
+.pz-owner-workflow-card__summary {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.pz-owner-workflow-card__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-owner-workflow-card__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: 1.25rem;
+}
+
+.pz-owner-workflow-card__body {
+  max-width: 58ch;
+  margin: 0;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.55;
+}
+
+.pz-owner-workflow-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.pz-owner-workflow-card__metrics {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pz-owner-workflow-metric {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.pz-owner-workflow-metric span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-owner-workflow-metric strong {
+  font-family: var(--pz-font-display);
+  font-size: 1rem;
 }
 
 /* Animations */

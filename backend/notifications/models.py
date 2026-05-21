@@ -32,6 +32,7 @@ class Notification(models.Model):
     type = models.CharField(max_length=20, choices=Type.choices, default=Type.SYSTEM)
     subject = models.CharField(max_length=255)
     message = models.TextField()
+    data = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     
     # Tracking

@@ -162,6 +162,7 @@ defineEmits(['update:activeSection']);
     display: grid;
     grid-template-columns: 280px 1fr;
     gap: var(--pz-space-8);
+    align-items: start;
   }
 }
 
@@ -175,6 +176,11 @@ defineEmits(['update:activeSection']);
     top: var(--pz-space-8);
     height: fit-content;
   }
+}
+
+.pz-dashboard-shell__main {
+  min-width: 0;
+  align-self: start;
 }
 
 /* Side Navigation */

@@ -1,30 +1,32 @@
 <template>
-    <div v-if="isOpen" class="pz-modal-overlay" @click.self="close">
-        <div
-            ref="modalRef"
-            :class="computedClasses"
-            role="dialog"
-            aria-modal="true"
-            :aria-label="title"
-            tabindex="-1"
-        >
-            <div class="pz-modal__header">
-                <div class="pz-modal__heading">
-                    <span class="pz-modal__eyebrow">Workspace Panel</span>
-                    <h3 class="pz-modal__title">{{ title }}</h3>
+    <Teleport to="body">
+        <div v-if="isOpen" class="pz-modal-overlay" @click.self="close">
+            <div
+                ref="modalRef"
+                :class="computedClasses"
+                role="dialog"
+                aria-modal="true"
+                :aria-label="title"
+                tabindex="-1"
+            >
+                <div class="pz-modal__header">
+                    <div class="pz-modal__heading">
+                        <span class="pz-modal__eyebrow">Workspace Panel</span>
+                        <h3 class="pz-modal__title">{{ title }}</h3>
+                    </div>
+                    <button ref="closeBtnRef" class="pz-modal__close" @click="close" aria-label="Close dialog">&times;</button>
                 </div>
-                <button class="pz-modal__close" @click="close" aria-label="Close">&times;</button>
-            </div>
 
-            <div class="pz-modal__body">
-                <slot />
-            </div>
+                <div class="pz-modal__body">
+                    <slot />
+                </div>
 
-            <div v-if="$slots.footer" class="pz-modal__footer">
-                <slot name="footer" />
+                <div v-if="$slots.footer" class="pz-modal__footer">
+                    <slot name="footer" />
+                </div>
             </div>
         </div>
-    </div>
+    </Teleport>
 </template>
 
 <script setup>
@@ -48,14 +50,53 @@
 
     const emit = defineEmits(['close'])
     const modalRef = ref(null)
+    const closeBtnRef = ref(null)
+    let lastFocusedElement = null
+    let focusTrapHandler = null
 
     const close = () => {
         emit('close')
     }
 
+    /** Get all focusable elements inside the modal */
+    function getFocusableElements() {
+        if (!modalRef.value) return []
+        const selector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        return Array.from(modalRef.value.querySelectorAll(selector)).filter(
+            (el) => !el.disabled && !el.getAttribute('aria-hidden') && el.offsetParent !== null
+        )
+    }
+
+    /** Trap focus within modal */
+    function trapFocus(event) {
+        if (event.key !== 'Tab') return
+        const focusable = getFocusableElements()
+        if (focusable.length === 0) {
+            event.preventDefault()
+            return
+        }
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+
+        if (event.shiftKey) {
+            if (document.activeElement === first || !modalRef.value.contains(document.activeElement)) {
+                event.preventDefault()
+                last.focus()
+            }
+        } else {
+            if (document.activeElement === last) {
+                event.preventDefault()
+                first.focus()
+            }
+        }
+    }
+
     const handleKeydown = (event) => {
         if (event.key === 'Escape' && props.isOpen) {
             close()
+        }
+        if (props.isOpen) {
+            trapFocus(event)
         }
     }
 
@@ -66,14 +107,28 @@
                 return
             }
 
-            document.body.style.overflow = isOpen ? 'hidden' : ''
-
             if (isOpen) {
+                lastFocusedElement = document.activeElement
+                document.body.style.overflow = 'hidden'
                 window.addEventListener('keydown', handleKeydown)
                 await nextTick()
-                modalRef.value?.focus()
+                // Focus the first focusable element (prefer close button for predictable behavior)
+                const focusable = getFocusableElements()
+                if (focusable.length > 0) {
+                    // Focus close button first, or first input if no close button
+                    const closeBtn = focusable.find((el) => el.getAttribute('aria-label') === 'Close dialog')
+                    ;(closeBtn || focusable[0]).focus()
+                } else {
+                    modalRef.value?.focus()
+                }
             } else {
+                document.body.style.overflow = ''
                 window.removeEventListener('keydown', handleKeydown)
+                // Return focus to trigger element
+                if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+                    await nextTick()
+                    lastFocusedElement.focus()
+                }
             }
         },
         { immediate: true }

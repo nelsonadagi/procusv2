@@ -13,6 +13,52 @@
       </template>
     </EntryHero>
 
+    <div class="pz-l-container">
+      <WorkflowGuide title="Workflow Path" eyebrow="Start Here">
+        <div class="pz-contract-workflow-banner">
+          <div class="pz-contract-workflow-banner__summary">
+            <div class="pz-contract-workflow-banner__kicker">{{ workflowSummary.stage }}</div>
+            <h2 class="pz-contract-workflow-banner__title">{{ workflowSummary.title }}</h2>
+            <p class="pz-contract-workflow-banner__body">{{ workflowSummary.body }}</p>
+          </div>
+          <div class="pz-contract-workflow-banner__actions">
+            <Button v-if="workflowSummary.primaryAction" variant="primary" size="sm" @click="workflowSummary.primaryAction.handler">
+              {{ workflowSummary.primaryAction.label }}
+            </Button>
+            <Button v-if="workflowSummary.secondaryAction" variant="outline" size="sm" @click="workflowSummary.secondaryAction.handler">
+              {{ workflowSummary.secondaryAction.label }}
+            </Button>
+          </div>
+        </div>
+        <div class="pz-contract-workflow-banner__steps">
+          <div
+            v-for="step in workflowSteps"
+            :key="step.label"
+            class="pz-contract-workflow-step"
+            :class="{ 'pz-contract-workflow-step--done': step.done, 'pz-contract-workflow-step--active': step.active }"
+          >
+            <span class="pz-contract-workflow-step__index">{{ step.index }}</span>
+            <div class="pz-contract-workflow-step__content">
+              <strong>{{ step.label }}</strong>
+              <span>{{ step.help }}</span>
+            </div>
+          </div>
+        </div>
+      
+
+      <ModuleCTA
+        eyebrow="Tender Action"
+        title="Need to hire, or want to compete for construction work?"
+        body="Project owners can post a tender, while contractors can activate onboarding and respond to opportunities from the same contract workflow."
+        primary-label="Post Tender"
+        primary-to="/contracts/new"
+        secondary-label="Contractor Onboarding"
+        secondary-to="/contractors/register"
+        tone="savanna"
+      />
+</WorkflowGuide>
+    </div>
+
     <main id="contract-market" class="pz-contract-market-shell">
       <aside class="pz-market-sidebar u-hide-mobile">
         <div class="pz-filter-rail">
@@ -259,12 +305,18 @@
 
 <script setup>
 import { computed, inject, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import ContractsService from '../services/contracts';
 import Button from '../components/ui/Button.vue';
+import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import EntryHero from '../components/ui/EntryHero.vue';
+import EmptyState from '../components/ui/EmptyState.vue';
 import Modal from '../components/ui/Modal.vue';
 import { useConfigStore } from '../stores/config';
 
+const router = useRouter();
 const configStore = useConfigStore();
 const contracts = ref([]);
 const loading = ref(true);
@@ -311,6 +363,87 @@ const activeFilterChips = computed(() => {
   }
   return chips;
 });
+
+const workflowSummary = computed(() => {
+  if (loading.value) {
+    return {
+      stage: 'SYNCING',
+      title: 'Loading procurement opportunities',
+      body: 'Fetching visible tenders, filters, and market state so you can move directly to the right brief.',
+      primaryAction: null,
+      secondaryAction: null,
+    };
+  }
+
+  if (error.value) {
+    return {
+      stage: 'BLOCKED',
+      title: 'Resolve the market connection first',
+      body: 'The tender feed is interrupted. Retry loading the market so current opportunities and status updates become visible again.',
+      primaryAction: { label: 'Retry', handler: fetchContracts },
+      secondaryAction: null,
+    };
+  }
+
+  if (!contracts.value.length) {
+    return {
+      stage: 'EMPTY',
+      title: 'Post the first work order',
+      body: 'Create a procurement brief when you want contractors to bid. If filters are hiding results, reset them and review the market again.',
+      primaryAction: { label: 'Post Work Order', handler: () => router.push('/contracts/new') },
+      secondaryAction: hasActiveFilters.value ? { label: 'Reset Filters', handler: clearFilters } : null,
+    };
+  }
+
+  if (selectedStatus.value === 'BIDDING' || selectedStatus.value === 'POSTED') {
+    return {
+      stage: 'BIDDING',
+      title: 'Review live bidding activity',
+      body: 'These contracts are open for response. Open a tender to inspect bids, deadlines, and the next procurement decision.',
+      primaryAction: { label: 'Open First Tender', handler: () => router.push(`/contracts/${contracts.value[0].id}`) },
+      secondaryAction: { label: 'Post Work Order', handler: () => router.push('/contracts/new') },
+    };
+  }
+
+  return {
+    stage: 'DISCOVERY',
+    title: 'Find a contract to review or bid on',
+    body: 'Use status, country, and budget filters to move from discovery to an actionable tender quickly.',
+    primaryAction: { label: 'Post Work Order', handler: () => router.push('/contracts/new') },
+    secondaryAction: { label: 'Open First Tender', handler: () => router.push(`/contracts/${contracts.value[0].id}`) },
+  };
+});
+
+const workflowSteps = computed(() => [
+  {
+    index: '01',
+    label: 'Find the tender',
+    help: 'Use filters and search to reach the right procurement brief.',
+    done: Boolean(contracts.value.length),
+    active: !contracts.value.length,
+  },
+  {
+    index: '02',
+    label: 'Review the brief',
+    help: 'Open the tender and check scope, dates, budget, and eligibility.',
+    done: Boolean(contracts.value.some((contract) => contract.status === 'POSTED' || contract.status === 'BIDDING')),
+    active: selectedStatus.value === 'POSTED' || selectedStatus.value === 'BIDDING',
+  },
+  {
+    index: '03',
+    label: 'Place or manage bids',
+    help: 'Contractors submit proposals; owners shortlist or award responses.',
+    done: Boolean(contracts.value.some((contract) => contract.status === 'AWARDED' || contract.status === 'IN_PROGRESS' || contract.status === 'COMPLETED')),
+    active: selectedStatus.value === 'AWARDED' || selectedStatus.value === 'IN_PROGRESS',
+  },
+  {
+    index: '04',
+    label: 'Move to execution',
+    help: 'Awarded work flows into milestones, approvals, and delivery tracking.',
+    done: Boolean(contracts.value.some((contract) => contract.status === 'COMPLETED')),
+    active: selectedStatus.value === 'COMPLETED',
+  },
+]);
 
 async function fetchContracts() {
   loading.value = true;
@@ -422,6 +555,116 @@ onMounted(() => {
   max-width: 92rem;
   margin: 0 auto;
   padding: 2.5rem 1.5rem 4rem;
+}
+
+.pz-contract-workflow-banner {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.pz-contract-workflow-banner__summary {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.pz-contract-workflow-banner__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-contract-workflow-banner__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.55rem);
+  line-height: 1.2;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-contract-workflow-banner__body {
+  max-width: 70ch;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.pz-contract-workflow-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.pz-contract-workflow-banner__steps {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pz-contract-workflow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.pz-contract-workflow-step__index {
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(247, 244, 239, 0.95);
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  color: var(--pz-color-foundation-black);
+  flex-shrink: 0;
+}
+
+.pz-contract-workflow-step__content {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.pz-contract-workflow-step__content strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.pz-contract-workflow-step__content span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.5;
+}
+
+.pz-contract-workflow-step--done {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: rgba(250, 255, 252, 0.95);
+}
+
+.pz-contract-workflow-step--done .pz-contract-workflow-step__index {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #047857;
+}
+
+.pz-contract-workflow-step--active {
+  border-color: rgba(212, 101, 42, 0.34);
+  box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
 }
 
 .pz-market-sidebar {
@@ -899,6 +1142,18 @@ onMounted(() => {
   .pz-contract-card--list .pz-contract-card__image-wrap {
     width: 100%;
     aspect-ratio: 3 / 2;
+  }
+
+  .pz-contract-workflow-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .pz-contract-workflow-banner__actions {
+    justify-content: flex-start;
+  }
+
+  .pz-contract-workflow-banner__steps {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 import uuid
 
 
@@ -42,7 +43,7 @@ class Product(models.Model):
     )
     slug = models.SlugField(
         max_length=300,
-        unique=False,
+        unique=True,
         blank=True,
         help_text="Auto-generated from name",
         verbose_name="URL Slug"
@@ -284,8 +285,10 @@ class Product(models.Model):
 
     @property
     def effective_price(self):
-        """Returns bulk price if available, otherwise base price"""
-        return self.bulk_price if self.bulk_price else self.base_price
+        """Returns bulk price only when both bulk price and threshold are configured."""
+        if self.bulk_price and self.bulk_threshold:
+            return self.bulk_price
+        return self.base_price
 
     @property
     def is_in_stock(self):
@@ -325,8 +328,21 @@ class Product(models.Model):
                 slug = f"{base_slug}-{counter}"
                 counter += 1
             self.slug = slug
+
+        # Auto-manage ACTIVE/OUT_OF_STOCK based on stock, but respect explicit
+        # vendor status choices during updates unless stock_quantity changes.
         if self.status in [self.Status.ACTIVE, self.Status.OUT_OF_STOCK]:
-            self.status = self.Status.OUT_OF_STOCK if self.available_quantity <= 0 else self.Status.ACTIVE
+            is_new = self._state.adding
+            stock_changed = True
+            if not is_new:
+                try:
+                    old_stock = Product.objects.values('stock_quantity').get(pk=self.pk)['stock_quantity']
+                    stock_changed = (old_stock or 0) != (self.stock_quantity or 0)
+                except Product.DoesNotExist:
+                    pass
+            if is_new or stock_changed:
+                self.status = self.Status.OUT_OF_STOCK if self.available_quantity <= 0 else self.Status.ACTIVE
+
         super().save(*args, **kwargs)
 
     def record_inventory_movement(self, *, movement_type, quantity_delta, quantity_before, quantity_after, actor=None, note='', reference=''):
@@ -385,6 +401,13 @@ class ProductCertification(models.Model):
 
     class Meta:
         ordering = ['display_name', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['product', 'registry'],
+                name='unique_product_certification_registry',
+                condition=models.Q(registry__isnull=False),
+            ),
+        ]
 
     def __str__(self):
         if self.display_name:
@@ -406,6 +429,7 @@ class ProductAttribute(models.Model):
 
     class Meta:
         ordering = ['sort_order', 'name']
+        unique_together = [('product', 'name')]
 
     def __str__(self):
         return f'{self.product.name}: {self.name}'
@@ -433,6 +457,7 @@ class ProductDocument(models.Model):
 
     class Meta:
         ordering = ['title', 'id']
+        unique_together = [('product', 'title')]
 
     def __str__(self):
         return self.title
@@ -523,3 +548,31 @@ class ProductInventoryMovement(models.Model):
 
     def __str__(self):
         return f"{self.product.name} {self.movement_type} {self.quantity_delta:+d}"
+
+
+class StockAlert(models.Model):
+    """Buyers who want to be notified when a product comes back in stock."""
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='stock_alerts',
+        verbose_name="Product"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='stock_alerts',
+        verbose_name="Buyer"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    notified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ['product', 'user']
+        ordering = ['-created_at']
+        verbose_name = "Stock Alert"
+        verbose_name_plural = "Stock Alerts"
+
+    def __str__(self):
+        return f"{self.user.email} waiting for {self.product.name}"

@@ -8,6 +8,10 @@ export const useConfigStore = defineStore('config', () => {
     const activeCountryCode = ref(localStorage.getItem('activeCountry') || '');
     const activeCurrencyCode = ref(localStorage.getItem('activeCurrency') || '');
     const platformSettings = ref(null);
+    const configLoadedAt = ref(0);
+    const configLoadPromise = ref(null);
+    const configCacheKey = 'pz-config-cache';
+    const configCacheTtlMs = 10 * 60 * 1000;
     const fallbackCurrencyCatalog = {
         KES: { currency_name: 'Kenyan Shilling', symbol: 'KSh', rate_to_default: 1 },
         UGX: { currency_name: 'Ugandan Shilling', symbol: 'USh', rate_to_default: 0.035 },
@@ -105,7 +109,64 @@ export const useConfigStore = defineStore('config', () => {
         syncCurrencyToCountry();
     }, { immediate: true });
 
-    async function fetchConfig() {
+    function readCachedConfig() {
+        try {
+            const raw = localStorage.getItem(configCacheKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            if (!parsed.loadedAt || Date.now() - parsed.loadedAt > configCacheTtlMs) return null;
+            return parsed;
+        } catch (error) {
+            console.warn('Failed to read cached config', error);
+            return null;
+        }
+    }
+
+    function writeCachedConfig(payload) {
+        try {
+            localStorage.setItem(configCacheKey, JSON.stringify({
+                ...payload,
+                loadedAt: Date.now(),
+            }));
+        } catch (error) {
+            console.warn('Failed to cache config', error);
+        }
+    }
+
+    function hydrateCachedConfig() {
+        const cached = readCachedConfig();
+        if (!cached) return false;
+        countries.value = cached.countries || [];
+        currencies.value = cached.currencies || [];
+        platformSettings.value = cached.platformSettings || null;
+        configLoadedAt.value = cached.loadedAt || Date.now();
+        syncCurrencyToCountry();
+        return true;
+    }
+
+    async function fetchConfig(force = false) {
+        if (!force && configLoadPromise.value) {
+            return configLoadPromise.value;
+        }
+
+        if (!force && configLoadedAt.value && Date.now() - configLoadedAt.value < configCacheTtlMs) {
+            return {
+                countries: countries.value,
+                currencies: currencies.value,
+                platformSettings: platformSettings.value,
+            };
+        }
+
+        if (!force && hydrateCachedConfig()) {
+            return {
+                countries: countries.value,
+                currencies: currencies.value,
+                platformSettings: platformSettings.value,
+            };
+        }
+
+        configLoadPromise.value = (async () => {
         try {
             // Fetch individually to handle partial failures
             const fetchCountries = api.get('/platform_settings/countries/').catch(err => {
@@ -130,11 +191,32 @@ export const useConfigStore = defineStore('config', () => {
             countries.value = countriesRes.data.results || countriesRes.data || [];
             currencies.value = currenciesRes.data.results || currenciesRes.data || [];
             platformSettings.value = platformRes.data;
+            configLoadedAt.value = Date.now();
+            writeCachedConfig({
+                countries: countries.value,
+                currencies: currencies.value,
+                platformSettings: platformSettings.value,
+            });
 
             syncCurrencyToCountry();
+            return {
+                countries: countries.value,
+                currencies: currencies.value,
+                platformSettings: platformSettings.value,
+            };
         } catch (err) {
             console.error("General config fetch error", err);
+            return {
+                countries: countries.value,
+                currencies: currencies.value,
+                platformSettings: platformSettings.value,
+            };
+        } finally {
+            configLoadPromise.value = null;
         }
+        })();
+
+        return configLoadPromise.value;
     }
 
     function setCountry(code) {
@@ -175,6 +257,7 @@ export const useConfigStore = defineStore('config', () => {
         activeCountry,
         activeCurrency,
         platformSettings,
+        configLoadedAt,
         resolveCurrency,
         fetchConfig,
         setCountry,

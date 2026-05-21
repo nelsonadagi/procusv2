@@ -1,9 +1,11 @@
 from datetime import timedelta
 import math
 
+from django.db.models import Count
 from django.db.models import DecimalField, Q, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -22,6 +24,9 @@ from .models import (
     PropertyAvailabilityWindow,
     PropertyAppointment,
     PropertyMediaAsset,
+    PropertyEvent,
+    PropertyInterest,
+    SavedPropertySearch,
 )
 from .serializers import (
     PropertyListingSerializer,
@@ -29,7 +34,11 @@ from .serializers import (
     PropertyAvailabilityWindowSerializer,
     PropertyAppointmentSerializer,
     PropertyMediaAssetSerializer,
+    PropertyEventSerializer,
+    PropertyInterestSerializer,
+    SavedPropertySearchSerializer,
 )
+from .services import dispatch_saved_search_alerts_for_property
 from platform_settings.utils import resolve_request_country_code
 
 
@@ -74,14 +83,59 @@ def create_property_chat_room(prop, participants):
     return room
 
 
-def notify_property_operators(prop, subject, message):
+def notify_property_operators(prop, subject, message, action='open_property', extra_data=None):
     recipients = [prop.owner]
     if prop.manager and prop.manager != prop.owner:
         recipients.append(prop.manager)
 
+    payload = {
+        'property_id': prop.id,
+        'property_title': prop.title,
+        'property_url': f'/properties/{prop.id}',
+        'action': action,
+    }
+    if extra_data:
+        payload.update(extra_data)
+
     for recipient in recipients:
         if recipient:
-            notify_user(recipient, Notification.Type.CHAT, subject, message)
+            notify_user(recipient, Notification.Type.SYSTEM, subject, message, data=payload)
+
+
+def property_readiness_score(prop):
+    score = 0
+    if prop.title:
+        score += 20
+    if prop.location_text or prop.formatted_address or prop.location_id:
+        score += 15
+    if prop.price_estimate or getattr(getattr(prop, 'pricing_profile', None), 'asking_price', None):
+        score += 15
+    if prop.description:
+        score += 10
+    if prop.media_assets.exists():
+        score += 15
+    if prop.inquiry_enabled:
+        score += 5
+    if prop.appointment_enabled:
+        score += 5
+    if getattr(getattr(prop, 'pricing_profile', None), 'pricing_strategy', ''):
+        score += 5
+    if getattr(getattr(prop, 'development_metadata', None), 'development_stage', ''):
+        score += 5
+    if getattr(getattr(prop, 'ownership_profile', None), 'legal_owner_name', ''):
+        score += 5
+    return min(score, 100)
+
+
+def record_property_event(prop, event_type, title, message='', actor=None, data=None):
+    return PropertyEvent.objects.create(
+        property=prop,
+        actor=actor if actor and actor.is_authenticated else None,
+        event_type=event_type,
+        title=title,
+        message=message,
+        data=data or {},
+    )
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
@@ -96,10 +150,13 @@ class PropertyViewSet(viewsets.ModelViewSet):
         'destroy': 'property:delete_property',
         'link_project': 'property:update_property',
         'upload_media': 'property:update_property',
+        'moderate': 'property:update_property',
     }
 
     def get_permissions(self):
         if self.action in {'list', 'retrieve', 'availability'}:
+            return [permissions.AllowAny()]
+        if self.action in {'similar', 'notify_me', 'saved_searches'}:
             return [permissions.AllowAny()]
         if self.action == 'mine':
             return [permissions.IsAuthenticated(), HasRequiredPermission()]
@@ -109,6 +166,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated(), HasRequiredPermission(), IsPropertyOwner()]
         if self.action == 'upload_media':
             return [permissions.IsAuthenticated(), HasRequiredPermission(), IsPropertyOperator()]
+        if self.action in {'analytics', 'manager_recommendations'}:
+            return [permissions.IsAuthenticated(), HasRequiredPermission()]
+        if self.action == 'moderate':
+            return [permissions.IsAdminUser()]
         return super().get_permissions()
 
     def get_queryset(self):
@@ -304,6 +365,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 PropertyMediaAsset.objects.create(
                     property=prop,
                     media_type=request.data.get(f'media_type_{idx}', requested_type) or requested_type,
+                    document_category=request.data.get(f'document_category_{idx}', request.data.get('document_category', '')),
                     file=upload,
                     title=request.data.get(f'title_{idx}', '') or upload.name,
                     caption=request.data.get(f'caption_{idx}', ''),
@@ -319,6 +381,13 @@ class PropertyViewSet(viewsets.ModelViewSet):
             )
 
         serializer = PropertyMediaAssetSerializer(created_assets, many=True, context={'request': request})
+        record_property_event(
+            prop,
+            PropertyEvent.EventType.PUBLISHED,
+            'Property media updated',
+            f'{len(created_assets)} media file(s) were added.',
+            actor=request.user,
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
@@ -326,7 +395,15 @@ class PropertyViewSet(viewsets.ModelViewSet):
         manager = serializer.validated_data.get('manager')
         if manager and not (user.role == 'ADMIN' or user.has_role('PROPERTY_MANAGER') or manager == user):
             raise permissions.PermissionDenied('Only property operators can assign a property manager.')
-        serializer.save(owner=user)
+        prop = serializer.save(owner=user)
+        record_property_event(
+            prop,
+            PropertyEvent.EventType.PROPERTY_CREATED,
+            'Property created',
+            f'{prop.title} was created.',
+            actor=user,
+        )
+        dispatch_saved_search_alerts_for_property(prop)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def mine(self, request):
@@ -340,6 +417,14 @@ class PropertyViewSet(viewsets.ModelViewSet):
         project_id = request.data.get('project_id')
         project = get_object_or_404(Project, id=project_id)
         link, _ = PropertyProjectLink.objects.get_or_create(property=prop, project=project)
+        record_property_event(
+            prop,
+            PropertyEvent.EventType.PROJECT_LINKED,
+            'Property linked to project',
+            f'{prop.title} was linked to {project.title}.',
+            actor=request.user,
+            data={'project_id': project.id},
+        )
         return Response({"status": "Linked", "link_id": link.id})
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
@@ -365,6 +450,140 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     })
                 cursor = slot_end
         return Response(slots)
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
+    def similar(self, request, pk=None):
+        prop = self.get_object()
+        base_price = prop.pricing_profile.asking_price if hasattr(prop, 'pricing_profile') and prop.pricing_profile.asking_price else prop.price_estimate
+        queryset = self.get_queryset().filter(status=PropertyListing.Status.ACTIVE).exclude(pk=prop.pk)
+        queryset = queryset.filter(Q(asset_type=prop.asset_type) | Q(location_text__icontains=prop.location_text or ''))
+        if base_price:
+            queryset = queryset.filter(effective_price__gte=float(base_price) * 0.75, effective_price__lte=float(base_price) * 1.25)
+        serializer = self.get_serializer(queryset[:3], many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
+    def events(self, request, pk=None):
+        prop = self.get_object()
+        events = prop.events.all()[:50]
+        serializer = PropertyEventSerializer(events, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny], url_path='notify-me')
+    def notify_me(self, request, pk=None):
+        prop = self.get_object()
+        serializer = PropertyInterestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        interest, _ = PropertyInterest.objects.update_or_create(
+            property=prop,
+            email=serializer.validated_data['email'],
+            reason=serializer.validated_data.get('reason') or 'availability',
+            defaults={'full_name': serializer.validated_data.get('full_name', '')},
+        )
+        notify_property_operators(
+            prop,
+            'New property interest',
+            f'{interest.email} asked to be notified when {prop.title} is available.',
+            action='review_interest',
+            extra_data={'interest_id': interest.id},
+        )
+        return Response(PropertyInterestSerializer(interest).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny], url_path='saved-searches')
+    def saved_searches(self, request):
+        serializer = SavedPropertySearchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        saved = serializer.save(user=request.user if request.user.is_authenticated else None)
+        return Response(SavedPropertySearchSerializer(saved).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], url_path='analytics')
+    def analytics(self, request):
+        queryset = self.get_queryset().filter(Q(owner=request.user) | Q(manager=request.user)).distinct()
+        total = queryset.count()
+        active = queryset.filter(status=PropertyListing.Status.ACTIVE).count()
+        inquiry_count = PropertyInquiry.objects.filter(property__in=queryset).count()
+        appointment_count = PropertyAppointment.objects.filter(property__in=queryset).count()
+        conversion_rate = round((appointment_count / inquiry_count) * 100, 1) if inquiry_count else 0
+        per_property = queryset.annotate(
+            inquiry_total=Count('inquiries', distinct=True),
+            appointment_total=Count('appointments', distinct=True),
+        ).values('id', 'title', 'status', 'inquiry_total', 'appointment_total')[:50]
+        return Response({
+            'total_properties': total,
+            'active_properties': active,
+            'total_views': 0,
+            'inquiries_this_month': inquiry_count,
+            'appointments_booked': appointment_count,
+            'conversion_rate': conversion_rate,
+            'properties': list(per_property),
+        })
+
+    @action(detail=False, methods=['get'], url_path='manager/recommendations')
+    def manager_recommendations(self, request):
+        queryset = self.get_queryset().filter(Q(owner=request.user) | Q(manager=request.user)).distinct()
+        recommendations = []
+        for prop in queryset[:100]:
+            score = property_readiness_score(prop)
+            if score < 80:
+                recommendations.append({
+                    'type': 'INCOMPLETE_LISTING',
+                    'property_id': prop.id,
+                    'priority': 'HIGH' if score < 50 else 'MEDIUM',
+                    'cta': f'/properties/{prop.id}/edit',
+                    'reason': f'{prop.title} is {score}% ready. Add the missing listing details before pushing it harder.',
+                })
+            if prop.appointment_enabled and not prop.availability_windows.filter(is_active=True).exists():
+                recommendations.append({
+                    'type': 'MISSING_VISIT_SLOTS',
+                    'property_id': prop.id,
+                    'priority': 'HIGH',
+                    'cta': '/property-manager/dashboard',
+                    'reason': f'Add visit slots to {prop.title} so interested buyers can book immediately.',
+                })
+        stale_cutoff = timezone.now() - timedelta(hours=48)
+        stale_inquiries = PropertyInquiry.objects.filter(property__in=queryset, status=PropertyInquiry.Status.NEW, created_at__lt=stale_cutoff)[:20]
+        for inquiry in stale_inquiries:
+            recommendations.append({
+                'type': 'STALE_INQUIRY',
+                'property_id': inquiry.property_id,
+                'priority': 'HIGH',
+                'cta': '/property-manager/dashboard',
+                'reason': f'Respond to {inquiry.full_name}; this inquiry has waited more than 48 hours.',
+            })
+        return Response(recommendations[:20])
+
+    @action(detail=True, methods=['post'], url_path='moderate')
+    def moderate(self, request, pk=None):
+        prop = self.get_object()
+        decision = request.data.get('decision')
+        notes = request.data.get('notes', '')
+        if decision == 'approve':
+            prop.status = PropertyListing.Status.ACTIVE
+            subject = 'Property approved'
+            message = f'{prop.title} has been approved and is now active.'
+        elif decision == 'reject':
+            prop.status = PropertyListing.Status.INACTIVE
+            subject = 'Property rejected'
+            message = f'{prop.title} was rejected. {notes}'.strip()
+        elif decision == 'request_changes':
+            prop.status = PropertyListing.Status.DRAFT
+            subject = 'Property changes requested'
+            message = f'Changes were requested for {prop.title}. {notes}'.strip()
+        else:
+            return Response({'detail': 'Use decision approve, reject, or request_changes.'}, status=status.HTTP_400_BAD_REQUEST)
+        prop.save(update_fields=['status', 'updated_at'])
+        if decision == 'approve':
+            dispatch_saved_search_alerts_for_property(prop)
+        record_property_event(
+            prop,
+            PropertyEvent.EventType.MODERATION_UPDATED,
+            subject,
+            message,
+            actor=request.user,
+            data={'decision': decision, 'notes': notes},
+        )
+        notify_property_operators(prop, subject, message, action='moderation_update', extra_data={'notes': notes})
+        return Response({'status': prop.status, 'notes': notes})
 
 
 class PropertyInquiryViewSet(viewsets.ModelViewSet):
@@ -417,6 +636,18 @@ class PropertyInquiryViewSet(viewsets.ModelViewSet):
             prop,
             'New property inquiry',
             f'A new inquiry was submitted for {prop.title}.',
+            action='review_inquiry',
+            extra_data={
+                'inquiry_id': serializer.instance.id,
+            },
+        )
+        record_property_event(
+            prop,
+            PropertyEvent.EventType.INQUIRY_RECEIVED,
+            'Inquiry received',
+            f'{serializer.instance.full_name} submitted a property inquiry.',
+            actor=self.request.user,
+            data={'inquiry_id': serializer.instance.id},
         )
 
 
@@ -442,7 +673,15 @@ class PropertyAvailabilityWindowViewSet(viewsets.ModelViewSet):
         prop = get_object_or_404(PropertyListing, id=property_id)
         if not (prop.owner == self.request.user or prop.manager == self.request.user or self.request.user.role == 'ADMIN'):
             raise permissions.PermissionDenied('Only the property owner or manager can set availability.')
-        serializer.save(managed_by=self.request.user, property=prop)
+        window = serializer.save(managed_by=self.request.user, property=prop)
+        record_property_event(
+            prop,
+            PropertyEvent.EventType.SLOT_ADDED,
+            'Visit slots added',
+            f'Availability was published for {prop.title}.',
+            actor=self.request.user,
+            data={'availability_window_id': window.id},
+        )
 
 
 class PropertyAppointmentViewSet(viewsets.ModelViewSet):
@@ -452,6 +691,8 @@ class PropertyAppointmentViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'create':
             return [permissions.AllowAny()]
+        if self.action in {'confirm', 'cancel', 'complete', 'reschedule'}:
+            return [permissions.IsAuthenticated(), HasRequiredPermission(), IsPropertyOperator()]
         return [permissions.IsAuthenticated(), HasRequiredPermission(), IsPropertyOperator()]
 
     required_permission = 'property:view'
@@ -502,4 +743,67 @@ class PropertyAppointmentViewSet(viewsets.ModelViewSet):
             prop,
             'New property appointment',
             f'A viewing request was scheduled for {prop.title}.',
+            action='review_appointment',
+            extra_data={
+                'appointment_id': serializer.instance.id,
+            },
         )
+        record_property_event(
+            prop,
+            PropertyEvent.EventType.VISIT_BOOKED,
+            'Visit booked',
+            f'{serializer.instance.full_name} booked a visit.',
+            actor=self.request.user,
+            data={'appointment_id': serializer.instance.id},
+        )
+
+    def _update_status(self, request, status_value, title):
+        appointment = self.get_object()
+        appointment.status = status_value
+        if request.data.get('notes'):
+            appointment.notes = request.data.get('notes')
+        appointment.save(update_fields=['status', 'notes'])
+        record_property_event(
+            appointment.property,
+            PropertyEvent.EventType.VISIT_UPDATED,
+            title,
+            request.data.get('notes', ''),
+            actor=request.user,
+            data={'appointment_id': appointment.id, 'status': appointment.status},
+        )
+        return Response(self.get_serializer(appointment).data)
+
+    @action(detail=True, methods=['post'])
+    def confirm(self, request, pk=None):
+        return self._update_status(request, PropertyAppointment.Status.CONFIRMED, 'Visit confirmed')
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        return self._update_status(request, PropertyAppointment.Status.CANCELLED, 'Visit cancelled')
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        return self._update_status(request, PropertyAppointment.Status.COMPLETED, 'Visit completed')
+
+    @action(detail=True, methods=['post'])
+    def reschedule(self, request, pk=None):
+        appointment = self.get_object()
+        scheduled_start = request.data.get('scheduled_start')
+        scheduled_end = request.data.get('scheduled_end')
+        if not scheduled_start or not scheduled_end:
+            return Response({'detail': 'Provide scheduled_start and scheduled_end.'}, status=status.HTTP_400_BAD_REQUEST)
+        appointment.scheduled_start = scheduled_start
+        appointment.scheduled_end = scheduled_end
+        appointment.status = PropertyAppointment.Status.REQUESTED
+        if request.data.get('notes'):
+            appointment.notes = request.data.get('notes')
+        appointment.save(update_fields=['scheduled_start', 'scheduled_end', 'status', 'notes'])
+        record_property_event(
+            appointment.property,
+            PropertyEvent.EventType.VISIT_UPDATED,
+            'Visit rescheduled',
+            appointment.notes,
+            actor=request.user,
+            data={'appointment_id': appointment.id},
+        )
+        return Response(self.get_serializer(appointment).data)

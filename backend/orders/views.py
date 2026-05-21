@@ -387,6 +387,35 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
 
         return Response(QuoteResponseSerializer(quote_response).data, status=status.HTTP_201_CREATED)
 
+    @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def decline(self, request, pk=None):
+        quote_request = self.get_object()
+
+        if not hasattr(request.user, 'vendor_profile'):
+            return Response({"error": "User is not a vendor"}, status=status.HTTP_403_FORBIDDEN)
+
+        vendor = request.user.vendor_profile
+        if vendor.verified_status != 'APPROVED':
+            return Response({"error": "Vendor not approved"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Verify this vendor is associated with at least one item in the quote
+        vendor_items = quote_request.items.filter(product__vendor=vendor)
+        if not vendor_items.exists():
+            return Response({"error": "You are not associated with this quote request"}, status=status.HTTP_403_FORBIDDEN)
+
+        quote_request.status = quote_request.Status.REJECTED
+        quote_request.save(update_fields=['status'])
+
+        notify_user(
+            quote_request.buyer,
+            Notification.Type.SYSTEM,
+            "Quote request declined",
+            f"{vendor.business_name} is unable to fulfill your quote request at this time.",
+            data={"quote_request_id": quote_request.id, "action": "find_alternative"},
+        )
+
+        return Response({"status": "declined"})
+
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsQuoteOwner])
     def checkout(self, request, pk=None):
         from .models import Order, OrderItem
@@ -497,3 +526,17 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    @decorators.action(detail=False, methods=['get'], url_path='unresponded-count', permission_classes=[permissions.IsAuthenticated])
+    def unresponded_count(self, request):
+        """Return the count of unresponded quote requests for the vendor."""
+        if not hasattr(request.user, 'vendor_profile'):
+            return Response({"count": 0})
+
+        vendor = request.user.vendor_profile
+        count = QuoteRequest.objects.filter(
+            items__product__vendor=vendor,
+            status='REQUESTED',
+        ).distinct().count()
+
+        return Response({"count": count})

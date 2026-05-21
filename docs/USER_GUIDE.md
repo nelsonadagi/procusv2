@@ -1,250 +1,604 @@
-# 📖 User Guide — Procus v2
-
-Welcome to the **Procus v2** User Guide. This document provides step-by-step instructions for each of the primary user roles on the platform.
-
----
-
-## 📑 Table of Contents
-1. [Registering on the Platform](#1-registering-on-the-platform)
-2. [Base Workspace: Buyer and Project Owner](#2-base-workspace-buyer-and-project-owner)
-3. [Specialized Role: Vendor](#3-specialized-role-vendor)
-4. [Specialized Role: Contractor](#4-specialized-role-contractor)
-5. [Specialized Role: Property Manager](#5-specialized-role-property-manager)
-6. [Core Role: Project Owner](#6-core-role-project-owner)
-7. [Specialized Role: Investor](#7-specialized-role-investor)
-8. [Role: Admin (Platform Management)](#8-role-admin-platform-management)
-
----
-
-## 1. Registering on the Platform
+# Procus v2 User Guide
 
-1. Navigate to the **Register** page.
-2. Enter your email, first name, last name, and a secure password.
-3. Click **Create Identity**.
-4. Your account starts in the base `PROJECT_OWNER` workspace.
-5. Once registered, log in to access the shared workspace and activate specialized workflows only when needed.
-
-### Role Activation Policy
+This guide is written for platform users. It explains what each role can do, what happens next after an action, and what to expect when something is waiting, blocked, or approved.
 
-- `PROJECT_OWNER` is the default base role for normal users.
-- `VENDOR`, `CONTRACTOR`, `INVESTOR`, `PROPERTY_MANAGER`, `COURIER`, and `GOVERNMENT` are specialized roles.
-- Specialized roles should be activated after onboarding and admin approval.
-- Users may hold multiple approved non-admin roles.
-- `ADMIN` is separate and manually assigned.
-
----
-
-## 2. Base Workspace: Buyer and Project Owner
-
-Every normal account starts in the shared `PROJECT_OWNER` workspace. In practice, this is also where buyer-style procurement begins.
-
-### 🛒 Browsing and Ordering
-1. **Explore Catalogue**: Use the "Materials" section to browse products. Use filters to find exactly what you need (e.g., Cement, Steel, Timber).
-2. **View Details**: Click on a product to see description, base price, currency, and availability. The price is shown in your selected country currency, converted from the product's stored source currency.
-3. **Add to Order**: Enter the quantity and click **Order Now**.
-4. **Checkout**: Review your order summary and confirm the delivery address.
-
-### 🏠 Property Discovery And Lead Capture
-1. **Browse Properties**: Use the property marketplace to search by location, asset type, development profile, and estimated value.
-2. **Open Property Detail**: Review the asset summary, development metadata, financing options, linked project details, and suggested materials or services.
-3. **Make Inquiry**: Public visitors may submit an inquiry without logging in if they provide callback phone number or email.
-4. **Schedule Visit**: Choose an available viewing slot from the property calendar when appointment booking is enabled.
-5. **Follow-Up**: Property inquiries and appointment requests should trigger notifications and a communication thread so the owner or manager can respond quickly.
+The platform is built around one shared base account. You can then activate additional workspaces such as Vendor, Contractor, Investor, Property Manager, Courier, or Government when your profile is approved.
 
-### 📦 Tracking and Disputes
-1. **Order Dashboard**: Monitor your orders in "My Orders".
-2. **Status Tracking**: See when your order moves from `PLACED` to `SHIPPED` to `DELIVERED`.
-3. **File Dispute**: If there is an issue with the quality or delivery, use the **Open Dispute** button to freeze the payment until resolved by an admin.
-
----
-
-## 3. Specialized Role: Vendor
-
-Vendor access is a specialized approved workflow layered onto the base account.
-
-### 🏗️ Product Management
-1. **Create Identity**: Register a platform account from the main **Register** page.
-2. **Activate Vendor Onboarding**: Open the Vendor Dashboard. If you do not yet have a supplier profile, the dashboard will prompt you to continue to **Vendor Registration** where you submit:
-   - business name
-   - registration number
-   - operating location
-   - delivery settings
-   - categories served
-3. **Wait for Approval**: Your supplier profile remains `PENDING` until an admin approves it. Vendor access should be treated as an approved specialization, not just a self-declared role.
-4. **Approved Access**: Once approved, your account can operate the vendor workspace without losing the base buyer-owner workspace.
-5. **List Products**: Use the **Inventory** tab to add new materials. Select a real material category, choose the product currency, set unit price, stock quantity, reorder threshold, and publish status.
-6. **Bulk Import**: Use **Download Template** to get the CSV format, then use **Import CSV** to bulk-create products and initial stock.
-7. **Inventory Ledger**: The inventory view only shows products owned by your vendor profile. Use **Adjust** to add or remove stock with a note and reference.
-8. **Movement History**: Use **History** to review inventory commits, restocks, imports, and manual adjustments for each product.
-9. **Inventory Updates**: Use **Edit** and **Delete** to maintain your catalog, but prefer stock adjustments for operational quantity changes.
-
-### 🚚 Order Fulfillment
-1. **Incoming Orders**: View new orders in your "Vendor Management" console.
-2. **Status Updates**: As you process the order, move the status through `CONFIRMED`, `PACKING`, `SHIPPED`, and `DELIVERED`.
-3. **Delivery Estimate**: When confirming an order, enter the estimated delivery date so the buyer can track the commitment window.
-4. **Fulfillment Rate**: Your reputation as a vendor is tracked by your fulfillment rate and delivery timeliness.
-
----
+## How The Platform Works
 
-## 4. Specialized Role: Contractor
-
-Contractors are verified service providers who bid on construction tenders.
-
-### 🛡️ Getting Verified
-1. **Activate Contractor Onboarding**: Open the contractor workspace and fill out the Contractor Registration form.
-2. **Certifications**: Upload your licenses and certifications.
-3. **Admin Review**: Wait for a platform admin to verify your credentials. Contractor access should be treated as an approved specialization, and you should not bid until verified.
+Most pages in the platform show the same pattern:
 
-### 🔨 Bidding and Execution
-1. **Find Tenders**: Browse the "Contracts" marketplace for posted tenders.
-2. **Submit Bid**: Enter your proposed cost and timeline.
-3. **Winning Jobs**: If a Project Owner awards you the contract, it will appear in your "Active Jobs".
-4. **Milestones**: Complete work according to the defined milestones. Once an owner approves a milestone, funds are released to you.
+1. Your current status is visible first.
+2. The platform highlights the next step.
+3. Buttons that are not available yet are hidden or disabled.
+4. Notifications appear when something needs your attention.
+5. Timelines show what changed, who changed it, and what happens next.
 
----
+If you are ever unsure, look for:
 
-## 5. Specialized Role: Property Manager
+- pending review
+- missing information
+- next action
+- notifications in the top bar
+- activity history on the relevant record
 
-Property managers operate standalone property assets inside the platform while preserving links to finance, project creation, and downstream procurement.
+You do not need a human guide for normal workflows. Open the relevant dashboard, follow the next step shown on the page, and use the notification bell or activity timeline when something is waiting on you.
 
-### 🏢 Property Operations
-1. **Activate Property Manager Onboarding**: Open the property workspace and complete the onboarding flow to be approved as a `PROPERTY_MANAGER`.
-2. **List Properties**: Create and manage listings for land, residential, commercial, industrial, mixed-use, hospitality, renovation, and completed-project assets. Set the pricing currency on the listing so the platform can convert the displayed price into the selected country currency.
-3. **Define Availability**: Configure viewing slots so visitors can book visits from the property calendar.
-4. **Handle Inquiries**: Respond to public and authenticated inquiries from the property detail page.
-5. **Enable Finance**: Mark properties as financing-eligible where acquisition, renovation, or completion finance should be offered.
-6. **Link To Projects**: Convert or connect a development opportunity into a platform project when procurement, contracts, and execution need to be formalized.
+## 1. Getting Started
 
-## 6. Core Role: Project Owner
+### Registering
 
-`PROJECT_OWNER` is the base role for new normal users and remains the anchor workspace even when the user later gains more approved roles.
+1. Open the Register page.
+2. Enter your email, first name, last name, and password.
+3. Create your account.
+4. Log in to enter the base workspace.
 
-### 🧭 Owner Workspace
-1. Open `/owner/dashboard` to reach the Project Control Center.
-2. Use **Start New Project** to open `/projects/new`.
-3. Use **Post a Tender** to open `/contracts/new`.
-4. Keep projects and contracts separate in the UI: projects are the execution record, contracts are the procurement record.
+### Your Base Account
 
-### 🏗️ Creating a Project
-1. **Set Up Project**: Define your project (name, location, budget).
-2. **Link Property When Needed**: Connect the project to a property if the site or completed asset should stay visible inside the property marketplace.
-3. **Start From Property Or Project**: A project owner may begin with a property opportunity first or create a project directly and link the property later.
-4. **Requirements (BoQ)**: Add the materials and services you need (e.g., "500 Bags of Cement", "Plumbing Services").
-5. **Post Tenders**: Create a tender for the services required.
+Every new non-admin user starts in the shared `PROJECT_OWNER` base account.
 
-### 🤝 Hiring and Paying
-1. **Review Bids**: Compare bids from different contractors. Look at their reliability scores and past reviews.
-2. **Award Contract**: Select the best bid to start the work.
-3. **Escrow Funding**: Deposit project funds into the secure Escrow account.
-4. **Finance Either Path**: Financing may support property acquisition/completion or project completion depending on how the opportunity is structured.
-5. **Approve Work**: As the contractor completes milestones, review the work and click **Approve**. This automatically triggers the payment release from escrow.
+That base account is not only for project owners. It is also the starting point for:
 
-## 7. Specialized Role: Investor
+- browsing the marketplace
+- requesting quotes
+- placing orders
+- viewing property listings
+- starting approval-based workspaces such as Vendor or Contractor
 
-Investors provide capital to construction projects, material orders, and property developments in exchange for structured returns or equity stakes.
+### Adding More Workspaces
 
-> **Full Reference**: See [`INVESTOR_GUIDE.md`](./INVESTOR_GUIDE.md) for the complete investor documentation.
+Some roles require approval before they become active.
 
-### 📈 Investing
+These include:
 
-1. **Activate Investor Onboarding**
-   - Open the investor workspace and request the `INVESTOR` role.
-   - Complete KYC verification: upload government-issued ID and proof of address.
-   - Wait for admin review. Status: `PENDING → VERIFIED`.
-   - (Optional) Apply for accredited investor status for large commitments.
+- Vendor
+- Contractor
+- Investor
+- Property Manager
+- Courier
+- Government
 
-2. **Project Discovery**
-   - Browse **Projects** (`/projects`) and filter by **"Seeking Investment"**.
-   - Evaluate projects using the funding progress bar, budget gap, requirements list, and linked contracts.
-   - Review owner track record, timeline, and location risk before pledging.
+When you activate one of these workspaces, the platform will usually ask you to:
 
-3. **Pledge Capital**
-   - Open a fundable project detail page.
-   - Enter your pledge amount in the **Funding & Investment** sidebar.
-   - Click **Pledge Commitment**.
-   - Your pledge is non-binding at this stage (`PLEDGED` status).
+1. complete the onboarding form
+2. upload any required documents
+3. wait for review
+4. continue once approved
 
-4. **Confirm Commitment**
-   - After discussing terms with the project owner, confirm your pledge.
-   - Funds transfer to a dedicated escrow account.
-   - Status moves: `PLEDGED → CONFIRMED`.
+## 2. Shared Buyer And Owner Experience
 
-5. **Sign Agreement**
-   - Review the legally binding `InvestmentAgreement` generated by the platform.
-   - Click **Execute Sign** in your Investor Dashboard.
-   - Agreement status: `DRAFT → SIGNED → FUNDED`.
+The shared base account is where most users begin buying, tracking, and managing work.
 
-### 🔄 Secondary Market
+### Browsing Materials
 
-1. **Manage Stakes**: View your portfolio at `/investor/dashboard` under **Portfolio Vital**.
-2. **List for Sale**: Go to `/market/secondary`, select a stake, set asking price and yield.
-3. **Buy Stakes**: Browse listings, review project status and seller history, confirm purchase.
-4. **Settlement**: Platform validates compliance, executes transfer, and releases funds.
+1. Open the Materials or marketplace section.
+2. Filter by category, location, certification, availability, or price.
+3. Open a product to review its details.
+4. Choose the quantity you need.
+5. Request a quote or place the order if the platform shows that option.
 
-> **Limitation**: No open public trading. All transfers are OTC with platform oversight.
+What to expect:
 
-### 💰 Returns & Distributions
+- the platform will show pricing in the selected country currency
+- unavailable products should be hidden or marked clearly
+- low-stock items should show a warning before checkout
 
-- **Milestone-linked**: Receive distributions as project milestones are approved.
-- **Completion-based**: Full payout when project reaches `COMPLETED` status.
-- **Revenue share**: Periodic distributions based on project revenue.
-- Distributions flow from escrow → your linked bank account via `SettlementTransaction`.
+### Requesting Quotes
 
-### ⚠️ Risk Summary
+1. Add the materials or services you need.
+2. Submit a quote request.
+3. Wait for vendor responses.
+4. Compare price, delivery fee, and availability notes.
+5. Accept the response that fits your needs best.
 
-- Construction projects carry inherent cost overrun, delay, and contractor failure risks.
-- The platform facilitates escrow but does not guarantee returns.
-- Investments are illiquid until project completion or secondary market sale.
-- Diversify across multiple projects and start with smaller commitments.
+What happens next:
 
-> **See [`INVESTOR_GUIDE.md`](./INVESTOR_GUIDE.md) for full risk disclosure, FAQ, and detailed workflows.**
+- vendors are notified that a quote is waiting
+- your quote request appears in your dashboard
+- each vendor response becomes visible once it is submitted
 
----
+### Placing An Order
 
-## 8. Role: Admin (Platform Management)
+1. Open the accepted quote response.
+2. Review the order summary.
+3. Choose a payment method.
+4. Complete checkout.
 
-Admins oversee the health and regulatory compliance of the entire ecosystem.
+What happens next:
 
-### 🔬 Operational Oversight
-1. **Audit Logs**: Monitor the `AUDIT_LOG_STREAM` to review recorded platform actions.
-2. **Security Monitoring**: Review throttling and access-scope violations from the security module.
-3. **Verifications**: Contractor verification is currently surfaced in the admin dashboard. Vendor verification and investor KYC review are not yet fully exposed there.
-4. **Dispute Resolution**: Backend dispute resolution exists, but the dedicated admin dispute workspace is not yet available in the dashboard UI.
+- the order is created
+- stock is committed
+- the vendor receives a new order notification
+- payment status changes from unpaid to paid when payment is confirmed
+- delivery is initiated after payment
 
-### ⚙️ System Configuration
-1. **Platform Identity**: Update branding, contact info, and default regions.
-2. **Currencies**: Manage exchange rates and active currencies relative to KES as the platform reference currency. The UI converts displayed money into the selected country's currency using the stored source currency on each record.
-   The default rate sync provider is Frankfurter, with ExchangeRate-API available as a fallback that admins can switch to in settings.
-3. **Countries**: Manage active operating countries and choose the default country. Selecting a country should automatically resolve its local currency in the UI and drive currency selection in create forms.
-4. **Roles and Users**: Activate users, reassign roles, and manage Django groups through settings tools.
-   Treat specialized roles as approval outcomes where possible, rather than arbitrary self-service profile values.
-5. **Approval Discipline**: Normal users may hold multiple approved non-admin roles. `ADMIN` should remain a separate operator identity.
-6. **Taxonomy**: Manage the categories for products and services (Material, Service, Project types).
+### Tracking Delivery
 
-### 📌 Current Admin Reality
+1. Open My Orders.
+2. Check the order status.
+3. Open tracking when a tracking number is available.
 
-The admin dashboard is partially operational today.
+Typical delivery flow:
 
-Strongest admin surfaces:
+- `PLACED`
+- `CONFIRMED`
+- `PACKING`
+- `SHIPPED`
+- `DELIVERED`
+- `COMPLETED`
 
-- system configuration
-- currencies
-- countries
-- taxonomy
-- security monitoring
-- audit logs
-- property registry visibility
-- regulatory reports surface
+If the order is already paid, you should expect to see delivery activity start soon after payment is confirmed.
 
-Still incomplete:
+### Opening A Dispute
 
-- vendor verification in admin dashboard
-- investor KYC review in admin dashboard
-- dispute arbitration UI
-- full operator management in the dedicated admin panel
+If there is a problem with the order:
 
-For a code-accurate admin reference, use `docs/ADMIN_FUNCTIONALITY_STATUS.md`.
+1. Open the order.
+2. Select Open Dispute.
+3. Explain the issue clearly.
 
----
+Use disputes for:
 
-*Procus v2 — Empowering the Construction Ecosystem.*
+- damaged items
+- missing items
+- delivery problems
+- serious quality issues
+
+When a dispute is opened:
+
+- the event is recorded
+- the relevant parties are notified
+- the platform may freeze or hold related resolution steps until the issue is reviewed
+
+### Managing Delivery Addresses
+
+1. Open the Addresses section.
+2. Add your site, store, yard, or delivery hub.
+3. Set a default address if needed.
+
+Good address records help avoid failed deliveries and slow checkout.
+
+## 3. Public Visitor And Property Browsing
+
+Public visitors can explore the property area without creating a full account first.
+
+### What A Visitor Can Do
+
+- browse property listings
+- search by location and type
+- open property details
+- submit an inquiry
+- book an available visit if the listing allows it
+
+### What Happens After An Inquiry
+
+1. The inquiry is saved.
+2. The owner or property manager is notified.
+3. A communication thread can be used for follow-up.
+4. The listing can continue to show availability and next steps.
+
+## 4. Project Owner
+
+The Project Owner workspace is where you manage projects, procurement, contracts, and milestone approvals.
+
+### What You Can Do
+
+- create projects
+- define requirements
+- post tenders
+- review bids
+- award work
+- fund escrow
+- approve milestones
+- track project progress
+
+### Typical Project Flow
+
+1. Create a project.
+2. Add the project budget and location.
+3. Add materials or services needed.
+4. Post a tender or procurement request.
+5. Review responses.
+6. Award the work.
+7. Fund escrow or project payments.
+8. Approve milestones as work is completed.
+
+### What You Should Watch
+
+- incomplete project details
+- missing requirements
+- few or no bids
+- delayed milestone approvals
+- funding gaps
+- unresolved disputes
+
+### Helpful Signals
+
+The dashboard should make these items easy to see first:
+
+- active projects
+- tasks waiting for your approval
+- milestones ready to review
+- escrow status
+- overdue actions
+
+## 5. Vendor
+
+The Vendor workspace is for suppliers who list products, respond to requests, and fulfill orders.
+
+### Onboarding
+
+1. Open the Vendor workspace.
+2. Submit your business details.
+3. Wait for review and approval.
+4. Once approved, your vendor tools become active.
+
+### What You Can Do
+
+- create products
+- import products from CSV
+- update stock
+- review movement history
+- respond to quote requests
+- confirm orders
+- prepare and ship deliveries
+
+### Typical Vendor Flow
+
+1. Complete onboarding.
+2. Add products and stock.
+3. Receive a quote request.
+4. Submit your response.
+5. Receive an order if the quote is accepted.
+6. Confirm the order.
+7. Pack and ship the goods.
+8. Update delivery status until completion.
+
+### What You Should Watch
+
+- vendor approval status
+- low stock warnings
+- quote requests waiting for response
+- orders waiting to be confirmed
+- shipments waiting to be updated
+
+### Helpful Signals
+
+Your dashboard should prioritise:
+
+- quote requests
+- new orders
+- low-stock products
+- shipment progress
+- delivery delays
+
+## 6. Contractor
+
+The Contractor workspace is for verified service providers who bid on tenders and complete milestone-based work.
+
+### Onboarding
+
+1. Open the Contractor workspace.
+2. Fill in your registration form.
+3. Upload licences or certifications.
+4. Wait for admin review.
+5. Once approved, you can bid on work.
+
+### What You Can Do
+
+- browse tenders
+- submit bids
+- track awards
+- review active jobs
+- update milestone progress
+- receive milestone-based payments
+
+### Typical Contractor Flow
+
+1. Complete onboarding.
+2. Search for suitable tenders.
+3. Submit a bid with cost and timeline.
+4. Wait for review or award.
+5. Start work once awarded.
+6. Submit milestone updates.
+7. Receive payment as milestones are approved.
+
+### What You Should Watch
+
+- verification status
+- bid deadlines
+- award notifications
+- milestone deadlines
+- payment status
+
+## 7. Property Manager
+
+The Property Manager workspace is for users who manage property listings, appointments, and inquiries.
+
+### Onboarding
+
+1. Open the Property Manager workspace.
+2. Complete the onboarding flow.
+3. Wait for approval if required.
+
+### What You Can Do
+
+- create property listings
+- manage property details
+- set availability for visits
+- answer inquiries
+- manage appointment requests
+- link properties to projects
+- mark properties as finance-ready when appropriate
+
+### Typical Property Manager Flow
+
+1. Create a property listing.
+2. Add photos, location, pricing, and description.
+3. Set viewing availability.
+4. Receive inquiries.
+5. Respond and schedule visits.
+6. Link the property to a project if it becomes a development workflow.
+
+### What You Should Watch
+
+- unanswered inquiries
+- appointment conflicts
+- incomplete listing details
+- stale availability
+- linked project updates
+
+## 8. Investor
+
+Investors provide capital to projects and properties through structured approval and agreement flows.
+
+> For detailed investor terms and risk information, see [`INVESTOR_GUIDE.md`](./INVESTOR_GUIDE.md).
+
+### Onboarding
+
+1. Open the Investor workspace.
+2. Submit your investor onboarding details.
+3. Complete KYC verification.
+4. Wait for review and approval.
+
+### What You Can Do
+
+- browse fundable projects
+- review funding gaps
+- pledge capital
+- confirm commitments
+- sign investment agreements
+- track portfolio and distributions
+
+### Typical Investor Flow
+
+1. Complete onboarding and KYC.
+2. Review a project or property opportunity.
+3. Check budget gap, progress, and risk.
+4. Pledge capital.
+5. Confirm the commitment if the terms work for you.
+6. Sign the agreement.
+7. Track milestone-linked or completion-linked returns.
+
+### What You Should Watch
+
+- KYC approval
+- commitment status
+- agreement status
+- project progress
+- distribution updates
+
+## 9. Courier
+
+The Courier workspace is for logistics partners who manage deliveries and shipment tracking.
+
+### Onboarding
+
+1. Open the Courier workspace.
+2. Submit your courier profile.
+3. Wait for approval if required.
+
+### What You Can Do
+
+- configure service areas
+- manage delivery pricing rules
+- receive shipment assignments
+- update tracking events
+- mark deliveries as in transit or completed
+
+### Typical Courier Flow
+
+1. Complete onboarding.
+2. Configure your delivery zones.
+3. Receive a shipment assignment.
+4. Confirm pickup.
+5. Update tracking while the shipment moves.
+6. Complete delivery.
+
+### What You Should Watch
+
+- assigned shipments
+- pickup requests
+- tracking gaps
+- failed deliveries
+- delivery deadlines
+
+## 10. Government
+
+The Government workspace is for institutional procurement and public tender operations.
+
+### Onboarding
+
+1. Open the Government workspace.
+2. Complete the institution onboarding flow.
+3. Wait for approval if required.
+
+### What You Can Do
+
+- publish tenders
+- review submissions
+- manage award decisions
+- monitor compliance
+- generate reports
+
+### Typical Government Flow
+
+1. Publish a tender.
+2. Receive submissions.
+3. Review eligibility and compliance.
+4. Award the tender.
+5. Track reporting and audit history.
+
+## 11. Admin
+
+Admins manage platform health, verification, moderation, and configuration.
+
+### What Admins Can Do
+
+- approve users and workspaces
+- review vendor and contractor verifications
+- review KYC or compliance items
+- monitor disputes
+- inspect audit logs
+- manage system settings
+
+### What Admins Should Watch
+
+- pending approvals
+- failed verifications
+- dispute queues
+- suspicious activity
+- incomplete setup in shared settings
+
+## 12. Understanding Statuses
+
+### Orders
+
+- `PLACED` - order created, waiting to progress
+- `CONFIRMED` - vendor/system acknowledged the order
+- `PACKING` - order is being prepared
+- `SHIPPED` - shipment has started
+- `DELIVERED` - delivery reached the buyer
+- `COMPLETED` - buyer accepted the order
+- `CANCELLED` - order was cancelled
+
+### Verifications
+
+- `PENDING` - waiting for review
+- `UNDER_REVIEW` - being checked
+- `APPROVED` - ready to use
+- `REJECTED` - needs correction or more information
+
+### Disputes
+
+- `OPENED` - issue reported
+- `UNDER_REVIEW` - being reviewed
+- `RESOLVED` - issue closed
+- `ESCALATED` - needs higher attention
+
+### Investments
+
+- `PLEDGED` - interest has been recorded
+- `CONFIRMED` - commitment accepted
+- `SIGNED` - agreement completed
+- `FUNDED` - funds are active
+
+### Milestones
+
+- `DRAFT` - still being prepared
+- `ACTIVE` - work is underway
+- `SUBMITTED` - ready for review
+- `APPROVED` - accepted for release
+- `REJECTED` - needs revision
+
+## 13. Notifications And Alerts
+
+The platform should notify you when something important changes.
+
+Common notifications include:
+
+- quote request received
+- quote response received
+- order placed
+- payment confirmed
+- shipment started
+- shipment delayed
+- milestone ready for approval
+- milestone approved
+- dispute opened
+- verification approved or rejected
+- tender awarded
+- investment confirmed
+
+### Where Notifications Should Lead
+
+Notifications should take you directly to the next useful page, such as:
+
+- the order
+- the shipment
+- the quote request
+- the milestone
+- the verification page
+- the dispute record
+- the tender or investment record
+
+## 14. If You Get Stuck
+
+### I Cannot Use A Workspace
+
+Usually this means your approval is still pending.
+
+What to do:
+
+1. open the workspace again
+2. complete the missing onboarding step
+3. wait for approval
+
+### I Cannot Continue Checkout
+
+Usually this means something is missing from payment or delivery setup.
+
+What to do:
+
+1. confirm you selected a payment method
+2. check that your delivery address is complete
+3. make sure the order is still valid
+
+### I Paid, But Nothing Moved
+
+What to do:
+
+1. open My Orders
+2. check the order timeline
+3. look for payment confirmation and delivery start
+4. contact support if the order remains stuck for too long
+
+### I Do Not See New Items
+
+What to do:
+
+1. refresh the page
+2. check the notification bell
+3. confirm the relevant workspace is approved
+4. verify the item is in the correct state
+
+## 15. What A Good Dashboard Should Show
+
+Every dashboard should show:
+
+- what is waiting on you
+- what is blocked
+- what is due soon
+- what is complete
+- what needs approval
+- what changed recently
+
+That means the platform should not just show data. It should help you move the workflow forward.
+
+## 16. Final Note
+
+If you use the platform often, remember this simple rule:
+
+**The platform should always make the next step obvious.**
+
+That is what keeps the experience intuitive.

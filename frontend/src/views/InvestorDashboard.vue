@@ -43,6 +43,50 @@
         </div>
       </section>
 
+      <WorkflowGuide title="Workflow Path" eyebrow="Start Here">
+        <div class="pz-investor-workflow__grid">
+          <div class="pz-investor-workflow__summary">
+            <div class="pz-investor-workflow__kicker">{{ workflowSummary.stage }}</div>
+            <h3 class="pz-investor-workflow__title">{{ workflowSummary.title }}</h3>
+            <p class="pz-investor-workflow__body">{{ workflowSummary.body }}</p>
+            <div class="pz-investor-workflow__actions">
+              <Button v-if="workflowSummary.primaryAction" variant="primary" size="sm" @click="workflowSummary.primaryAction.handler">
+                {{ workflowSummary.primaryAction.label }}
+              </Button>
+              <Button v-if="workflowSummary.secondaryAction" variant="outline" size="sm" @click="workflowSummary.secondaryAction.handler">
+                {{ workflowSummary.secondaryAction.label }}
+              </Button>
+            </div>
+          </div>
+          <div class="pz-investor-workflow__metrics">
+            <div class="pz-investor-workflow__metric">
+              <span>Agreements</span>
+              <strong>{{ agreements.length }}</strong>
+            </div>
+            <div class="pz-investor-workflow__metric">
+              <span>Applications</span>
+              <strong>{{ financeApps.length }}</strong>
+            </div>
+            <div class="pz-investor-workflow__metric">
+              <span>Pending Pledges</span>
+              <strong>{{ pendingPledges }}</strong>
+            </div>
+          </div>
+        </div>
+      
+
+      <ModuleCTA
+        eyebrow="Capital Path"
+        title="Want to fund projects or prepare a project for funding?"
+        body="Review investable projects, track readiness signals, and move qualified opportunities into the investor workflow."
+        primary-label="Discover Projects"
+        primary-to="/projects"
+        secondary-label="Apply for Finance"
+        secondary-to="/finance/apply"
+        tone="earth"
+      />
+</WorkflowGuide>
+
       <!-- Layout -->
       <div class="pz-investor-layout">
         <section class="pz-space-y-6">
@@ -220,6 +264,8 @@ import { useConfigStore } from '../stores/config';
 import Button from '../components/ui/Button.vue';
 import Badge from '../components/ui/Badge.vue';
 import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import EmptyState from '../components/ui/EmptyState.vue';
 import BankAccountManager from '../components/finance/BankAccountManager.vue';
 
@@ -247,6 +293,46 @@ const pendingPledges = computed(() => {
 
 const openApplications = computed(() => {
   return financeApps.value.filter(a => a.status === 'SUBMITTED').length;
+});
+
+const workflowSummary = computed(() => {
+  if (!profile.value) {
+    return {
+      stage: 'SETUP',
+      title: 'Initialize your investor profile',
+      body: 'Complete onboarding to unlock agreements, applications, and portfolio tracking.',
+      primaryAction: { label: 'Initialize', handler: () => { window.location.href = '/investor/onboard'; } },
+      secondaryAction: null,
+    };
+  }
+
+  if (!agreements.value.length && !financeApps.value.length) {
+    return {
+      stage: 'DISCOVER',
+      title: 'Find opportunities to fund',
+      body: 'Browse projects, shortlist relevant assets, and start with a low-friction pledge or application.',
+      primaryAction: { label: 'Discover Projects', handler: () => { window.location.href = '/projects'; } },
+      secondaryAction: { label: 'Apply for Credit', handler: () => { window.location.href = '/finance/apply'; } },
+    };
+  }
+
+  if (pendingPledges.value > 0) {
+    return {
+      stage: 'ACTION',
+      title: 'Review open commitments',
+      body: 'Pending pledges and draft agreements need a decision before the portfolio can progress.',
+      primaryAction: { label: 'Open Agreements', handler: () => { activeTab.value = 'agreements'; } },
+      secondaryAction: { label: 'Review Portfolio', handler: () => { activeTab.value = 'portfolio'; } },
+    };
+  }
+
+  return {
+    stage: 'ACTIVE',
+    title: 'Your portfolio is active',
+    body: 'Use the portfolio, agreements, and applications tabs to manage ongoing capital deployment.',
+    primaryAction: { label: 'Review Portfolio', handler: () => { activeTab.value = 'portfolio'; } },
+    secondaryAction: { label: 'Open Applications', handler: () => { activeTab.value = 'applications'; } },
+  };
 });
 
 onMounted(() => loadData());
@@ -358,6 +444,77 @@ function getAppVariant(s) {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.pz-investor-workflow {
+  margin-top: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.pz-investor-workflow__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.95fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.pz-investor-workflow__summary {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.pz-investor-workflow__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-investor-workflow__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: 1.2rem;
+}
+
+.pz-investor-workflow__body {
+  max-width: 56ch;
+  margin: 0;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.55;
+}
+
+.pz-investor-workflow__actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.pz-investor-workflow__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.pz-investor-workflow__metric {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.pz-investor-workflow__metric span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-investor-workflow__metric strong {
+  font-family: var(--pz-font-display);
+  font-size: 1rem;
 }
 
 .pz-investor-stat {
@@ -651,6 +808,10 @@ function getAppVariant(s) {
 @media (max-width: 1024px) {
   .pz-investor-hero__stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pz-investor-workflow__grid,
+  .pz-investor-workflow__metrics {
+    grid-template-columns: 1fr;
   }
   .pz-investor-layout {
     grid-template-columns: 1fr;

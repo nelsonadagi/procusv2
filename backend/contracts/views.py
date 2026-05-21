@@ -38,7 +38,14 @@ class ContractViewSet(viewsets.ModelViewSet):
         'milestones': 'milestones:manage_milestones',
     }
 
+    def get_permissions(self):
+        if self.action in {'list', 'retrieve'}:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated(), HasRequiredPermission()]
+
     def perform_create(self, serializer):
+        if not self.request.user or not self.request.user.is_authenticated:
+            raise permissions.NotAuthenticated("Sign in before posting a contract.")
         contract = serializer.save(owner=self.request.user)
         log_action(self.request.user, 'POST_CONTRACT', 'contract', contract.id)
 

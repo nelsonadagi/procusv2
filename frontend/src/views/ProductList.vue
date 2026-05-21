@@ -13,6 +13,65 @@
       </template>
     </EntryHero>
 
+    <div class="pz-l-container u-mt-6">
+      <WorkflowGuide title="Materials Workflow" :eyebrow="workflowSummary.stage">
+          <div class="pz-product-workflow">
+            <div class="pz-product-workflow__summary">
+              <div class="pz-product-workflow__kicker">{{ workflowSummary.stage }}</div>
+              <h3 class="pz-product-workflow__title">{{ workflowSummary.title }}</h3>
+              <p class="pz-product-workflow__body">{{ workflowSummary.body }}</p>
+              <div class="pz-product-workflow__actions">
+                <Button v-if="workflowSummary.primaryAction" variant="primary" size="sm" @click="workflowSummary.primaryAction.handler">
+                  {{ workflowSummary.primaryAction.label }}
+                </Button>
+                <Button v-if="workflowSummary.secondaryAction" variant="outline" size="sm" @click="workflowSummary.secondaryAction.handler">
+                  {{ workflowSummary.secondaryAction.label }}
+                </Button>
+              </div>
+            </div>
+            <div class="pz-product-workflow__metrics">
+              <div class="pz-product-workflow__metric">
+                <span>Visible Products</span>
+                <strong>{{ totalProducts }}</strong>
+              </div>
+              <div class="pz-product-workflow__metric">
+                <span>Compare Queue</span>
+                <strong>{{ selectedForComparison.length }}</strong>
+              </div>
+              <div class="pz-product-workflow__metric">
+                <span>Active Filters</span>
+                <strong>{{ activeFiltersCount }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="pz-product-workflow__steps">
+            <div
+              v-for="step in workflowSteps"
+              :key="step.label"
+              class="pz-product-workflow-step"
+              :class="{ 'pz-product-workflow-step--done': step.done, 'pz-product-workflow-step--active': step.active }"
+            >
+              <span class="pz-product-workflow-step__index">{{ step.index }}</span>
+              <div class="pz-product-workflow-step__content">
+                <strong>{{ step.label }}</strong>
+                <span>{{ step.help }}</span>
+              </div>
+            </div>
+          </div>
+
+          <ModuleCTA
+            eyebrow="Sell Materials"
+            title="Have materials to sell on the marketplace?"
+            body="Activate a vendor workspace, list your first product, and start receiving quote requests from buyers who are already comparing suppliers."
+            primary-label="Become a Vendor"
+            primary-to="/vendors/register"
+            secondary-label="List a Product"
+            secondary-to="/vendor/dashboard"
+            tone="earth"
+          />
+      </WorkflowGuide>
+    </div>
+
     <div id="marketplace" class="pz-marketplace-shell u-mt-12">
       <aside class="pz-marketplace-sidebar u-hide-mobile">
         <div class="pz-filter-rail">
@@ -300,9 +359,9 @@
         <!-- Empty State -->
         <div v-if="!loading && productList.length === 0" class="pz-card pz-p-12 pz-u-text-center">
           <div class="u-text-4xl u-mb-4">🔍</div>
-          <h3 class="pz-u-text-display text-lg">NO PRODUCTS FOUND</h3>
-          <p class="pz-u-text-mono text-xs pz-u-color-steel u-mb-8">TRY CHANGING YOUR SEARCH FILTERS</p>
-          <Button variant="outline" @click="clearFilters">RESET ALL FILTERS</Button>
+          <h3 class="pz-u-text-display text-lg">No Products Found</h3>
+          <p class="pz-u-text-mono text-xs pz-u-color-steel u-mb-8">Try changing your search filters</p>
+          <Button variant="outline" @click="clearFilters">Reset All Filters</Button>
         </div>
 
         <!-- Pagination -->
@@ -463,18 +522,48 @@
     <div class="pz-compare-bar" :class="{ 'pz-compare-bar--active': selectedForComparison.length > 0 }">
       <div class="pz-l-container pz-l-flex pz-l-flex--justify-between pz-l-flex--align-center">
         <div class="pz-l-flex pz-l-flex--align-center pz-l-flex--gap-4">
-          <span class="pz-u-text-mono text-xs">{{ selectedForComparison.length }} SELECTED</span>
+          <span class="pz-u-text-mono text-xs">{{ selectedForComparison.length }} selected</span>
           <div class="pz-l-flex pz-l-flex--gap-2 u-hide-mobile">
             <Badge v-for="p in selectedForComparison" :key="p.id" variant="finance"
               @click="toggleProductForComparison(p)">{{ p.name }} ✕</Badge>
           </div>
         </div>
         <div class="pz-l-flex pz-l-flex--gap-3">
-          <Button variant="ghost" size="sm" @click="selectedForComparison = []">DISCARD</Button>
-          <Button variant="primary" size="sm">COMPARE PRODUCTS</Button>
+          <Button variant="ghost" size="sm" @click="selectedForComparison = []">Discard</Button>
+          <Button variant="primary" size="sm" @click="showComparisonModal = true">Compare Products</Button>
         </div>
       </div>
     </div>
+
+    <!-- Comparison Modal -->
+    <Modal :isOpen="showComparisonModal" title="Compare Materials" size="xl" @close="showComparisonModal = false">
+      <div v-if="selectedForComparison.length" class="pz-compare-table-wrap">
+        <table class="pz-compare-table">
+          <thead>
+            <tr>
+              <th>Attribute</th>
+              <th v-for="p in selectedForComparison" :key="p.id">{{ p.name }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Price</td><td v-for="p in selectedForComparison" :key="p.id">{{ configStore.formatPrice(p.base_price, p.effective_currency || p.currency, displayCurrencyCode) }}</td></tr>
+            <tr><td>Bulk Price</td><td v-for="p in selectedForComparison" :key="p.id">{{ p.bulk_price ? configStore.formatPrice(p.bulk_price, p.effective_currency || p.currency, displayCurrencyCode) : '—' }}</td></tr>
+            <tr><td>Brand</td><td v-for="p in selectedForComparison" :key="p.id">{{ p.brand || '—' }}</td></tr>
+            <tr><td>Stock</td><td v-for="p in selectedForComparison" :key="p.id"><Badge :variant="inventoryBadgeVariant(p.inventory_signal)">{{ formatInventorySignal(p.inventory_signal) }}</Badge></td></tr>
+            <tr><td>Min Order</td><td v-for="p in selectedForComparison" :key="p.id">{{ p.min_order_quantity || 1 }} {{ p.unit }}</td></tr>
+            <tr><td>Quality</td><td v-for="p in selectedForComparison" :key="p.id">{{ p.quality_grade || '—' }}</td></tr>
+            <tr><td>Origin</td><td v-for="p in selectedForComparison" :key="p.id">{{ p.country_of_origin || '—' }}</td></tr>
+            <tr><td>Certifications</td><td v-for="p in selectedForComparison" :key="p.id">{{ p.certification_highlights?.join(', ') || '—' }}</td></tr>
+            <tr>
+              <td></td>
+              <td v-for="p in selectedForComparison" :key="p.id">
+                <Button size="sm" variant="primary" @click="requestQuote(p); showComparisonModal = false">Quote</Button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -492,6 +581,8 @@
   import Button from '../components/ui/Button.vue';
   import Badge from '../components/ui/Badge.vue';
   import EntryHero from '../components/ui/EntryHero.vue';
+  import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+  import ModuleCTA from '../components/ui/ModuleCTA.vue';
   import Modal from '../components/ui/Modal.vue';
 
   const router = useRouter();
@@ -529,6 +620,7 @@
   const pageSize = 12;
   const mobileFiltersOpen = ref(false);
   const selectedForComparison = ref([]);
+  const showComparisonModal = ref(false);
 
   const regions = ['NAIROBI', 'MOMBASA', 'KISUMU', 'NAKURU', 'ELDORET', 'CENTRAL', 'COAST', 'RIFT VALLEY'];
 
@@ -617,6 +709,87 @@
   const searchPlaceholder = computed(() => {
     return "Search materials (e.g. 'TMT Bars', 'Simba Cement')...";
   });
+
+  const workflowSummary = computed(() => {
+    if (loading.value) {
+      return {
+        stage: 'SYNCING',
+        title: 'Loading the material marketplace',
+        body: 'Fetching filters, materials, and location context so the next step is visible immediately.',
+        primaryAction: null,
+        secondaryAction: null,
+      };
+    }
+
+    if (!productList.value.length) {
+      return {
+        stage: 'DISCOVER',
+        title: 'Widen the search and reset filters',
+        body: 'No products match the current search state. Reset filters or broaden the category, region, or price range to recover results.',
+        primaryAction: { label: 'Reset Filters', handler: clearFilters },
+        secondaryAction: { label: 'Search Again', handler: submitSearch },
+      };
+    }
+
+    if (selectedForComparison.value.length) {
+      return {
+        stage: 'COMPARE',
+        title: 'Compare shortlisted materials',
+        body: 'Use the compare queue to review price, stock, certifications, and origin before requesting a quote.',
+        primaryAction: { label: 'Compare Products', handler: () => { showComparisonModal.value = true; } },
+        secondaryAction: { label: 'Request Quote', handler: () => { const first = selectedForComparison.value[0]; if (first) requestQuote(first); } },
+      };
+    }
+
+    if (activeFiltersCount.value > 0) {
+      return {
+        stage: 'REFINE',
+        title: 'Refine results and shortlist the best match',
+        body: 'Your filters are narrowing the catalog. Compare a few candidates, then request a quote from the strongest supplier.',
+        primaryAction: { label: 'Clear Filters', handler: clearFilters },
+        secondaryAction: { label: 'Compare Selected', handler: () => { if (selectedForComparison.value.length) showComparisonModal.value = true; } },
+      };
+    }
+
+    return {
+      stage: 'BROWSE',
+      title: 'Browse, compare, and request a quote',
+      body: 'Start with the strongest match, compare suppliers, then use the quote path to move into checkout or delivery planning.',
+      primaryAction: { label: 'Compare Products', handler: () => { if (selectedForComparison.value.length) showComparisonModal.value = true; } },
+      secondaryAction: { label: 'Reset Filters', handler: clearFilters },
+    };
+  });
+
+  const workflowSteps = computed(() => [
+    {
+      index: '01',
+      label: 'Filter or search',
+      help: 'Narrow by location, category, stock, or price.',
+      done: activeFiltersCount.value > 0,
+      active: activeFiltersCount.value === 0,
+    },
+    {
+      index: '02',
+      label: 'Compare suppliers',
+      help: 'Use the compare queue to review viable options side by side.',
+      done: selectedForComparison.value.length > 1,
+      active: selectedForComparison.value.length === 1,
+    },
+    {
+      index: '03',
+      label: 'Request quote',
+      help: 'Send the chosen product into the buyer quote workflow.',
+      done: false,
+      active: Boolean(selectedForComparison.value.length),
+    },
+    {
+      index: '04',
+      label: 'Track response',
+      help: 'Move from quote request into order and delivery tracking.',
+      done: false,
+      active: false,
+    },
+  ]);
 
   const isSelectedForComparison = (id) => selectedForComparison.value.some(p => p.id === id);
 
@@ -728,6 +901,18 @@
     }
   };
 
+  const inventoryBadgeVariant = (signal) => {
+    if (signal === 'OUT_OF_STOCK') return 'danger';
+    if (signal === 'LOW_STOCK') return 'warning';
+    return 'success';
+  };
+
+  const formatInventorySignal = (signal) => {
+    if (signal === 'OUT_OF_STOCK') return 'Out of Stock';
+    if (signal === 'LOW_STOCK') return 'Low Stock';
+    return 'In Stock';
+  };
+
   const scrollToMarket = () => {
     document.getElementById('marketplace')?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -824,6 +1009,10 @@
       syncStoreFromCountryFilter();
     }
   );
+
+  watch(searchQuery, () => {
+    debouncedSearch();
+  });
 </script>
 
 <style scoped>
@@ -1093,6 +1282,288 @@
     background: rgba(10, 10, 15, 0.08);
     border-color: rgba(10, 10, 15, 0.15);
     color: var(--pz-color-foundation-black);
+  }
+
+  .pz-product-workflow-popover {
+    position: relative;
+    display: inline-block;
+    z-index: 20;
+  }
+
+  .pz-product-workflow-trigger {
+    position: relative;
+    display: inline-grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.75rem;
+    row-gap: 0.08rem;
+    min-width: 13.5rem;
+    padding: 0.9rem 1.05rem;
+    border: 1px solid rgba(212, 101, 42, 0.64);
+    border-radius: 999px;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 236, 213, 0.98)),
+      #fff;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      0 14px 30px rgba(212, 101, 42, 0.24);
+    text-align: left;
+    cursor: help;
+    animation: pz-product-start-breathe 2.8s ease-in-out infinite;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, filter 0.16s ease;
+  }
+
+  .pz-product-workflow-trigger::before {
+    content: ">";
+    grid-row: 1 / span 3;
+    display: inline-flex;
+    width: 2.35rem;
+    height: 2.35rem;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    border-radius: 999px;
+    background: var(--pz-color-earth-orange);
+    color: white;
+    font-family: var(--pz-font-mono);
+    font-size: 1.08rem;
+    font-weight: 900;
+    box-shadow: 0 8px 18px rgba(212, 101, 42, 0.3);
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .pz-product-workflow-trigger::after {
+    content: "Open";
+    position: absolute;
+    top: -0.55rem;
+    right: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.05rem;
+    padding: 0 0.42rem;
+    border-radius: 999px;
+    background: #111827;
+    color: white;
+    font-family: var(--pz-font-mono);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .pz-product-workflow-trigger:hover,
+  .pz-product-workflow-popover:focus-within .pz-product-workflow-trigger {
+    transform: translateY(-2px);
+    border-color: rgba(212, 101, 42, 0.9);
+    filter: saturate(1.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 18px 34px rgba(212, 101, 42, 0.34);
+  }
+
+  .pz-product-workflow-trigger:hover::before,
+  .pz-product-workflow-popover:focus-within .pz-product-workflow-trigger::before {
+    transform: translateX(2px) scale(1.04);
+    box-shadow: 0 10px 22px rgba(212, 101, 42, 0.38);
+  }
+
+  .pz-product-workflow-trigger span {
+    grid-column: 2;
+    font-family: var(--pz-font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--pz-color-concrete-grey);
+  }
+
+  .pz-product-workflow-trigger strong {
+    grid-column: 2;
+    font-family: var(--pz-font-display);
+    font-size: 1.08rem;
+    color: var(--pz-color-foundation-black);
+  }
+
+  .pz-product-workflow-trigger em {
+    grid-column: 2;
+    color: var(--pz-color-structural-steel);
+    font-family: var(--pz-font-mono);
+    font-size: 0.66rem;
+    font-style: normal;
+    line-height: 1.25;
+  }
+
+  @keyframes pz-product-start-breathe {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        0 12px 26px rgba(212, 101, 42, 0.2);
+    }
+
+    50% {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 18px 36px rgba(212, 101, 42, 0.34);
+    }
+  }
+
+  .pz-product-workflow-panel {
+    position: absolute;
+    top: calc(100% + 0.65rem);
+    left: 0;
+    width: min(62rem, calc(100vw - 2rem));
+    padding: 1.1rem;
+    border: 1px solid rgba(212, 101, 42, 0.18);
+    border-radius: 14px;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.99), rgba(255, 247, 237, 0.98)),
+      #fff;
+    box-shadow:
+      0 24px 60px rgba(10, 10, 15, 0.16),
+      0 12px 30px rgba(212, 101, 42, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-0.35rem);
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+    pointer-events: none;
+  }
+
+  .pz-product-workflow-panel::before {
+    content: "";
+    position: absolute;
+    top: -0.45rem;
+    left: 1.6rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    transform: rotate(45deg);
+    border-left: 1px solid rgba(212, 101, 42, 0.18);
+    border-top: 1px solid rgba(212, 101, 42, 0.18);
+    background: rgba(255, 255, 255, 0.99);
+  }
+
+  .pz-product-workflow-popover:hover .pz-product-workflow-panel,
+  .pz-product-workflow-popover:focus-within .pz-product-workflow-panel {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .pz-product-workflow {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.95fr);
+    align-items: start;
+  }
+
+  .pz-product-workflow__summary {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .pz-product-workflow__kicker {
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pz-color-concrete-grey);
+  }
+
+  .pz-product-workflow__title {
+    margin: 0;
+    font-family: var(--pz-font-display);
+    font-size: 1.25rem;
+  }
+
+  .pz-product-workflow__body {
+    max-width: 58ch;
+    margin: 0;
+    color: var(--pz-color-text-secondary);
+    line-height: 1.55;
+  }
+
+  .pz-product-workflow__actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .pz-product-workflow__metrics {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pz-product-workflow__metric {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid rgba(10, 10, 15, 0.08);
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  .pz-product-workflow__metric span {
+    font-family: var(--pz-font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pz-color-concrete-grey);
+  }
+
+  .pz-product-workflow__metric strong {
+    font-family: var(--pz-font-display);
+    font-size: 1rem;
+  }
+
+  .pz-product-workflow__steps {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .pz-product-workflow-step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid rgba(10, 10, 15, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .pz-product-workflow-step__index {
+    display: inline-grid;
+    place-items: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 1px solid rgba(10, 10, 15, 0.12);
+    background: rgba(247, 244, 239, 0.95);
+    font-family: var(--pz-font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .pz-product-workflow-step__content {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .pz-product-workflow-step__content strong {
+    font-size: 0.82rem;
+  }
+
+  .pz-product-workflow-step__content span {
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    color: var(--pz-color-concrete-grey);
+    line-height: 1.5;
+  }
+
+  .pz-product-workflow-step--done {
+    border-color: rgba(5, 150, 105, 0.25);
+  }
+
+  .pz-product-workflow-step--active {
+    border-color: rgba(212, 101, 42, 0.35);
+    box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
   }
 
   .quote-ticker {
@@ -1516,6 +1987,23 @@
   }
 
   @media (max-width: 1024px) {
+    .pz-product-workflow-panel {
+      left: 50%;
+      width: min(34rem, calc(100vw - 2rem));
+      transform: translate(-50%, -0.35rem);
+    }
+
+    .pz-product-workflow-popover:hover .pz-product-workflow-panel,
+    .pz-product-workflow-popover:focus-within .pz-product-workflow-panel {
+      transform: translate(-50%, 0);
+    }
+
+    .pz-product-workflow,
+    .pz-product-workflow__metrics,
+    .pz-product-workflow__steps {
+      grid-template-columns: 1fr;
+    }
+
     .pz-product-grid {
       grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
     }
@@ -1524,6 +2012,10 @@
   @media (max-width: 767px) {
     .pz-marketplace-shell {
       padding: 0 1rem;
+    }
+
+    .pz-product-workflow {
+      gap: 0.75rem;
     }
 
     .quote-ticker {
@@ -1547,5 +2039,46 @@
       bottom: 1rem;
       right: 1rem;
     }
+  }
+
+  /* Comparison Table */
+  .pz-compare-table-wrap {
+    overflow-x: auto;
+  }
+
+  .pz-compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .pz-compare-table th,
+  .pz-compare-table td {
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(10, 10, 15, 0.08);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .pz-compare-table th {
+    background: rgba(10, 10, 15, 0.03);
+    font-family: var(--pz-font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pz-color-concrete-grey);
+    white-space: nowrap;
+  }
+
+  .pz-compare-table td:first-child {
+    font-weight: 600;
+    color: var(--pz-color-structural-steel);
+    white-space: nowrap;
+  }
+
+  .pz-compare-table th:not(:first-child) {
+    min-width: 10rem;
+    color: var(--pz-color-foundation-black);
+    font-size: 0.8rem;
   }
 </style>

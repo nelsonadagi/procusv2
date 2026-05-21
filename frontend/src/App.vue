@@ -97,9 +97,12 @@
                     class="pz-nav__notification-item"
                     @click="openNotification(notification)"
                   >
-                    <span class="pz-nav__notification-type">{{ notification.type || 'SYSTEM' }}</span>
+                    <span class="pz-nav__notification-type">{{ notificationLabel(notification) }}</span>
                     <strong>{{ notification.subject || notification.message }}</strong>
                     <span>{{ notification.message }}</span>
+                    <span v-if="notification.data?.property_title" class="pz-nav__notification-meta">
+                      {{ notification.data.property_title }}
+                    </span>
                     <time>{{ formatNotificationTime(notification.timestamp) }}</time>
                   </button>
                 </div>
@@ -527,6 +530,14 @@
       uiStore.openChat(data.room_id);
       return;
     }
+    if (data.property_url) {
+      router.push(data.property_url);
+      return;
+    }
+    if (data.property_id) {
+      router.push(`/properties/${data.property_id}`);
+      return;
+    }
     if (data.action === 'respond_quote' || data.quote_request_id) {
       router.push(authStore.hasRole('VENDOR') ? '/vendor/dashboard' : '/buyer/dashboard');
       return;
@@ -536,6 +547,14 @@
       return;
     }
     router.push('/buyer/dashboard');
+  }
+
+  function notificationLabel(notification) {
+    const data = notification?.data || {};
+    if (data.action === 'review_inquiry') return 'PROPERTY';
+    if (data.action === 'review_appointment') return 'PROPERTY';
+    if (data.property_id) return 'PROPERTY';
+    return notification?.type || 'SYSTEM';
   }
 
   async function saveProfile() {

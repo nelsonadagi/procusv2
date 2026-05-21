@@ -17,6 +17,9 @@ from .models import (
     PropertyInquiry,
     PropertyAvailabilityWindow,
     PropertyAppointment,
+    PropertyEvent,
+    PropertyInterest,
+    SavedPropertySearch,
 )
 
 
@@ -50,6 +53,7 @@ class PropertyMediaAssetSerializer(serializers.ModelSerializer):
             'id',
             'property',
             'media_type',
+            'document_category',
             'file',
             'external_url',
             'media_url',
@@ -153,6 +157,34 @@ class PropertyAppointmentSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class PropertyEventSerializer(serializers.ModelSerializer):
+    actor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PropertyEvent
+        fields = ['id', 'property', 'actor', 'actor_name', 'event_type', 'title', 'message', 'data', 'created_at']
+        read_only_fields = fields
+
+    def get_actor_name(self, obj):
+        if not obj.actor:
+            return ''
+        return obj.actor.get_full_name() or obj.actor.username
+
+
+class PropertyInterestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PropertyInterest
+        fields = ['id', 'property', 'email', 'full_name', 'reason', 'created_at']
+        read_only_fields = ['property', 'created_at']
+
+
+class SavedPropertySearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedPropertySearch
+        fields = ['id', 'user', 'email', 'name', 'filters', 'is_active', 'created_at']
+        read_only_fields = ['user', 'created_at']
+
+
 class PropertyListingSerializer(LocationSyncMixin, serializers.ModelSerializer):
     owner_name = serializers.SerializerMethodField()
     manager_name = serializers.SerializerMethodField()
@@ -175,6 +207,28 @@ class PropertyListingSerializer(LocationSyncMixin, serializers.ModelSerializer):
         model = PropertyListing
         fields = '__all__'
         read_only_fields = ['owner', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        target_status = attrs.get('status')
+        current_status = getattr(self.instance, 'status', None)
+        status_value = target_status or current_status
+        if status_value in {PropertyListing.Status.ACTIVE, PropertyListing.Status.PENDING_REVIEW}:
+            title = attrs.get('title', getattr(self.instance, 'title', ''))
+            location_text = attrs.get('location_text', getattr(self.instance, 'location_text', ''))
+            formatted_address = attrs.get('formatted_address', getattr(self.instance, 'formatted_address', ''))
+            price = attrs.get('price_estimate', getattr(self.instance, 'price_estimate', None))
+            if not title or not (location_text or formatted_address) or price in {None, ''}:
+                raise serializers.ValidationError(
+                    'This property cannot be published yet. Add a title, location, and value first.'
+                )
+        if current_status == PropertyListing.Status.DRAFT and target_status in {
+            PropertyListing.Status.SOLD,
+            PropertyListing.Status.LEASED,
+        }:
+            raise serializers.ValidationError(
+                'This property cannot move to Sold or Leased yet. Publish it first.'
+            )
+        return attrs
 
     def create(self, validated_data):
         development_metadata = validated_data.pop('development_metadata', None)

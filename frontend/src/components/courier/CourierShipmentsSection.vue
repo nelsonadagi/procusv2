@@ -9,11 +9,13 @@
         </div>
       </div>
       <div v-if="shipments.length === 0" class="pz-section-shell__content">
-        <div class="pz-empty-state">
-          <div class="pz-empty-state__glyph">SHP</div>
-          <div class="pz-empty-state__eyebrow">Shipment Stream</div>
-          <h4 class="pz-empty-state__title">No active shipments are currently assigned.</h4>
-          <p class="pz-empty-state__body">Shipment manifests will appear here as soon as vendor orders are routed to your courier profile.</p>
+        <div class="courier-workflow-empty">
+          <div class="courier-workflow-empty__kicker">NO_ACTIVE_SHIPMENTS</div>
+          <h4 class="courier-workflow-empty__title">No active shipments are currently assigned.</h4>
+          <p class="courier-workflow-empty__body">Shipment manifests will appear here as soon as vendor orders are routed to your courier profile.</p>
+          <div class="courier-workflow-empty__actions">
+            <Button variant="outline" size="sm" @click="showAlert('Use the profile and pricing tabs to finish courier readiness before live shipments arrive.', 'info')">Review Readiness</Button>
+          </div>
         </div>
       </div>
       <div v-else class="pz-section-shell__content">
@@ -76,6 +78,39 @@ onMounted(fetchShipments);
 </script>
 
 <style scoped>
+.courier-workflow-empty {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    border: 1px solid rgba(10, 10, 15, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.courier-workflow-empty__kicker {
+    font-family: var(--pz-font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pz-color-earth-orange);
+}
+
+.courier-workflow-empty__title {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.courier-workflow-empty__body {
+    margin: 0;
+    color: var(--pz-color-text-secondary);
+    line-height: 1.6;
+}
+
+.courier-workflow-empty__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
 .pz-table {
     width: 100%;
     border-collapse: collapse;

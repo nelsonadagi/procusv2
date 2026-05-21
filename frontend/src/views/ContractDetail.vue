@@ -62,6 +62,50 @@
         </div>
       </section>
 
+      <WorkflowGuide title="Workflow Path" eyebrow="Start Here">
+        <div class="pz-contract-workflow-banner">
+          <div class="pz-contract-workflow-banner__summary">
+            <div class="pz-contract-workflow-banner__kicker">{{ workflowBanner.stage }}</div>
+            <h2 class="pz-contract-workflow-banner__title">{{ workflowBanner.title }}</h2>
+            <p class="pz-contract-workflow-banner__body">{{ workflowBanner.body }}</p>
+          </div>
+          <div class="pz-contract-workflow-banner__actions">
+            <Button v-if="workflowBanner.primaryAction" variant="primary" size="sm" @click="workflowBanner.primaryAction.handler">
+              {{ workflowBanner.primaryAction.label }}
+            </Button>
+            <Button v-if="workflowBanner.secondaryAction" variant="outline" size="sm" @click="workflowBanner.secondaryAction.handler">
+              {{ workflowBanner.secondaryAction.label }}
+            </Button>
+          </div>
+        </div>
+        <div class="pz-contract-workflow-banner__steps">
+          <div
+            v-for="step in workflowSteps"
+            :key="step.label"
+            class="pz-contract-workflow-step"
+            :class="{ 'pz-contract-workflow-step--done': step.done, 'pz-contract-workflow-step--active': step.active }"
+          >
+            <span class="pz-contract-workflow-step__index">{{ step.index }}</span>
+            <div class="pz-contract-workflow-step__content">
+              <strong>{{ step.label }}</strong>
+              <span>{{ step.help }}</span>
+            </div>
+          </div>
+        </div>
+      
+
+      <ModuleCTA
+        eyebrow="Procurement Path"
+        title="Need another contractor or want to respond to similar tenders?"
+        body="Post a new tender as a project owner, or activate contractor onboarding to submit compliant responses to open opportunities."
+        primary-label="Post Tender"
+        primary-to="/contracts/new"
+        secondary-label="Contractor Onboarding"
+        secondary-to="/contractors/register"
+        tone="savanna"
+      />
+</WorkflowGuide>
+
       <!-- Layout -->
       <div class="pz-contract-layout">
         <section class="pz-space-y-6">
@@ -328,6 +372,8 @@ import { useAuthStore } from '../stores/auth';
 import Button from '../components/ui/Button.vue';
 import Badge from '../components/ui/Badge.vue';
 import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import Modal from '../components/ui/Modal.vue';
 import PzInput from '../components/PzInput.vue';
 import ChatWindow from '../components/chat/ChatWindow.vue';
@@ -361,6 +407,101 @@ const tabs = computed(() => [
   { id: 'bids', label: 'Bids', count: bids.value.length || null },
   { id: 'milestones', label: 'Milestones', count: milestones.value.length || null },
   { id: 'attachments', label: 'Attachments', count: attachments.value.length || null },
+]);
+
+function openTab(tabId) {
+  activeTab.value = tabId;
+}
+
+const workflowBanner = computed(() => {
+  if (!contract.value) {
+    return {
+      stage: 'LOADING',
+      title: 'Preparing contract workspace',
+      body: 'Loading the tender, bids, and milestone state so the next action is visible as soon as the page opens.',
+      primaryAction: null,
+      secondaryAction: null,
+    };
+  }
+
+  if (contract.value.status === 'PENDING') {
+    return {
+      stage: 'DRAFT',
+      title: 'Publish the tender to the market',
+      body: 'The brief is still private. Publish it when the scope, dates, and budget are ready for contractors.',
+      primaryAction: canManageMilestones.value ? { label: 'Publish Tender', handler: publishContract } : null,
+      secondaryAction: { label: 'Review Overview', handler: () => openTab('overview') },
+    };
+  }
+
+  if (contract.value.status === 'POSTED' || contract.value.status === 'BIDDING') {
+    return {
+      stage: 'BIDDING',
+      title: 'Review live bids and scope coverage',
+      body: 'Open the bids tab to shortlist submissions, check compliance, and move toward award once a strong proposal is ready.',
+      primaryAction: { label: 'Review Bids', handler: () => openTab('bids') },
+      secondaryAction: { label: 'Open Milestones', handler: () => openTab('milestones') },
+    };
+  }
+
+  if (contract.value.status === 'AWARDED') {
+    return {
+      stage: 'AWARDED',
+      title: 'Move this contract into execution',
+      body: 'The contract has been awarded. Add or review milestones, keep attachments current, and move progress into the active workspace.',
+      primaryAction: { label: 'Open Milestones', handler: () => openTab('milestones') },
+      secondaryAction: { label: 'Review Attachments', handler: () => openTab('attachments') },
+    };
+  }
+
+  if (contract.value.status === 'IN_PROGRESS') {
+    return {
+      stage: 'EXECUTION',
+      title: 'Keep the delivery stage visible',
+      body: 'Use milestones and attachments to track what is complete, what is pending, and what the next approval should be.',
+      primaryAction: { label: 'Open Milestones', handler: () => openTab('milestones') },
+      secondaryAction: { label: 'Open Overview', handler: () => openTab('overview') },
+    };
+  }
+
+  return {
+    stage: contract.value.status || 'SUMMARY',
+    title: 'Track completion and close out the tender',
+    body: 'The contract is complete. Keep the history visible for reference, disputes, and audit review.',
+    primaryAction: { label: 'View Activity', handler: () => openTab('overview') },
+    secondaryAction: { label: 'Open Attachments', handler: () => openTab('attachments') },
+  };
+});
+
+const workflowSteps = computed(() => [
+  {
+    index: '01',
+    label: 'Publish the tender',
+    help: 'Move the brief from draft into the market.',
+    done: contract.value?.status !== 'PENDING',
+    active: contract.value?.status === 'PENDING',
+  },
+  {
+    index: '02',
+    label: 'Review bids',
+    help: 'Compare contractor submissions and shortlist the strongest proposals.',
+    done: Boolean(bids.value.length),
+    active: activeTab.value === 'bids',
+  },
+  {
+    index: '03',
+    label: 'Award or start execution',
+    help: 'Award the contract and keep milestones visible.',
+    done: ['AWARDED', 'IN_PROGRESS', 'COMPLETED'].includes(contract.value?.status),
+    active: activeTab.value === 'milestones',
+  },
+  {
+    index: '04',
+    label: 'Track close-out',
+    help: 'Use attachments and history for handoff, approvals, and audit context.',
+    done: contract.value?.status === 'COMPLETED',
+    active: activeTab.value === 'attachments',
+  },
 ]);
 
 const snapshotItems = computed(() => [
@@ -779,6 +920,116 @@ function formatApiError(err, fallback) {
   font-weight: 800;
   color: var(--pz-color-foundation-black);
   letter-spacing: -0.02em;
+}
+
+.pz-contract-workflow-banner {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.pz-contract-workflow-banner__summary {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.pz-contract-workflow-banner__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-contract-workflow-banner__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.55rem);
+  line-height: 1.2;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-contract-workflow-banner__body {
+  max-width: 70ch;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.pz-contract-workflow-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.pz-contract-workflow-banner__steps {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pz-contract-workflow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.pz-contract-workflow-step__index {
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(247, 244, 239, 0.95);
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  color: var(--pz-color-foundation-black);
+  flex-shrink: 0;
+}
+
+.pz-contract-workflow-step__content {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.pz-contract-workflow-step__content strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.pz-contract-workflow-step__content span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.5;
+}
+
+.pz-contract-workflow-step--done {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: rgba(250, 255, 252, 0.95);
+}
+
+.pz-contract-workflow-step--done .pz-contract-workflow-step__index {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #047857;
+}
+
+.pz-contract-workflow-step--active {
+  border-color: rgba(212, 101, 42, 0.34);
+  box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
 }
 
 /* Summary Grid */
@@ -1302,6 +1553,18 @@ function formatApiError(err, fallback) {
     grid-template-columns: 1fr;
   }
   .pz-detail-chip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pz-contract-workflow-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .pz-contract-workflow-banner__actions {
+    justify-content: flex-start;
+  }
+
+  .pz-contract-workflow-banner__steps {
     grid-template-columns: 1fr;
   }
 }

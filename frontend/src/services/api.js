@@ -36,11 +36,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-            // Optional: Handle auto-logout or redirect here if needed
-            // localStorage.removeItem('token');
-            // localStorage.removeItem('user');
-            // window.location.href = '/login';
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            const currentPath = `${window.location.pathname}${window.location.search}`;
+            if (!currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
+                window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+            }
         }
         return Promise.reject(error);
     }

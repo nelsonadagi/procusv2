@@ -100,7 +100,7 @@
           <div class="pz-inventory-list__meta-cell">
             <span class="pz-inventory-list__meta-label">Inventory</span>
             <Badge :variant="inventoryBadgeVariant(product.inventory_signal)">
-              {{ product.inventory_signal }}
+              {{ formatInventorySignal(product.inventory_signal) }}
             </Badge>
             <span>On hand: {{ product.stock_quantity }}</span>
             <span>Available: {{ product.available_quantity ?? product.stock_quantity }}</span>

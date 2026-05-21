@@ -55,6 +55,22 @@
           <h1 class="pz-u-text-display text-4xl u-mb-3">{{ product.name }}</h1>
           <p class="pz-u-color-steel u-mb-6">{{ product.short_description || product.description }}</p>
 
+          <!-- Trust Strip -->
+          <div class="pz-trust-strip u-mb-4">
+            <div v-if="product.vendor_verified_status === 'APPROVED'" class="pz-trust-badge pz-trust-badge--verified">
+              ✅ Verified Supplier
+            </div>
+            <div v-if="product.certification_entries?.length" class="pz-trust-badge pz-trust-badge--cert">
+              📋 {{ product.certification_entries.length }} Certification{{ product.certification_entries.length === 1 ? '' : 's' }}
+            </div>
+            <div v-if="product.is_featured" class="pz-trust-badge pz-trust-badge--featured">
+              ⭐ Featured
+            </div>
+            <div v-if="product.is_new_arrival" class="pz-trust-badge pz-trust-badge--new">
+              🆕 New Arrival
+            </div>
+          </div>
+
           <div class="pz-detail-meta">
             <div><span>Vendor</span><strong>{{ product.vendor_business_name || 'Marketplace Vendor' }}</strong></div>
             <div><span>Location</span><strong>{{ product.vendor_location || product.vendor_formatted_address || 'Location on request' }}</strong></div>
@@ -92,14 +108,36 @@
             </div>
           </div>
 
+          <div class="pz-detail-quantity u-mb-4">
+            <label class="pz-detail-quantity__label">Quantity</label>
+            <div class="pz-detail-quantity__control">
+              <button type="button" class="pz-qty-btn" :disabled="quoteQuantity <= (product.min_order_quantity || 1)" @click="quoteQuantity--">−</button>
+              <input v-model.number="quoteQuantity" type="number" :min="product.min_order_quantity || 1" :max="product.max_order_quantity || 99999" class="pz-qty-input">
+              <button type="button" class="pz-qty-btn" :disabled="product.max_order_quantity && quoteQuantity >= product.max_order_quantity" @click="quoteQuantity++">+</button>
+            </div>
+            <span class="pz-detail-quantity__unit">{{ product.unit }}</span>
+          </div>
+
           <div class="pz-l-flex pz-l-flex--gap-3 pz-l-flex--wrap">
             <Button variant="primary" size="lg" :disabled="product.inventory_signal === 'OUT_OF_STOCK'" @click="requestQuote(product)">
               Request Quote
             </Button>
-            <Button variant="outline" size="lg" @click="contactVendor">Contact Vendor</Button>
           </div>
         </div>
       </section>
+
+      <WorkflowGuide title="Seller Opportunity" eyebrow="CTA">
+        <ModuleCTA
+          eyebrow="Supplier Path"
+          title="Sell this material or a similar product?"
+          body="Activate your vendor profile, publish product details, and make your stock available to buyers comparing suppliers."
+          primary-label="Become a Vendor"
+          primary-to="/vendors/register"
+          secondary-label="List a Product"
+          secondary-to="/vendor/dashboard"
+          tone="earth"
+        />
+      </WorkflowGuide>
 
       <section class="pz-detail-tabs-wrap u-mt-10">
         <div class="pz-detail-tabs">
@@ -116,6 +154,18 @@
         </div>
 
         <div v-show="activeDetailTab === 'overview'" class="pz-detail-tab-panel">
+          <!-- Certifications Banner -->
+          <div v-if="product.certification_entries?.length" class="pz-detail-cert-banner u-mb-6">
+            <div class="pz-detail-cert-banner__title">Compliance & Certifications</div>
+            <div class="pz-detail-cert-banner__list">
+              <div v-for="cert in product.certification_entries" :key="cert.id" class="pz-detail-cert-item">
+                <div class="pz-detail-cert-item__name">{{ cert.display_name || cert.registry?.name || 'Certification' }}</div>
+                <div v-if="cert.issuing_body" class="pz-detail-cert-item__body">{{ cert.issuing_body }}</div>
+                <div v-if="cert.status" class="pz-detail-cert-item__status" :class="`pz-detail-cert-item__status--${cert.status.toLowerCase()}`">{{ cert.status }}</div>
+              </div>
+            </div>
+          </div>
+
           <div class="pz-detail-card">
             <div class="pz-detail-card__header">
               <div>
@@ -256,6 +306,8 @@ import { useAuthStore } from '../stores/auth';
 import { useConfigStore } from '../stores/config';
 import Button from '../components/ui/Button.vue';
 import Badge from '../components/ui/Badge.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -347,6 +399,7 @@ const fetchProduct = async () => {
     const response = await api.get(`/v1/products/${route.params.id}/`);
     product.value = response.data;
     selectedImage.value = response.data.primary_image_url || response.data.images?.[0]?.image_url || null;
+    quoteQuantity.value = response.data.min_order_quantity || 1;
   } catch (err) {
     error.value = 'Material not found or unavailable.';
   } finally {
@@ -354,25 +407,28 @@ const fetchProduct = async () => {
   }
 };
 
+const quoteQuantity = ref(1);
+
 const requestQuote = async (material) => {
   if (!authStore.isAuthenticated) {
     showAlert?.('Please sign in to request a quote.', 'info');
     router.push('/login');
     return;
   }
+  const qty = Math.max(quoteQuantity.value || 1, material.min_order_quantity || 1);
+  if (material.max_order_quantity && qty > material.max_order_quantity) {
+    showAlert?.(`Maximum order quantity is ${material.max_order_quantity} ${material.unit}.`, 'warning');
+    return;
+  }
   try {
     await api.post('/orders/quote-requests/', {
-      items: [{ product: material.id, quantity: material.min_order_quantity || 1 }],
+      items: [{ product: material.id, quantity: qty }],
     });
     showAlert?.('Quote request sent successfully.', 'success');
     router.push('/buyer/dashboard');
   } catch (err) {
     showAlert?.(err.response?.data?.detail || 'Failed to request quote.', 'error');
   }
-};
-
-const contactVendor = () => {
-  showAlert?.('Vendor messaging will open from this detail page once chat routing is enabled for materials.', 'info');
 };
 
 onMounted(fetchProduct);
@@ -754,4 +810,145 @@ onMounted(fetchProduct);
     grid-template-columns: 1fr;
   }
 }
+
+.pz-detail-quantity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pz-detail-quantity__label {
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+}
+
+.pz-detail-quantity__control {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+}
+
+.pz-qty-btn {
+  width: 2.4rem;
+  height: 2.4rem;
+  border: none;
+  background: transparent;
+  font-size: 1.1rem;
+  color: var(--pz-color-foundation-black);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pz-qty-btn:hover:not(:disabled) {
+  background: rgba(10, 10, 15, 0.04);
+}
+
+.pz-qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pz-qty-input {
+  width: 3.5rem;
+  height: 2.4rem;
+  border: none;
+  border-left: 1px solid rgba(10, 10, 15, 0.08);
+  border-right: 1px solid rgba(10, 10, 15, 0.08);
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--pz-color-foundation-black);
+  outline: none;
+}
+
+.pz-detail-quantity__unit {
+  font-size: 0.9rem;
+  color: var(--pz-color-concrete-grey);
+}
+
+/* Trust Strip */
+.pz-trust-strip {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pz-trust-badge {
+  font-size: 0.72rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-family: var(--pz-font-mono);
+  letter-spacing: 0.04em;
+}
+
+.pz-trust-badge--verified { background: rgba(22, 163, 74, 0.1); color: #166534; }
+.pz-trust-badge--cert     { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; }
+.pz-trust-badge--featured { background: rgba(212, 101, 42, 0.1); color: var(--pz-color-earth-orange); }
+.pz-trust-badge--new      { background: rgba(22, 163, 74, 0.1); color: #166534; }
+
+/* Certification Banner */
+.pz-detail-cert-banner {
+  padding: 1.25rem;
+  background: rgba(59, 130, 246, 0.04);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  border-radius: 14px;
+}
+
+.pz-detail-cert-banner__title {
+  font-family: var(--pz-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pz-color-concrete-grey);
+  margin-bottom: 0.75rem;
+}
+
+.pz-detail-cert-banner__list {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pz-detail-cert-item {
+  padding: 0.6rem 1rem;
+  background: white;
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 10px;
+  min-width: 10rem;
+}
+
+.pz-detail-cert-item__name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-detail-cert-item__body {
+  font-size: 0.78rem;
+  color: var(--pz-color-concrete-grey);
+  margin-top: 0.15rem;
+}
+
+.pz-detail-cert-item__status {
+  display: inline-block;
+  margin-top: 0.3rem;
+  font-size: 0.65rem;
+  font-family: var(--pz-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+}
+
+.pz-detail-cert-item__status--active { background: rgba(22, 163, 74, 0.1); color: #166534; }
+.pz-detail-cert-item__status--expired { background: rgba(220, 38, 38, 0.1); color: #991b1b; }
+.pz-detail-cert-item__status--pending { background: rgba(217, 119, 6, 0.1); color: #92400e; }
 </style>

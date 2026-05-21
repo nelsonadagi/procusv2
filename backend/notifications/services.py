@@ -38,6 +38,7 @@ def notify_user(user, notification_type, subject, message, data=None):
         type=notification_type,
         subject=subject,
         message=message,
+        data=data or {},
         status='PENDING'
     )
     

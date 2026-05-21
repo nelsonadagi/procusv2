@@ -14,6 +14,8 @@ from contracts.models import Contract
 from rbac.permissions import HasRequiredPermission
 from .permissions import IsProjectOwnerOrAdmin
 from platform_settings.utils import resolve_request_country_code
+from catalog.models import Product
+from catalog.serializers import ProductListSerializer
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -34,6 +36,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         'unlink_contract': 'projects:update_project',
         'post_update': 'projects:update_project',
         'remove_update': 'projects:update_project',
+        'suggest_products': 'projects:view',
     }
 
     def get_permissions(self):
@@ -222,3 +225,55 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if deleted:
             return Response({"status": "Removed"})
         return Response({"error": "Update not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['get'], url_path='suggest-products')
+    def suggest_products(self, request, pk=None):
+        """
+        Suggest catalog products that match a project's material requirements.
+        Query param: requirement_id (optional) — if omitted, suggests for all MATERIAL requirements.
+        """
+        project = self.get_object()
+        requirement_id = request.query_params.get('requirement_id')
+
+        reqs = project.requirements.filter(type=ProjectRequirement.Type.MATERIAL)
+        if requirement_id:
+            reqs = reqs.filter(id=requirement_id)
+
+        if not reqs.exists():
+            return Response({"matches": []})
+
+        # Build a broad search from all requirement descriptions
+        search_terms = []
+        for req in reqs:
+            desc = (req.description or '').strip()
+            if desc:
+                search_terms.append(desc)
+
+        if not search_terms:
+            return Response({"matches": []})
+
+        # Find products that match any keyword from any requirement
+        qs = Product.objects.filter(status=Product.Status.ACTIVE)
+        q_objects = Q()
+        for term in search_terms:
+            for word in term.split():
+                if len(word) > 2:
+                    q_objects |= Q(name__icontains=word) | Q(description__icontains=word) | Q(category__name__icontains=word)
+        if q_objects:
+            qs = qs.filter(q_objects)
+
+        # Exclude out-of-stock from suggestions
+        qs = qs.exclude(stock_quantity__lte=0)
+
+        # Prefer verified vendors, then featured
+        qs = qs.order_by('-vendor__verified_status', '-is_featured', '-created_at')
+
+        # Limit to top 8 suggestions
+        qs = qs.select_related('vendor', 'category').prefetch_related('images')[:8]
+
+        serializer = ProductListSerializer(qs, many=True, context={'request': request})
+        return Response({
+            "matches": serializer.data,
+            "requirement_count": reqs.count(),
+            "total_available": Product.objects.filter(status=Product.Status.ACTIVE).exclude(stock_quantity__lte=0).count(),
+        })

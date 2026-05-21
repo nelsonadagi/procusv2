@@ -104,7 +104,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       message: item.message,
       status: item.status,
       timestamp: item.created_at || item.sent_at || new Date().toISOString(),
-      data: { notification_id: item.id },
+      data: item.data || { notification_id: item.id },
       read: item.status === 'SENT'
     }));
     return notificationFeed.value;

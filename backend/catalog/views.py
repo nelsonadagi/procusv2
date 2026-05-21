@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Product, ProductImage, ProductCertificationRegistry, ProductInventoryMovement
-from .models import ProductDocument
+from .models import ProductDocument, StockAlert
 from taxonomy.models import Category
 from .serializers import (
     ProductSerializer,
@@ -26,6 +26,7 @@ import io
 from rbac.permissions import HasRequiredPermission, IsVendorOwner, VendorApprovedOnly
 from rbac.utils import log_action
 from platform_settings.utils import resolve_request_country_code
+from notifications.services import notify_user
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().select_related(
@@ -57,10 +58,18 @@ class ProductViewSet(viewsets.ModelViewSet):
         'partial_update': 'catalog:update',
         'destroy': 'catalog:delete',
         'import_products': 'catalog:create',
+        'validate_import': 'catalog:create',
         'upload_images': 'catalog:update',
         'upload_documents': 'catalog:update',
         'adjust_inventory': 'catalog:manage_stock',
         'inventory_history': 'catalog:manage_stock',
+        'category_price_stats': 'catalog:view',
+        'stock_out_prediction': 'catalog:view',
+        'daily_stats': 'catalog:view',
+        'subscribe_stock_alert': 'catalog:view',
+        'unsubscribe_stock_alert': 'catalog:view',
+        'check_stock_alert': 'catalog:view',
+        'similar_products': 'catalog:view',
     }
 
     def get_serializer_class(self):
@@ -84,9 +93,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action == 'download_template':
             return [permissions.IsAuthenticated()]
         if self.action in ['create', 'import_products']:
-            return [permissions.IsAuthenticated()]
+            return [permissions.IsAuthenticated(), VendorApprovedOnly(), HasRequiredPermission()]
         if self.action in ['update', 'partial_update', 'destroy', 'upload_images', 'upload_documents', 'adjust_inventory', 'inventory_history']:
-            return [HasRequiredPermission(), IsVendorOwner()]
+            return [HasRequiredPermission(), IsVendorOwner(), VendorApprovedOnly()]
         return super().get_permissions()
 
     def get_queryset(self):
@@ -254,11 +263,17 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        if not hasattr(self.request.user, 'vendor_profile'):
+        user = self.request.user
+        if not hasattr(user, 'vendor_profile'):
             from rest_framework.exceptions import ValidationError
             raise ValidationError("User has no vendor profile.")
 
-        product = serializer.save(vendor=self.request.user.vendor_profile)
+        vendor = user.vendor_profile
+        if vendor.verified_status != 'APPROVED':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Vendor account must be approved before publishing materials.")
+
+        product = serializer.save(vendor=vendor)
         if product.stock_quantity:
             product.record_inventory_movement(
                 movement_type=ProductInventoryMovement.MovementType.INITIAL,
@@ -300,6 +315,120 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='dashboard-stats')
+    def dashboard_stats(self, request):
+        """Return aggregated vendor catalog statistics for the workspace."""
+        if not hasattr(request.user, 'vendor_profile'):
+            return Response({"detail": "User is not a vendor."}, status=status.HTTP_403_FORBIDDEN)
+
+        vendor = request.user.vendor_profile
+        products_qs = Product.objects.filter(vendor=vendor)
+        from orders.models import QuoteItem, OrderItem, QuoteResponse
+
+        total = products_qs.count()
+        active = products_qs.filter(status='ACTIVE').count()
+        draft = products_qs.filter(status='DRAFT').count()
+        disabled = products_qs.filter(status='DISABLED').count()
+        low_stock = products_qs.filter(status='ACTIVE', stock_quantity__gt=0, stock_quantity__lte=models.F('reorder_level')).count()
+        out_of_stock = products_qs.filter(status='ACTIVE', stock_quantity__lte=0).count()
+        with_images = products_qs.filter(images__isnull=False).distinct().count()
+        with_certs = products_qs.filter(certification_entries__isnull=False).distinct().count()
+
+        # Performance metrics: views, quotes, conversion
+        from django.db.models import Avg
+        from django.utils import timezone
+        from datetime import timedelta
+
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        seven_days_ago = timezone.now() - timedelta(days=7)
+
+        # Product views approximated from quote request volume per product
+        product_uuids = list(products_qs.values_list('uuid', flat=True))
+        quote_items_month = QuoteItem.objects.filter(
+            product__vendor=vendor,
+            quote_request__requested_at__gte=thirty_days_ago
+        )
+        quote_items_week = QuoteItem.objects.filter(
+            product__vendor=vendor,
+            quote_request__requested_at__gte=seven_days_ago
+        )
+        quotes_this_month = quote_items_month.values('quote_request').distinct().count()
+        views_this_week = quote_items_week.values('quote_request').distinct().count()
+
+        # Conversion: quotes that became orders
+        converted_orders = OrderItem.objects.filter(
+            product__vendor=vendor,
+            order__created_at__gte=thirty_days_ago
+        ).values('order').distinct().count()
+
+        conversion_rate = round((converted_orders / max(quotes_this_month, 1)) * 100, 1)
+
+        # Average quote response time
+        responses = QuoteResponse.objects.filter(
+            quote_request__items__product__vendor=vendor,
+            confirmed_at__gte=thirty_days_ago
+        )
+        avg_response_time = None
+        if responses.exists():
+            response_times = []
+            for resp in responses.select_related('quote_request'):
+                if resp.quote_request.requested_at:
+                    delta = (resp.confirmed_at - resp.quote_request.requested_at).total_seconds() / 3600
+                    if delta >= 0:
+                        response_times.append(delta)
+            if response_times:
+                avg_response_time = round(sum(response_times) / len(response_times), 1)
+
+        return Response({
+            'total_products': total,
+            'active_products': active,
+            'draft_products': draft,
+            'disabled_products': disabled,
+            'low_stock_count': low_stock,
+            'out_of_stock_count': out_of_stock,
+            'products_with_images': with_images,
+            'products_with_certifications': with_certs,
+            'views_this_week': views_this_week,
+            'views_this_month': products_qs.filter(created_at__gte=thirty_days_ago).count(),  # Proxy metric
+            'quotes_this_month': quotes_this_month,
+            'conversion_rate': conversion_rate,
+            'avg_response_time_hours': avg_response_time,
+        })
+
+    @action(detail=False, methods=['get'], url_path='daily-stats')
+    def daily_stats(self, request):
+        """Return daily quote and view counts for the last 30 days for charting."""
+        if not hasattr(request.user, 'vendor_profile'):
+            return Response({"detail": "User is not a vendor."}, status=status.HTTP_403_FORBIDDEN)
+
+        vendor = request.user.vendor_profile
+        from django.utils import timezone
+        from datetime import timedelta
+        from orders.models import QuoteItem
+
+        days = 30
+        result = []
+        for i in range(days - 1, -1, -1):
+            day_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=i)
+            day_end = day_start + timedelta(days=1)
+
+            quote_count = QuoteItem.objects.filter(
+                product__vendor=vendor,
+                quote_request__requested_at__gte=day_start,
+                quote_request__requested_at__lt=day_end,
+            ).values('quote_request').distinct().count()
+
+            # Proxy views with quote requests (no separate view tracking yet)
+            view_count = quote_count
+
+            result.append({
+                'date': day_start.strftime('%Y-%m-%d'),
+                'quotes': quote_count,
+                'views': view_count,
+            })
+
+        return Response(result)
+
     @action(detail=True, methods=['get'], url_path='inventory-history')
     def inventory_history(self, request, pk=None):
         product = self.get_object()
@@ -311,6 +440,100 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='timeline')
+    def timeline(self, request, pk=None):
+        """Return a chronological operational timeline for this product."""
+        product = self.get_object()
+        events = []
+
+        # Product creation
+        events.append({
+            'id': f'created-{product.id}',
+            'type': 'CREATED',
+            'icon': '📝',
+            'title': 'Product created',
+            'description': f"'{product.name}' was added to your catalog.",
+            'timestamp': product.created_at.isoformat() if product.created_at else None,
+            'actor': None,
+        })
+
+        # Inventory movements
+        for movement in product.inventory_movements.all().order_by('-created_at')[:20]:
+            events.append({
+                'id': f'movement-{movement.id}',
+                'type': 'INVENTORY',
+                'icon': '📦',
+                'title': f"{movement.get_movement_type_display()}: {movement.quantity_delta:+d}",
+                'description': f"Stock changed from {movement.quantity_before} to {movement.quantity_after}.",
+                'timestamp': movement.created_at.isoformat() if movement.created_at else None,
+                'actor': movement.actor.get_full_name() or movement.actor.username if movement.actor else None,
+            })
+
+        # Images uploaded
+        for image in product.images.all().order_by('-uploaded_at')[:10]:
+            events.append({
+                'id': f'image-{image.id}',
+                'type': 'MEDIA',
+                'icon': '📸',
+                'title': 'Image uploaded',
+                'description': image.alt_text or 'Product image added.',
+                'timestamp': image.uploaded_at.isoformat() if image.uploaded_at else None,
+                'actor': None,
+            })
+
+        # Certifications
+        for cert in product.certification_entries.all().order_by('-id')[:10]:
+            events.append({
+                'id': f'cert-{cert.id}',
+                'type': 'COMPLIANCE',
+                'icon': '📋',
+                'title': f"Certification: {cert.display_name or cert.registry.name if cert.registry else 'Custom'}",
+                'description': f"Status: {cert.get_status_display()}.",
+                'timestamp': cert.issued_on.isoformat() if cert.issued_on else None,
+                'actor': None,
+            })
+
+        # Stock status events
+        if product.stock_quantity <= 0 and product.status == 'ACTIVE':
+            events.append({
+                'id': f'oos-{product.id}',
+                'type': 'OUT_OF_STOCK',
+                'icon': '🚫',
+                'title': 'Out of stock',
+                'description': f"'{product.name}' is out of stock and hidden from buyers.",
+                'timestamp': product.updated_at.isoformat() if product.updated_at else None,
+                'actor': None,
+            })
+        elif product.inventory_signal == 'LOW_STOCK':
+            events.append({
+                'id': f'low-{product.id}',
+                'type': 'STOCK_LOW',
+                'icon': '⚠️',
+                'title': 'Low stock warning',
+                'description': f"'{product.name}' stock is low ({product.stock_quantity} remaining).",
+                'timestamp': product.updated_at.isoformat() if product.updated_at else None,
+                'actor': None,
+            })
+
+        # Certification expiry events
+        from django.utils import timezone
+        from datetime import timedelta
+        for cert in product.certification_entries.filter(expires_on__lte=timezone.now() + timedelta(days=30)):
+            events.append({
+                'id': f'cert-expiry-{cert.id}',
+                'type': 'CERT_EXPIRING',
+                'icon': '⏳',
+                'title': 'Certification expiring soon',
+                'description': f"{cert.display_name or cert.registry.name if cert.registry else 'Certification'} expires on {cert.expires_on}.",
+                'timestamp': cert.expires_on.isoformat() if cert.expires_on else None,
+                'actor': None,
+            })
+
+        # Sort by timestamp descending
+        events.sort(key=lambda e: e['timestamp'] or '', reverse=True)
+
+        return Response({'events': events})
 
     @action(detail=True, methods=['post'], url_path='adjust-inventory')
     def adjust_inventory(self, request, pk=None):
@@ -345,6 +568,40 @@ class ProductViewSet(viewsets.ModelViewSet):
             )
 
         log_action(request.user, 'ADJUST_PRODUCT_INVENTORY', 'product', product.id)
+
+        # Notify vendor if stock is now low or out of stock
+        if locked_product.inventory_signal == 'LOW_STOCK':
+            notify_user(
+                locked_product.vendor.user,
+                'SYSTEM',
+                f"Low stock alert: {locked_product.name}",
+                f"You have {locked_product.stock_quantity} {locked_product.unit} left. Restock soon to avoid going out of stock.",
+                data={"product_uuid": str(locked_product.uuid), "action": "restock"},
+            )
+        elif locked_product.inventory_signal == 'OUT_OF_STOCK':
+            notify_user(
+                locked_product.vendor.user,
+                'SYSTEM',
+                f"Out of stock: {locked_product.name}",
+                f"This product is now hidden from buyers. Restock to reactivate.",
+                data={"product_uuid": str(locked_product.uuid), "action": "restock"},
+            )
+
+        # Notify buyers who subscribed to stock alerts when product comes back in stock
+        was_out_of_stock = quantity_before <= 0
+        is_now_in_stock = quantity_after > 0
+        if was_out_of_stock and is_now_in_stock:
+            alerts = StockAlert.objects.filter(product=locked_product, notified_at__isnull=True)
+            for alert in alerts:
+                notify_user(
+                    alert.user,
+                    'SYSTEM',
+                    f"{locked_product.name} is back in stock",
+                    f"The product you were watching now has {locked_product.stock_quantity} {locked_product.unit} available. Request a quote before it sells out again.",
+                    data={"product_uuid": str(locked_product.uuid), "action": "view_product"},
+                )
+            alerts.update(notified_at=timezone.now())
+
         return Response({
             'product': ProductSerializer(locked_product, context={'request': request}).data,
             'movement': ProductInventoryMovementSerializer(movement).data,
@@ -355,10 +612,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         """Upload multiple images for a product"""
         product = self.get_object()
 
-        # Check if user owns this product
+        # Check ownership and approval
         if not hasattr(request.user, 'vendor_profile') or product.vendor != request.user.vendor_profile:
             return Response(
                 {'error': 'You do not have permission to upload images for this product'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        if request.user.vendor_profile.verified_status != 'APPROVED':
+            return Response(
+                {'error': 'Vendor account must be approved to upload images.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -394,6 +656,11 @@ class ProductViewSet(viewsets.ModelViewSet):
                 {'error': 'You do not have permission to upload documents for this product'},
                 status=status.HTTP_403_FORBIDDEN
             )
+        if request.user.vendor_profile.verified_status != 'APPROVED':
+            return Response(
+                {'error': 'Vendor account must be approved to upload documents.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         document_files = request.FILES.getlist('documents')
         if not document_files:
@@ -421,18 +688,47 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = ProductDocumentSerializer(created_documents, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
-    def import_products(self, request):
-        """Import products from CSV file"""
+    @action(detail=True, methods=['post'], url_path='remove-document')
+    def remove_document(self, request, pk=None):
+        """Remove an existing document from a product."""
+        product = self.get_object()
+        if not hasattr(request.user, 'vendor_profile') or product.vendor != request.user.vendor_profile:
+            return Response(
+                {'error': 'You do not have permission to remove documents from this product'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        if request.user.vendor_profile.verified_status != 'APPROVED':
+            return Response(
+                {'error': 'Vendor account must be approved to remove documents.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        doc_uuid = request.data.get('document_uuid')
+        if not doc_uuid:
+            return Response({'error': 'document_uuid is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            document = product.documents.get(uuid=doc_uuid)
+            document.delete()
+            return Response({'message': 'Document removed successfully.'}, status=status.HTTP_200_OK)
+        except ProductDocument.DoesNotExist:
+            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='validate-import')
+    def validate_import(self, request):
+        """Validate a CSV import before committing. Returns parsed rows + errors."""
         if not hasattr(request.user, 'vendor_profile'):
-            return Response({'error': 'Only vendors can import products'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Only vendors can validate imports'}, status=status.HTTP_403_FORBIDDEN)
+
+        vendor = request.user.vendor_profile
+        if vendor.verified_status != 'APPROVED':
+            return Response({'error': 'Vendor account must be approved before importing materials.'}, status=status.HTTP_403_FORBIDDEN)
 
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
-
         if not file_obj.name.lower().endswith('.csv'):
-            return Response({'error': 'Only CSV files are supported at this time.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Only CSV files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
 
         def _get_val(row, *keys, default=''):
             for k in keys:
@@ -466,117 +762,405 @@ class ProductViewSet(viewsets.ModelViewSet):
                 return False
             return default
 
-        def _parse_date(row, *keys, default=None):
-            val = _get_val(row, *keys, default='')
-            if not val:
-                return default
-            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y'):
-                try:
-                    return datetime.strptime(val, fmt).date()
-                except ValueError:
-                    continue
-            return default
-
         try:
             from decimal import Decimal, InvalidOperation
-            from datetime import datetime
-
             decoded_file = file_obj.read().decode('utf-8-sig')
             io_string = io.StringIO(decoded_file)
             reader = csv.DictReader(io_string)
 
-            created_count = 0
+            valid_rows = []
             errors = []
-            vendor = request.user.vendor_profile
 
             for row_idx, row in enumerate(reader, start=1):
-                try:
-                    name = _get_val(row, 'Name', 'name', 'Product Name')
-                    if not name:
-                        continue
+                row_errors = []
+                name = _get_val(row, 'Name', 'name', 'Product Name')
+                if not name:
+                    row_errors.append('Product Name is required')
 
-                    category_field = _get_val(row, 'Category', 'category')
-                    category = None
-                    if category_field:
-                        category = Category.objects.filter(
-                            models.Q(name__iexact=category_field) | models.Q(slug__iexact=category_field),
-                            taxonomy_type='MATERIAL'
-                        ).first()
-                        if not category:
-                            raise ValueError(f"Category '{category_field}' not found.")
-                    else:
-                        category = Category.objects.filter(taxonomy_type='MATERIAL', active=True).order_by('name').first()
-                        if not category:
-                            raise ValueError('No active material category exists for import.')
+                category_field = _get_val(row, 'Category', 'category')
+                category = None
+                if category_field:
+                    category = Category.objects.filter(
+                        models.Q(name__iexact=category_field) | models.Q(slug__iexact=category_field),
+                        taxonomy_type='MATERIAL'
+                    ).first()
+                    if not category:
+                        row_errors.append(f"Category '{category_field}' not found")
 
-                    product_data = {
-                        'vendor': vendor,
-                        'category': category,
+                base_price = _parse_decimal(row, 'Price', 'Base Price', 'base_price')
+                if base_price is None or base_price < 0:
+                    row_errors.append('Base Price must be a positive number')
+
+                stock = _parse_int(row, 'Stock', 'Stock Quantity', 'stock_quantity', default=0)
+                if stock is None or stock < 0:
+                    row_errors.append('Stock Quantity must be a non-negative integer')
+
+                if row_errors:
+                    errors.append({'row': row_idx, 'product_name': name or '(unnamed)', 'errors': row_errors})
+                else:
+                    valid_rows.append({
+                        'row': row_idx,
                         'name': name,
-                        'description': _get_val(row, 'Description', 'description') or name,
-                        'short_description': _get_val(row, 'Short Description', 'short_description'),
-                        'unit': _get_val(row, 'Unit', 'unit') or 'unit',
-                        'currency': (_get_val(row, 'Currency', 'currency') or getattr(getattr(vendor, 'country', None), 'default_currency', None) or 'KES').upper(),
-                        'base_price': _parse_decimal(row, 'Price', 'Base Price', 'base_price', default=Decimal('0')),
-                        'stock_quantity': _parse_int(row, 'Stock', 'Stock Quantity', 'stock_quantity', default=0) or 0,
-                        'brand': _get_val(row, 'Brand', 'brand'),
-                        'status': _get_val(row, 'Status', 'status') or 'ACTIVE',
-                        'min_order_quantity': _parse_int(row, 'Min Order Quantity', 'min_order_quantity', 'Min Order', default=1),
-                        'max_order_quantity': _parse_int(row, 'Max Order Quantity', 'max_order_quantity', 'Max Order'),
-                        'bulk_price': _parse_decimal(row, 'Bulk Price', 'bulk_price'),
-                        'bulk_threshold': _parse_int(row, 'Bulk Threshold', 'bulk_threshold'),
-                        'reorder_level': _parse_int(row, 'Reorder Level', 'reorder_level', default=0),
-                        'quality_grade': _get_val(row, 'Quality Grade', 'quality_grade'),
-                        'model_number': _get_val(row, 'Model Number', 'model_number', 'SKU'),
-                        'country_of_origin': _get_val(row, 'Country of Origin', 'country_of_origin'),
-                        'packaging_details': _get_val(row, 'Packaging Details', 'packaging_details'),
-                        'weight': _parse_decimal(row, 'Weight', 'weight'),
-                        'dimensions': _get_val(row, 'Dimensions', 'dimensions'),
-                        'color': _get_val(row, 'Color', 'color'),
-                        'material_composition': _get_val(row, 'Material Composition', 'material_composition'),
-                        'estimated_delivery_days': _parse_int(row, 'Estimated Delivery Days', 'estimated_delivery_days'),
-                        'handling_instructions': _get_val(row, 'Handling Instructions', 'handling_instructions'),
-                        'features': _get_val(row, 'Features', 'features'),
-                        'applications': _get_val(row, 'Applications', 'applications'),
-                        'certifications': _get_val(row, 'Certifications', 'certifications'),
-                        'warranty_period': _get_val(row, 'Warranty Period', 'warranty_period'),
-                        'meta_keywords': _get_val(row, 'Meta Keywords', 'meta_keywords'),
-                        'is_featured': _parse_bool(row, 'Is Featured', 'is_featured'),
-                        'is_new_arrival': _parse_bool(row, 'Is New Arrival', 'is_new_arrival'),
-                        'is_on_sale': _parse_bool(row, 'Is On Sale', 'is_on_sale'),
-                        'requires_special_handling': _parse_bool(row, 'Requires Special Handling', 'requires_special_handling'),
-                        'shipping_weight': _parse_decimal(row, 'Shipping Weight', 'shipping_weight'),
-                        'manufacturing_date': _parse_date(row, 'Manufacturing Date', 'manufacturing_date'),
-                        'expiry_date': _parse_date(row, 'Expiry Date', 'expiry_date'),
-                    }
+                        'category': category.name if category else category_field,
+                        'base_price': str(base_price) if base_price else '0',
+                        'stock_quantity': stock or 0,
+                    })
 
-                    # Remove None values so model defaults apply
-                    product_data = {k: v for k, v in product_data.items() if v is not None}
+            return Response({
+                'valid': len(errors) == 0,
+                'valid_count': len(valid_rows),
+                'total_rows': len(valid_rows) + len(errors),
+                'preview': valid_rows[:5],
+                'errors': errors,
+            })
 
+        except Exception as e:
+            return Response({'error': f'Failed to process file: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ------------------------------------------------------------------
+    # CSV import helpers (shared between validate and import)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _csv_get_val(row, *keys, default=''):
+        for k in keys:
+            if k in row and row[k] is not None and str(row[k]).strip() != '':
+                return str(row[k]).strip()
+        return default
+
+    @classmethod
+    def _csv_parse_int(cls, row, *keys, default=None):
+        val = cls._csv_get_val(row, *keys, default='')
+        if val == '':
+            return default
+        try:
+            return int(float(val))
+        except (ValueError, TypeError):
+            return default
+
+    @classmethod
+    def _csv_parse_decimal(cls, row, *keys, default=None):
+        from decimal import Decimal, InvalidOperation
+        val = cls._csv_get_val(row, *keys, default='')
+        if val == '':
+            return default
+        try:
+            return Decimal(val.replace(',', ''))
+        except (ValueError, TypeError, InvalidOperation):
+            return default
+
+    @classmethod
+    def _csv_parse_bool(cls, row, *keys, default=False):
+        val = cls._csv_get_val(row, *keys, default='').lower()
+        if val in ('1', 'true', 'yes', 'y'):
+            return True
+        if val in ('0', 'false', 'no', 'n'):
+            return False
+        return default
+
+    @classmethod
+    def _csv_parse_date(cls, row, *keys, default=None):
+        from datetime import datetime
+        val = cls._csv_get_val(row, *keys, default='')
+        if not val:
+            return default
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y'):
+            try:
+                return datetime.strptime(val, fmt).date()
+            except ValueError:
+                continue
+        return default
+
+    def _parse_csv_rows(self, file_obj, vendor, dry_run=False):
+        """Parse CSV rows and return (valid_rows, errors). If dry_run=True, no DB writes."""
+        from decimal import Decimal
+        from datetime import datetime
+
+        decoded_file = file_obj.read().decode('utf-8-sig')
+        io_string = io.StringIO(decoded_file)
+        reader = csv.DictReader(io_string)
+
+        valid_rows = []
+        errors = []
+        created_count = 0
+
+        for row_idx, row in enumerate(reader, start=1):
+            try:
+                name = self._csv_get_val(row, 'Name', 'name', 'Product Name')
+                if not name:
+                    continue
+
+                category_field = self._csv_get_val(row, 'Category', 'category')
+                category = None
+                if category_field:
+                    category = Category.objects.filter(
+                        models.Q(name__iexact=category_field) | models.Q(slug__iexact=category_field),
+                        taxonomy_type='MATERIAL'
+                    ).first()
+                    if not category:
+                        raise ValueError(f"Category '{category_field}' not found.")
+                else:
+                    category = Category.objects.filter(taxonomy_type='MATERIAL', active=True).order_by('name').first()
+                    if not category:
+                        raise ValueError('No active material category exists for import.')
+
+                product_data = {
+                    'vendor': vendor,
+                    'category': category,
+                    'name': name,
+                    'description': self._csv_get_val(row, 'Description', 'description') or name,
+                    'short_description': self._csv_get_val(row, 'Short Description', 'short_description'),
+                    'unit': self._csv_get_val(row, 'Unit', 'unit') or 'unit',
+                    'currency': (self._csv_get_val(row, 'Currency', 'currency') or getattr(getattr(vendor, 'country', None), 'default_currency', None) or 'KES').upper(),
+                    'base_price': self._csv_parse_decimal(row, 'Price', 'Base Price', 'base_price', default=Decimal('0')),
+                    'stock_quantity': self._csv_parse_int(row, 'Stock', 'Stock Quantity', 'stock_quantity', default=0) or 0,
+                    'brand': self._csv_get_val(row, 'Brand', 'brand'),
+                    'status': self._csv_get_val(row, 'Status', 'status') or 'ACTIVE',
+                    'min_order_quantity': self._csv_parse_int(row, 'Min Order Quantity', 'min_order_quantity', 'Min Order', default=1),
+                    'max_order_quantity': self._csv_parse_int(row, 'Max Order Quantity', 'max_order_quantity', 'Max Order'),
+                    'bulk_price': self._csv_parse_decimal(row, 'Bulk Price', 'bulk_price'),
+                    'bulk_threshold': self._csv_parse_int(row, 'Bulk Threshold', 'bulk_threshold'),
+                    'reorder_level': self._csv_parse_int(row, 'Reorder Level', 'reorder_level', default=0),
+                    'quality_grade': self._csv_get_val(row, 'Quality Grade', 'quality_grade'),
+                    'model_number': self._csv_get_val(row, 'Model Number', 'model_number', 'SKU'),
+                    'country_of_origin': self._csv_get_val(row, 'Country of Origin', 'country_of_origin'),
+                    'packaging_details': self._csv_get_val(row, 'Packaging Details', 'packaging_details'),
+                    'weight': self._csv_parse_decimal(row, 'Weight', 'weight'),
+                    'dimensions': self._csv_get_val(row, 'Dimensions', 'dimensions'),
+                    'color': self._csv_get_val(row, 'Color', 'color'),
+                    'material_composition': self._csv_get_val(row, 'Material Composition', 'material_composition'),
+                    'estimated_delivery_days': self._csv_parse_int(row, 'Estimated Delivery Days', 'estimated_delivery_days'),
+                    'handling_instructions': self._csv_get_val(row, 'Handling Instructions', 'handling_instructions'),
+                    'features': self._csv_get_val(row, 'Features', 'features'),
+                    'applications': self._csv_get_val(row, 'Applications', 'applications'),
+                    'certifications': self._csv_get_val(row, 'Certifications', 'certifications'),
+                    'warranty_period': self._csv_get_val(row, 'Warranty Period', 'warranty_period'),
+                    'meta_keywords': self._csv_get_val(row, 'Meta Keywords', 'meta_keywords'),
+                    'is_featured': self._csv_parse_bool(row, 'Is Featured', 'is_featured'),
+                    'is_new_arrival': self._csv_parse_bool(row, 'Is New Arrival', 'is_new_arrival'),
+                    'is_on_sale': self._csv_parse_bool(row, 'Is On Sale', 'is_on_sale'),
+                    'requires_special_handling': self._csv_parse_bool(row, 'Requires Special Handling', 'requires_special_handling'),
+                    'shipping_weight': self._csv_parse_decimal(row, 'Shipping Weight', 'shipping_weight'),
+                    'manufacturing_date': self._csv_parse_date(row, 'Manufacturing Date', 'manufacturing_date'),
+                    'expiry_date': self._csv_parse_date(row, 'Expiry Date', 'expiry_date'),
+                }
+
+                # Remove None values so model defaults apply
+                product_data = {k: v for k, v in product_data.items() if v is not None}
+
+                if dry_run:
+                    valid_rows.append({
+                        'row': row_idx,
+                        'name': name,
+                        'category': category.name if category else None,
+                        'base_price': str(product_data.get('base_price', '')),
+                        'stock_quantity': product_data.get('stock_quantity', 0),
+                        'currency': product_data.get('currency', 'KES'),
+                    })
+                else:
                     product = Product.objects.create(**product_data)
                     created_count += 1
-
                     if product.stock_quantity:
                         product.record_inventory_movement(
                             movement_type=ProductInventoryMovement.MovementType.IMPORT,
                             quantity_delta=product.stock_quantity,
                             quantity_before=0,
                             quantity_after=product.stock_quantity,
-                            actor=request.user,
+                            actor=self.request.user,
                             note='Stock created via CSV import.',
                             reference=file_obj.name,
                         )
-                except Exception as e:
-                    errors.append(f"Row {row_idx}: {str(e)}")
+            except Exception as e:
+                errors.append({'row': row_idx, 'message': str(e)})
 
+        return valid_rows, errors, created_count
+
+    @action(detail=False, methods=['post'], url_path='validate-import', parser_classes=[MultiPartParser, FormParser])
+    def validate_import(self, request):
+        """Validate CSV import without creating products. Returns preview + errors."""
+        if not hasattr(request.user, 'vendor_profile'):
+            return Response({'error': 'Only vendors can validate imports'}, status=status.HTTP_403_FORBIDDEN)
+
+        vendor = request.user.vendor_profile
+        if vendor.verified_status != 'APPROVED':
+            return Response({'error': 'Vendor account must be approved before importing materials.'}, status=status.HTTP_403_FORBIDDEN)
+
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not file_obj.name.lower().endswith('.csv'):
+            return Response({'error': 'Only CSV files are supported at this time.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            valid_rows, errors, _ = self._parse_csv_rows(file_obj, vendor, dry_run=True)
+            return Response({
+                'valid': len(errors) == 0,
+                'valid_rows': valid_rows[:5],
+                'total_rows': len(valid_rows),
+                'errors': errors,
+            })
+        except Exception as e:
+            return Response({'error': f'Failed to process file: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def import_products(self, request):
+        """Import products from CSV file"""
+        if not hasattr(request.user, 'vendor_profile'):
+            return Response({'error': 'Only vendors can import products'}, status=status.HTTP_403_FORBIDDEN)
+
+        vendor = request.user.vendor_profile
+        if vendor.verified_status != 'APPROVED':
+            return Response({'error': 'Vendor account must be approved before importing materials.'}, status=status.HTTP_403_FORBIDDEN)
+
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not file_obj.name.lower().endswith('.csv'):
+            return Response({'error': 'Only CSV files are supported at this time.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            _, errors, created_count = self._parse_csv_rows(file_obj, vendor, dry_run=False)
             return Response({
                 'message': f'Successfully imported {created_count} products.',
                 'created_count': created_count,
                 'errors': errors
             }, status=status.HTTP_201_CREATED)
-
         except Exception as e:
             return Response({'error': f'Failed to process file: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'], url_path='category-price-stats')
+    def category_price_stats(self, request):
+        """Return price statistics per category for anomaly detection."""
+        from django.db.models import Avg, Min, Max, Count
+
+        stats = Product.objects.filter(
+            status=Product.Status.ACTIVE,
+            base_price__gt=0
+        ).values('category__name', 'category__uuid', 'category_id').annotate(
+            median_price=Avg('base_price'),  # Fallback to Avg; true Median needs raw SQL
+            min_price=Min('base_price'),
+            max_price=Max('base_price'),
+            product_count=Count('id'),
+            avg_price=Avg('base_price'),
+        ).order_by('category__name')
+
+        # Compute true median via raw SQL for each category
+        from django.db import connection
+        is_postgres = connection.vendor == 'postgresql'
+        
+        result = []
+        for row in stats:
+            cat_uuid = row['category__uuid']
+            cat_id = row['category_id']
+            median = None
+            if is_postgres:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY base_price)
+                        FROM catalog_product
+                        WHERE category_id = %s AND status = %s AND base_price > 0
+                    """, [cat_id, Product.Status.ACTIVE])
+                    median = cursor.fetchone()[0]
+
+            result.append({
+                'category': row['category__name'],
+                'category_uuid': cat_uuid,
+                'median_price': round(float(median or row['avg_price'] or 0), 2),
+                'average_price': round(float(row['avg_price'] or 0), 2),
+                'min_price': round(float(row['min_price'] or 0), 2),
+                'max_price': round(float(row['max_price'] or 0), 2),
+                'product_count': row['product_count'],
+            })
+
+        return Response(result)
+
+    @action(detail=True, methods=['get'], url_path='stock-out-prediction')
+    def stock_out_prediction(self, request, pk=None):
+        """Predict days until stock runs out based on recent quote volume."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Sum
+
+        product = self.get_object()
+
+        # Look at quote requests in the last 30 days
+        since = timezone.now() - timedelta(days=30)
+        quote_items = product.quoteitem_set.filter(
+            quote_request__requested_at__gte=since
+        )
+
+        total_quoted_qty = quote_items.aggregate(total=Sum('quantity'))['total'] or 0
+        days = 30
+
+        if total_quoted_qty <= 0:
+            return Response({
+                'current_stock': product.stock_quantity,
+                'daily_quote_rate': 0,
+                'days_until_stockout': None,
+                'message': 'No recent quote activity. Stock level is stable.',
+            })
+
+        daily_rate = total_quoted_qty / days
+        days_left = product.stock_quantity / daily_rate if daily_rate > 0 else None
+
+        return Response({
+            'current_stock': product.stock_quantity,
+            'daily_quote_rate': round(daily_rate, 2),
+            'days_until_stockout': round(days_left, 1) if days_left is not None else None,
+            'message': (
+                f"At current quote volume, you'll run out in ~{round(days_left)} days."
+                if days_left and days_left <= 14 else
+                f"Stock healthy. ~{round(days_left)} days remaining at current quote rate."
+                if days_left else "Stock level stable."
+            ),
+        })
+
+    @action(detail=True, methods=['post'], url_path='subscribe-stock-alert', permission_classes=[permissions.IsAuthenticated])
+    def subscribe_stock_alert(self, request, pk=None):
+        """Subscribe to be notified when this product comes back in stock."""
+        product = self.get_object()
+        alert, created = StockAlert.objects.get_or_create(
+            product=product,
+            user=request.user,
+        )
+        return Response({
+            'status': 'subscribed',
+            'created': created,
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='unsubscribe-stock-alert', permission_classes=[permissions.IsAuthenticated])
+    def unsubscribe_stock_alert(self, request, pk=None):
+        """Unsubscribe from stock alerts for this product."""
+        product = self.get_object()
+        deleted, _ = StockAlert.objects.filter(product=product, user=request.user).delete()
+        return Response({
+            'status': 'unsubscribed',
+            'deleted': deleted > 0,
+        })
+
+    @action(detail=True, methods=['get'], url_path='check-stock-alert', permission_classes=[permissions.IsAuthenticated])
+    def check_stock_alert(self, request, pk=None):
+        """Check if the current user is subscribed to stock alerts for this product."""
+        product = self.get_object()
+        is_subscribed = StockAlert.objects.filter(product=product, user=request.user).exists()
+        return Response({'is_subscribed': is_subscribed})
+
+    @action(detail=True, methods=['get'], url_path='similar-products')
+    def similar_products(self, request, pk=None):
+        """Return similar products when this one is out of stock."""
+        product = self.get_object()
+        qs = Product.objects.filter(
+            status=Product.Status.ACTIVE,
+            category=product.category,
+        ).exclude(
+            pk=product.pk
+        ).exclude(
+            stock_quantity__lte=0
+        ).select_related('vendor', 'category').prefetch_related('images')[:6]
+
+        serializer = ProductListSerializer(qs, many=True, context={'request': request})
+        return Response({'matches': serializer.data})
 
     @action(detail=False, methods=['get'])
     def download_template(self, request):

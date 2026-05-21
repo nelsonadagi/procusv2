@@ -12,6 +12,52 @@
       </template>
     </EntryHero>
 
+    <div class="pz-l-container">
+      <WorkflowGuide title="Workflow Path" eyebrow="Start Here">
+        <div class="pz-project-workflow-banner">
+          <div class="pz-project-workflow-banner__summary">
+            <div class="pz-project-workflow-banner__kicker">{{ workflowSummary.stage }}</div>
+            <h2 class="pz-project-workflow-banner__title">{{ workflowSummary.title }}</h2>
+            <p class="pz-project-workflow-banner__body">{{ workflowSummary.body }}</p>
+          </div>
+          <div class="pz-project-workflow-banner__actions">
+            <Button v-if="workflowSummary.primaryAction" variant="primary" size="sm" @click="workflowSummary.primaryAction.handler">
+              {{ workflowSummary.primaryAction.label }}
+            </Button>
+            <Button v-if="workflowSummary.secondaryAction" variant="outline" size="sm" @click="workflowSummary.secondaryAction.handler">
+              {{ workflowSummary.secondaryAction.label }}
+            </Button>
+          </div>
+        </div>
+        <div class="pz-project-workflow-banner__steps">
+          <div
+            v-for="step in workflowSteps"
+            :key="step.label"
+            class="pz-project-workflow-step"
+            :class="{ 'pz-project-workflow-step--done': step.done, 'pz-project-workflow-step--active': step.active }"
+          >
+            <div class="pz-project-workflow-step__index">{{ step.index }}</div>
+            <div class="pz-project-workflow-step__content">
+              <strong>{{ step.label }}</strong>
+              <span>{{ step.help }}</span>
+            </div>
+          </div>
+        </div>
+      
+
+      <ModuleCTA
+        eyebrow="Build From Here"
+        title="Have land, a brief, or materials ready for a new build?"
+        body="Create a project workspace, connect it to property or procurement needs, and move from discovery into funded execution."
+        primary-label="Start Project"
+        primary-to="/projects/new"
+        secondary-label="Post Tender"
+        secondary-to="/contracts/new"
+        tone="savanna"
+      />
+</WorkflowGuide>
+    </div>
+
     <div class="pz-market-shell">
       <aside class="pz-market-sidebar u-hide-mobile">
         <div class="pz-filter-rail">
@@ -89,11 +135,16 @@
           <p class="pz-u-text-mono text-xs u-mt-4">Loading projects...</p>
         </div>
 
-        <div v-else-if="!projects.length" class="pz-empty-state">
-          <p class="pz-u-text-display text-lg">No projects found</p>
-          <p class="pz-u-text-mono text-xs pz-u-color-concrete">Try widening your search or resetting filters.</p>
-          <Button variant="outline" @click="clearFilters">Reset Filters</Button>
-        </div>
+        <EmptyState
+          v-else-if="!projects.length"
+          icon="📁"
+          title="No projects found"
+          description="Projects appear here once a project shell has been created and shared into the workspace."
+          next-step="Start a project with a title, location, and budget. If filters are hiding results, reset them to review the full portfolio."
+          action-label="Reset Filters"
+          action-variant="outline"
+          @action="clearFilters"
+        />
 
         <div v-else :class="viewMode === 'grid' ? 'pz-results-grid' : 'pz-results-list'">
           <article
@@ -182,11 +233,17 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import ProjectsService from '../services/projects';
 import Button from '../components/ui/Button.vue';
+import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import EntryHero from '../components/ui/EntryHero.vue';
+import EmptyState from '../components/ui/EmptyState.vue';
 import { useConfigStore } from '../stores/config';
 
+const router = useRouter();
 const configStore = useConfigStore();
 const projects = ref([]);
 const loading = ref(true);
@@ -203,6 +260,7 @@ const countryLabel = computed(() => {
   }
   return 'All countries';
 });
+const hasProjects = computed(() => projects.value.length > 0);
 
 const statusLabels = {
   LISTED: 'Planning',
@@ -246,6 +304,86 @@ function coverImageUrl(project) {
   const base = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '');
   return `${base}/media/${project.cover_photo}`;
 }
+
+const workflowSummary = computed(() => {
+  const hasProjects = projects.value.length > 0;
+  const hasFilters = activeFilterLabels.value.length > 0;
+
+  if (loading.value) {
+    return {
+      stage: 'LOADING',
+      title: 'Preparing the project workspace',
+      body: 'Loading projects and portfolio filters so you can move directly to the right record.',
+      primaryAction: null,
+      secondaryAction: null,
+    };
+  }
+
+  if (!hasProjects) {
+    return {
+      stage: 'EMPTY',
+      title: 'Start the first project shell',
+      body: 'Create a project when a property moves into execution. The shell lets you add requirements, funding, contracts, and updates in one place.',
+      primaryAction: { label: 'Start Project', handler: () => router.push('/projects/new') },
+      secondaryAction: hasFilters ? { label: 'Reset Filters', handler: clearFilters } : null,
+    };
+  }
+
+  if (selectedStatus.value === 'FUNDING_OPEN') {
+    return {
+      stage: 'FUNDING',
+      title: 'Review funding-ready projects first',
+      body: 'Projects in funding-open state need commitments, clear progress updates, and an active next step.',
+      primaryAction: {
+        label: 'Open Funding',
+        handler: () => {
+          const first = projects.value.find((project) => project.status === 'FUNDING_OPEN');
+          if (first) router.push(`/projects/${first.id}`);
+        },
+      },
+      secondaryAction: { label: 'Create Project', handler: () => router.push('/projects/new') },
+    };
+  }
+
+  return {
+    stage: 'DISCOVERY',
+    title: 'Find the next project to advance',
+    body: 'Use search and filters to move from planning to execution. Open a project to add requirements, contracts, milestones, or updates.',
+    primaryAction: { label: 'Start Project', handler: () => router.push('/projects/new') },
+    secondaryAction: hasProjects.value ? { label: 'Open First Project', handler: () => router.push(`/projects/${projects.value[0].id}`) } : null,
+  };
+});
+
+const workflowSteps = computed(() => [
+  {
+    index: '01',
+    label: 'Start the shell',
+    help: 'Create the project record with title, location, and budget.',
+    done: hasProjects.value,
+    active: !hasProjects.value,
+  },
+  {
+    index: '02',
+    label: 'Add requirements',
+    help: 'Define materials, contractor work, and other procurement needs.',
+    done: projects.value.some((project) => (project.requirements || []).length > 0),
+    active: selectedStatus.value === 'LISTED',
+  },
+  {
+    index: '03',
+    label: 'Open funding or contracts',
+    help: 'Move the project into execution with funding, awards, or milestones.',
+    done: projects.value.some((project) => ['FUNDING_OPEN', 'EXECUTION_STARTED', 'COMPLETED'].includes(project.status)),
+    active: selectedStatus.value === 'FUNDING_OPEN' || selectedStatus.value === 'EXECUTION_STARTED',
+  },
+  {
+    index: '04',
+    label: 'Track progress',
+    help: 'Use the detail workspace for updates, activity, and issue visibility.',
+    done: projects.value.some((project) => (project.updates || []).length > 0),
+    active: viewMode.value === 'list',
+  },
+]);
 
 async function fetchProjects() {
   loading.value = true;
@@ -325,6 +463,117 @@ watch(
   width: 100%;
   margin: 2rem 0 0;
   padding: 0 clamp(1rem, 2vw, 2rem) 4rem;
+}
+
+.pz-project-workflow-banner {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.pz-project-workflow-banner__summary {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.pz-project-workflow-banner__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-project-workflow-banner__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.55rem);
+  line-height: 1.2;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-project-workflow-banner__body {
+  max-width: 70ch;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.pz-project-workflow-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.pz-project-workflow-banner__steps {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pz-project-workflow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.pz-project-workflow-step__index {
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(247, 244, 239, 0.95);
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  color: var(--pz-color-foundation-black);
+  flex-shrink: 0;
+}
+
+.pz-project-workflow-step__content {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.pz-project-workflow-step__content strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.pz-project-workflow-step__content span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.5;
+}
+
+.pz-project-workflow-step--done {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: rgba(250, 255, 252, 0.95);
+}
+
+.pz-project-workflow-step--done .pz-project-workflow-step__index {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #047857;
+}
+
+.pz-project-workflow-step--active {
+  border-color: rgba(212, 101, 42, 0.34);
+  box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
 }
 
 .pz-market-sidebar {
@@ -766,6 +1015,18 @@ watch(
   }
   .pz-results-grid {
     grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  }
+
+  .pz-project-workflow-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .pz-project-workflow-banner__actions {
+    justify-content: flex-start;
+  }
+
+  .pz-project-workflow-banner__steps {
+    grid-template-columns: 1fr;
   }
 }
 

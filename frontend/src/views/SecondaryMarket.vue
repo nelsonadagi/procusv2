@@ -37,6 +37,19 @@
     </section>
 
     <div class="pz-l-container u-py-12">
+      <WorkflowGuide title="Capital CTA" eyebrow="Action">
+        <ModuleCTA
+          eyebrow="Capital Marketplace"
+          title="Need to raise capital or sell a project stake?"
+          body="Use the finance and investor workflows to prepare opportunities before they move into secondary-market discovery."
+          primary-label="Apply for Finance"
+          primary-to="/finance/apply"
+          secondary-label="Discover Projects"
+          secondary-to="/projects"
+          tone="earth"
+        />
+      </WorkflowGuide>
+
       <!-- Unified Discovery Filters -->
       <div class="pz-filter-bar">
         <div class="pz-l-flex pz-l-flex--gap-6 pz-l-flex--align-center pz-l-flex--wrap">
@@ -160,6 +173,8 @@
   import Button from '../components/ui/Button.vue';
   import Badge from '../components/ui/Badge.vue';
   import Modal from '../components/ui/Modal.vue';
+  import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+  import ModuleCTA from '../components/ui/ModuleCTA.vue';
   import PzInput from '../components/PzInput.vue';
   import { useConfigStore } from '../stores/config';
 

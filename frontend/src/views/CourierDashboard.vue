@@ -33,6 +33,50 @@
       </div>
     </template>
 
+    <WorkflowGuide title="Workflow Path" eyebrow="Start Here">
+      <div class="courier-workflow-banner">
+        <div class="courier-workflow-banner__summary">
+          <div class="courier-workflow-banner__kicker">{{ workflowSummary.stage }}</div>
+          <h2 class="courier-workflow-banner__title">{{ workflowSummary.title }}</h2>
+          <p class="courier-workflow-banner__body">{{ workflowSummary.body }}</p>
+        </div>
+        <div class="courier-workflow-banner__actions">
+          <Button v-if="workflowSummary.primaryAction" variant="primary" size="sm" @click="workflowSummary.primaryAction.handler">
+            {{ workflowSummary.primaryAction.label }}
+          </Button>
+          <Button v-if="workflowSummary.secondaryAction" variant="outline" size="sm" @click="workflowSummary.secondaryAction.handler">
+            {{ workflowSummary.secondaryAction.label }}
+          </Button>
+        </div>
+      </div>
+      <div class="courier-workflow-banner__steps">
+        <div
+          v-for="step in workflowSteps"
+          :key="step.label"
+          class="courier-workflow-step"
+          :class="{ 'courier-workflow-step--done': step.done, 'courier-workflow-step--active': step.active }"
+        >
+          <span class="courier-workflow-step__index">{{ step.index }}</span>
+          <div class="courier-workflow-step__content">
+            <strong>{{ step.label }}</strong>
+            <span>{{ step.help }}</span>
+          </div>
+        </div>
+      </div>
+    
+
+    <ModuleCTA
+      eyebrow="Delivery Services"
+      title="Can your company handle site deliveries?"
+      body="Register courier capacity, publish pricing zones, and connect delivery operations to material orders and site dispatch."
+      primary-label="Set Up Courier Profile"
+      primary-to="/courier/dashboard"
+      secondary-label="Browse Materials"
+      secondary-to="/products"
+      tone="copper"
+    />
+</WorkflowGuide>
+
     <div v-if="needsOnboarding" class="pz-onboarding-state">
       <div class="pz-onboarding-state__kicker">COURIER_PROFILE_REQUIRED</div>
       <h3 class="pz-onboarding-state__title">Your courier workspace needs a registry profile before dispatch can start.</h3>
@@ -51,6 +95,10 @@
 <script setup>
 import { ref, onMounted, computed, defineAsyncComponent, provide } from 'vue';
 import api from '../services/api';
+import Button from '../components/ui/Button.vue';
+import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import Badge from '../components/ui/Badge.vue';
 import DashboardShell from '../components/layout/DashboardShell.vue';
 import { useNotificationStore } from '../stores/notifications';
@@ -72,6 +120,67 @@ const navSections = [
   { id: 'api', label: 'API Configuration', icon: '🔌' },
   { id: 'shipments', label: 'Active Shipments', icon: '🚚' }
 ];
+
+const workflowSummary = computed(() => {
+  if (needsOnboarding.value) {
+    return {
+      stage: 'SETUP',
+      title: 'Create the courier registry profile',
+      body: 'Complete the company profile first. Until the registry is active, pricing, API, and shipments stay locked.',
+      primaryAction: { label: 'Open Profile', handler: () => { activeSection.value = 'profile'; } },
+      secondaryAction: null,
+    };
+  }
+
+  if (!courierProfile.value || courierProfile.value.status !== 'APPROVED') {
+    return {
+      stage: courierProfile.value?.status || 'PENDING',
+      title: 'Finish approval before dispatch work begins',
+      body: 'The registry is present, but the account is not yet approved for live shipment handling.',
+      primaryAction: { label: 'Open Profile', handler: () => { activeSection.value = 'profile'; } },
+      secondaryAction: { label: 'View Shipments', handler: () => { activeSection.value = 'shipments'; } },
+    };
+  }
+
+  return {
+    stage: 'ACTIVE',
+    title: 'Manage live courier operations',
+    body: 'Use pricing zones, API settings, and the active shipment manifest to keep deliveries moving and visible.',
+    primaryAction: { label: 'View Shipments', handler: () => { activeSection.value = 'shipments'; } },
+    secondaryAction: { label: 'Open Pricing', handler: () => { activeSection.value = 'pricing'; } },
+  };
+});
+
+const workflowSteps = computed(() => [
+  {
+    index: '01',
+    label: 'Register the courier profile',
+    help: 'Company identity and support contacts activate the console.',
+    done: Boolean(courierProfile.value),
+    active: needsOnboarding.value,
+  },
+  {
+    index: '02',
+    label: 'Get approved',
+    help: 'Approval unlocks dispatch, pricing, and shipment handling.',
+    done: courierProfile.value?.status === 'APPROVED',
+    active: courierProfile.value?.status === 'PENDING',
+  },
+  {
+    index: '03',
+    label: 'Configure pricing and API',
+    help: 'Set up zones and sync points before accepting active routes.',
+    done: courierProfile.value?.status === 'APPROVED' && activeSection.value !== 'profile',
+    active: activeSection.value === 'pricing' || activeSection.value === 'api',
+  },
+  {
+    index: '04',
+    label: 'Track active shipments',
+    help: 'Use the shipment panel to monitor live delivery movement.',
+    done: activeSection.value === 'shipments',
+    active: activeSection.value === 'shipments',
+  },
+]);
 
 const activeComponent = computed(() => {
   switch (activeSection.value) {
@@ -158,6 +267,116 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+.courier-workflow-banner {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.courier-workflow-banner__summary {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.courier-workflow-banner__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.courier-workflow-banner__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.55rem);
+  line-height: 1.2;
+  color: var(--pz-color-foundation-black);
+}
+
+.courier-workflow-banner__body {
+  max-width: 70ch;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.courier-workflow-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.courier-workflow-banner__steps {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.courier-workflow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.courier-workflow-step__index {
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(247, 244, 239, 0.95);
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  color: var(--pz-color-foundation-black);
+  flex-shrink: 0;
+}
+
+.courier-workflow-step__content {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.courier-workflow-step__content strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.courier-workflow-step__content span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.5;
+}
+
+.courier-workflow-step--done {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: rgba(250, 255, 252, 0.95);
+}
+
+.courier-workflow-step--done .courier-workflow-step__index {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #047857;
+}
+
+.courier-workflow-step--active {
+  border-color: rgba(212, 101, 42, 0.34);
+  box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.25s ease;
@@ -166,5 +385,19 @@ onMounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 768px) {
+  .courier-workflow-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .courier-workflow-banner__actions {
+    justify-content: flex-start;
+  }
+
+  .courier-workflow-banner__steps {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

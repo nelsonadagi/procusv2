@@ -127,6 +127,21 @@ The vendor inventory workspace should support:
 - product edit/delete controls
 - CSV import for initial catalog loading
 
+## Vendor Approval Enforcement
+
+As of 2026-05-17, all inventory-mutating operations require the vendor to have `verified_status == 'APPROVED'`:
+
+- `POST /api/v1/products/` — Create product
+- `POST /api/v1/products/import_products/` — CSV import
+- `POST /api/v1/products/{uuid}/upload_images/` — Upload images
+- `POST /api/v1/products/{uuid}/upload-documents/` — Upload documents
+- `POST /api/v1/products/{uuid}/adjust-inventory/` — Manual stock adjustment
+
+Unapproved (`PENDING`, `REJECTED`, `SUSPENDED`) vendors receive `403 Forbidden` with the message:
+> "Vendor account must be approved before publishing materials."
+
+This is enforced via the `VendorApprovedOnly` permission class in `rbac/permissions.py`.
+
 ## Remaining gaps
 
 These should still be treated as open follow-up items rather than silently assumed complete:
@@ -137,3 +152,6 @@ These should still be treated as open follow-up items rather than silently assum
 - returns workflow with dedicated return movements
 - purchase-order or supplier replenishment workflow
 - inventory valuation and cost layers
+- image/document deletion from the vendor edit modal
+- product comparison workflow
+- vendor-facing marketing flag controls (`is_featured`, `is_new_arrival`, `is_on_sale`)

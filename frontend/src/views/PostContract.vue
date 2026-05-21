@@ -37,6 +37,50 @@
       </div>
     </div>
 
+    <WorkflowGuide title="Workflow Path" eyebrow="Start Here">
+      <div class="pz-contract-posting__workflow">
+        <div class="pz-contract-posting__workflow-summary">
+          <div class="pz-contract-posting__workflow-kicker">{{ workflowSummary.stage }}</div>
+          <h2 class="pz-contract-posting__workflow-title">{{ workflowSummary.title }}</h2>
+          <p class="pz-contract-posting__workflow-body">{{ workflowSummary.body }}</p>
+        </div>
+        <div class="pz-contract-posting__workflow-actions">
+          <Button v-if="workflowSummary.primaryAction" variant="primary" size="sm" @click="workflowSummary.primaryAction.handler">
+            {{ workflowSummary.primaryAction.label }}
+          </Button>
+          <Button v-if="workflowSummary.secondaryAction" variant="outline" size="sm" @click="workflowSummary.secondaryAction.handler">
+            {{ workflowSummary.secondaryAction.label }}
+          </Button>
+        </div>
+      </div>
+      <div class="pz-contract-posting__workflow-steps">
+        <div
+          v-for="step in workflowSteps"
+          :key="step.label"
+          class="pz-contract-posting__workflow-step"
+          :class="{ 'pz-contract-posting__workflow-step--done': step.done, 'pz-contract-posting__workflow-step--active': step.active }"
+        >
+          <span class="pz-contract-posting__workflow-step-num">{{ step.index }}</span>
+          <div class="pz-contract-posting__workflow-step-content">
+            <strong>{{ step.label }}</strong>
+            <span>{{ step.help }}</span>
+          </div>
+        </div>
+      </div>
+    
+
+    <ModuleCTA
+      eyebrow="Supplier Readiness"
+      title="This tender may need materials and delivery support too."
+      body="After posting the contract, use vendor and courier workspaces to line up product availability and site logistics."
+      primary-label="Browse Materials"
+      primary-to="/products"
+      secondary-label="Open Courier Workspace"
+      secondary-to="/courier/dashboard"
+      tone="savanna"
+    />
+</WorkflowGuide>
+
     <div class="pz-contract-workspace">
       <Card title="Post a New Contract" eyebrow="Structured procurement" class="pz-contract-form-card" variant="premium">
         <form @submit.prevent="postContract" class="pz-contract-form">
@@ -220,12 +264,16 @@ import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import api from '../services/api';
 import ContractsService from '../services/contracts';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
 import Button from '../components/ui/Button.vue';
 import Badge from '../components/ui/Badge.vue';
 import PzInput from '../components/PzInput.vue';
 
 const router = useRouter();
+const authStore = useAuthStore();
 const showAlert = inject('showAlert');
 const submitting = ref(false);
 const categories = ref([]);
@@ -273,6 +321,85 @@ const briefCompletion = computed(() => {
   const filled = fields.filter((value) => value !== null && value !== undefined && value !== '').length;
   return Math.round((filled / fields.length) * 100);
 });
+
+const workflowSummary = computed(() => {
+  const missingTitle = !form.value.title.trim();
+  const missingScope = !form.value.description_scope.trim();
+  const missingLocation = !form.value.location.trim();
+  const missingBudget = !form.value.budget_min || !form.value.budget_max;
+  const missingDates = !form.value.bid_deadline || !form.value.project_start_date || !form.value.project_end_date;
+  const missingCategory = !form.value.category_uuid;
+  const missingImage = !form.value.featured_image;
+
+  if (missingTitle || missingScope) {
+    return {
+      stage: 'BRIEF',
+      title: 'Write the work order in plain language',
+      body: 'Start with the title and scope so contractors understand what is being priced before they open the tender.',
+      primaryAction: { label: 'Focus Brief', handler: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+      secondaryAction: null,
+    };
+  }
+
+  if (missingLocation || missingCategory) {
+    return {
+      stage: 'CLASSIFY',
+      title: 'Add location and category',
+      body: 'Place the work in the right region and trade category so the right contractors see it.',
+      primaryAction: { label: 'Focus Classification', handler: () => window.scrollTo({ top: 220, behavior: 'smooth' }) },
+      secondaryAction: null,
+    };
+  }
+
+  if (missingBudget || missingDates || missingImage) {
+    return {
+      stage: 'READYING',
+      title: 'Complete the commercial details',
+      body: 'Set the budget corridor, dates, and image so the brief is complete enough for serious bidding.',
+      primaryAction: { label: 'Focus Commercials', handler: () => window.scrollTo({ top: 420, behavior: 'smooth' }) },
+      secondaryAction: null,
+    };
+  }
+
+  return {
+    stage: 'READY',
+    title: 'Review and broadcast the tender',
+    body: 'The brief is complete. Post it to the market so contractors can start reviewing and bidding.',
+    primaryAction: { label: 'Post Work Order', handler: postContract },
+    secondaryAction: null,
+  };
+});
+
+const workflowSteps = computed(() => [
+  {
+    index: '01',
+    label: 'Write the brief',
+    help: 'Title and scope explain the work.',
+    done: Boolean(form.value.title.trim() && form.value.description_scope.trim()),
+    active: !form.value.title.trim() || !form.value.description_scope.trim(),
+  },
+  {
+    index: '02',
+    label: 'Classify the work',
+    help: 'Location and category route the tender to the right contractors.',
+    done: Boolean(form.value.location.trim() && form.value.category_uuid),
+    active: Boolean(form.value.title.trim() && form.value.description_scope.trim() && (!form.value.location.trim() || !form.value.category_uuid)),
+  },
+  {
+    index: '03',
+    label: 'Confirm commercials',
+    help: 'Budget corridor, dates, and image make the tender usable.',
+    done: Boolean(form.value.budget_min && form.value.budget_max && form.value.bid_deadline && form.value.project_start_date && form.value.project_end_date && form.value.featured_image),
+    active: Boolean(form.value.location.trim() && form.value.category_uuid && (!form.value.budget_min || !form.value.budget_max || !form.value.bid_deadline || !form.value.project_start_date || !form.value.project_end_date || !form.value.featured_image)),
+  },
+  {
+    index: '04',
+    label: 'Broadcast the tender',
+    help: 'Submit the work order to open bidding.',
+    done: false,
+    active: Boolean(form.value.title.trim() && form.value.description_scope.trim() && form.value.location.trim() && form.value.category_uuid && form.value.budget_min && form.value.budget_max && form.value.bid_deadline && form.value.project_start_date && form.value.project_end_date && form.value.featured_image),
+  },
+]);
 
 function flattenCategories(items, depth = 0, output = []) {
   items.forEach((item) => {
@@ -365,6 +492,12 @@ function deadlineLabel(value) {
 }
 
 async function postContract() {
+  if (!authStore.isAuthenticated) {
+    showAlert?.('Sign in before posting a tender.', 'info');
+    router.push({ path: '/login', query: { redirect: '/contracts/new' } });
+    return;
+  }
+
   submitting.value = true;
   try {
     const payload = new FormData();
@@ -395,13 +528,129 @@ async function postContract() {
   }
 }
 
-onMounted(fetchCategories);
+onMounted(() => {
+  if (!authStore.isAuthenticated) {
+    router.replace({ path: '/login', query: { redirect: '/contracts/new' } });
+    return;
+  }
+  fetchCategories();
+});
 </script>
 
 <style scoped>
 .pz-contract-posting {
   display: grid;
   gap: 1.5rem;
+}
+
+.pz-contract-posting__workflow {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.pz-contract-posting__workflow-summary {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.pz-contract-posting__workflow-kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-contract-posting__workflow-title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.55rem);
+  line-height: 1.2;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-contract-posting__workflow-body {
+  max-width: 70ch;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.pz-contract-posting__workflow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.pz-contract-posting__workflow-steps {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pz-contract-posting__workflow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.pz-contract-posting__workflow-step-num {
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(247, 244, 239, 0.95);
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  color: var(--pz-color-foundation-black);
+  flex-shrink: 0;
+}
+
+.pz-contract-posting__workflow-step-content {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.pz-contract-posting__workflow-step-content strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.pz-contract-posting__workflow-step-content span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.5;
+}
+
+.pz-contract-posting__workflow-step--done {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: rgba(250, 255, 252, 0.95);
+}
+
+.pz-contract-posting__workflow-step--done .pz-contract-posting__workflow-step-num {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #047857;
+}
+
+.pz-contract-posting__workflow-step--active {
+  border-color: rgba(212, 101, 42, 0.34);
+  box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
 }
 
 .pz-contract-posting__hero {
@@ -736,6 +985,18 @@ onMounted(fetchCategories);
 
   .pz-contract-actions__group .pz-button {
     flex: 1;
+  }
+
+  .pz-contract-posting__workflow {
+    grid-template-columns: 1fr;
+  }
+
+  .pz-contract-posting__workflow-actions {
+    justify-content: flex-start;
+  }
+
+  .pz-contract-posting__workflow-steps {
+    grid-template-columns: 1fr;
   }
 }
 </style>

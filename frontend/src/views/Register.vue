@@ -20,14 +20,14 @@
             <span class="pz-auth-shell__step-index">02</span>
             <div>
               <h3>Workspace selection</h3>
-              <p>Start with a shared account, then activate vendor, contractor, investor, courier, or owner workflows after sign-in.</p>
+              <p>Start with a shared account, then activate vendor, contractor, investor, property, courier, or government workflows after sign-in.</p>
             </div>
           </div>
           <div class="pz-auth-shell__step">
             <span class="pz-auth-shell__step-index">03</span>
             <div>
               <h3>Workspace activation</h3>
-              <p>Specialized dashboards guide you through any extra onboarding they require.</p>
+              <p>Each workspace shows the next step, required documents, and approval status so you can complete it without help.</p>
             </div>
           </div>
         </div>
@@ -59,7 +59,7 @@
           <div class="pz-auth-card__note">
             <span class="pz-auth-card__note-label">Operational note</span>
             <span class="pz-auth-card__note-text">
-              New accounts start in the shared buyer-owner workspace. You can activate specialized dashboards after sign-in.
+              New accounts start in the shared base workspace. The platform will guide you through additional workflows when you activate them.
             </span>
           </div>
 
@@ -70,7 +70,7 @@
 
         <div class="u-mt-8 u-text-center text-sm pz-u-text-mono">
           ALREADY INDUCTED?
-          <router-link to="/login" class="pz-u-color-earth font-bold u-ml-2">Secure Login</router-link>
+          <router-link :to="loginLink" class="pz-u-color-earth font-bold u-ml-2">Secure Login</router-link>
         </div>
       </Card>
     </div>
@@ -78,8 +78,8 @@
 </template>
 
 <script setup>
-  import { inject, ref } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { computed, inject, ref } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import { useAuthStore } from '../stores/auth';
   import Card from '../components/ui/Card.vue';
   import Button from '../components/ui/Button.vue';
@@ -94,7 +94,21 @@
 
   const authStore = useAuthStore();
   const router = useRouter();
+  const route = useRoute();
   const showAlert = inject('showAlert', null);
+
+  function safeRedirectTarget() {
+    const redirect = route.query.redirect;
+    if (typeof redirect !== 'string') return null;
+    if (!redirect.startsWith('/') || redirect.startsWith('//')) return null;
+    if (redirect === '/login' || redirect.startsWith('/login?') || redirect === '/register' || redirect.startsWith('/register?')) return null;
+    return redirect;
+  }
+
+  const loginLink = computed(() => {
+    const redirect = safeRedirectTarget();
+    return redirect ? { path: '/login', query: { redirect } } : '/login';
+  });
 
   async function handleRegister() {
     const nameParts = form.value.name.trim().split(' ');
@@ -110,8 +124,14 @@
     });
 
     if (success) {
+      const redirect = safeRedirectTarget();
+      if (authStore.isAuthenticated && redirect) {
+        showAlert?.('Account created successfully. Continue with the activation workflow.', 'success');
+        router.push(redirect);
+        return;
+      }
       showAlert?.('Account created successfully. Sign in to choose your workspace and complete any specialized onboarding.', 'success');
-      router.push('/login');
+      router.push(redirect ? { path: '/login', query: { redirect } } : '/login');
     }
   }
 </script>

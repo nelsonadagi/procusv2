@@ -106,8 +106,118 @@
                 {{ feature.name }}
               </span>
             </div>
+
+            <div class="pz-trust-strip">
+              <span>{{ trustSignals.verification }}</span>
+              <span>{{ trustSignals.responseTime }}</span>
+              <span>{{ trustSignals.responseRate }}</span>
+              <span>{{ trustSignals.freshness }}</span>
+            </div>
           </div>
         </section>
+
+        <WorkflowGuide title="Guided Workflow" eyebrow="Start Here">
+          <div class="pz-property-workflow-banner">
+            <div class="pz-property-workflow-banner__summary">
+              <div class="pz-property-workflow-banner__kicker">{{ workflowBanner.stage }}</div>
+              <h2 class="pz-property-workflow-banner__title">{{ workflowBanner.title }}</h2>
+              <p class="pz-property-workflow-banner__body">{{ workflowBanner.body }}</p>
+            </div>
+            <div class="pz-property-workflow-banner__actions">
+              <Button v-for="action in workflowBanner.actions" :key="action.label" :variant="action.variant" size="sm" @click="action.handler">
+                {{ action.label }}
+              </Button>
+            </div>
+          </div>
+          <div class="pz-property-workflow-banner__steps">
+            <div
+              v-for="step in workflowSteps"
+              :key="step.label"
+              class="pz-property-workflow-step"
+              :class="{ 'pz-property-workflow-step--done': step.done, 'pz-property-workflow-step--active': step.active }"
+            >
+              <span class="pz-property-workflow-step__index">{{ step.index }}</span>
+              <div class="pz-property-workflow-step__content">
+                <strong>{{ step.label }}</strong>
+                <span>{{ step.help }}</span>
+              </div>
+            </div>
+          </div>
+        
+
+        <ModuleCTA
+          eyebrow="List Similar Property"
+          title="Own a similar asset or want this property developed?"
+          body="Open the property workspace to publish a listing, or start a project when the asset is ready for construction planning."
+          primary-label="List Property"
+          primary-to="/property-manager/dashboard"
+          secondary-label="Start Project"
+          secondary-to="/projects/new"
+          tone="steel"
+        />
+</WorkflowGuide>
+
+        <Card title="Operational Readiness" eyebrow="Property Health" variant="premium">
+          <div class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
+            <div class="pz-property-detail__metric">
+              <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Readiness Score')" v-html="getMetricIcon('Readiness Score')"></span>
+              <div class="pz-metric__content">
+                <span class="pz-property-detail__label">Readiness Score</span>
+                <span class="pz-property-detail__value">{{ operationalSignals.score }}/100</span>
+              </div>
+            </div>
+            <div class="pz-property-detail__metric">
+              <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Next Step')" v-html="getMetricIcon('Next Step')"></span>
+              <div class="pz-metric__content">
+                <span class="pz-property-detail__label">Next Step</span>
+                <span class="pz-property-detail__value">{{ operationalSignals.nextAction }}</span>
+              </div>
+            </div>
+            <div class="pz-property-detail__metric">
+              <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Blockers')" v-html="getMetricIcon('Blockers')"></span>
+              <div class="pz-metric__content">
+                <span class="pz-property-detail__label">Blockers</span>
+                <span class="pz-property-detail__value">{{ operationalSignals.blockers.length ? `${operationalSignals.blockers.length} open` : 'None' }}</span>
+              </div>
+            </div>
+            <div class="pz-property-detail__metric">
+              <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor('Unlocks')" v-html="getMetricIcon('Unlocks')"></span>
+              <div class="pz-metric__content">
+                <span class="pz-property-detail__label">Unlocks After This</span>
+                <span class="pz-property-detail__value">{{ operationalSignals.unlocks }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="operationalSignals.blockers.length" class="pz-property-chip-row">
+            <span v-for="blocker in operationalSignals.blockers" :key="blocker" class="pz-property-chip">{{ blocker }}</span>
+          </div>
+          <p class="pz-u-text-mono text-xs pz-u-color-steel">{{ operationalSignals.summary }}</p>
+        </Card>
+
+        <Card title="Quick Actions" eyebrow="Do This Now" variant="premium">
+          <div class="pz-property-action-strip">
+            <Button
+              v-for="action in workflowBanner.actions"
+              :key="action.label"
+              :variant="action.variant"
+              size="sm"
+              @click="action.handler"
+            >
+              {{ action.label }}
+            </Button>
+            <Button v-if="showNotifyMe" variant="outline" size="sm" @click="activeSidebarTab = 'showings'">
+              Notify Me
+            </Button>
+            <router-link v-if="canModifyProperty && isDevelopmentReady" :to="`/projects/new?property=${property.id}`">
+              <Button variant="outline" size="sm">Link To Project</Button>
+            </router-link>
+          </div>
+          <p class="pz-u-text-mono text-xs pz-u-color-steel">Use one action to move the property forward. The system will keep the next step visible after each change.</p>
+        </Card>
+
+        <Card title="Activity Timeline" eyebrow="Recent Work" variant="premium">
+          <PropertyActivityTimeline :events="propertyTimeline" />
+        </Card>
 
         <div class="pz-property-layout">
           <section class="pz-space-y-6">
@@ -281,7 +391,7 @@
                   </div>
                 </div>
               </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Development metadata has not been published for this property yet.</p>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Add zoning, utilities, and readiness details so buyers and investors can understand the next step for this asset.</p>
             </Card>
 
             <Card title="Features And Amenities" eyebrow="Amenities">
@@ -295,12 +405,15 @@
                   </div>
                 </div>
               </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No feature list published yet.</p>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Add a few highlighted features so people can compare this property quickly.</p>
             </Card>
             </div>
 
             <div v-show="activeTab === 'financials'" class="pz-tab-panel">
             <Card title="Financial Structure" variant="premium" eyebrow="Pricing">
+              <div v-if="financeBlocker" class="pz-context-blocker">
+                {{ financeBlocker }}
+              </div>
               <div v-if="financialStats.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-2 pz-l-grid--gap-4">
                 <div v-for="stat in financialStats" :key="stat.label" class="pz-property-detail__metric">
                   <span class="pz-metric__icon" :class="'pz-metric__icon--' + getMetricColor(stat.label)" v-html="getMetricIcon(stat.label)"></span>
@@ -310,7 +423,7 @@
                   </div>
                 </div>
               </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Detailed pricing data has not been published yet.</p>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Publish pricing details to unlock comparison, financing, and next-step decisions.</p>
             </Card>
 
             <Card title="Ownership And Compliance" eyebrow="Legal">
@@ -323,7 +436,7 @@
                   </div>
                 </div>
               </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Ownership diligence notes have not been published yet.</p>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Add ownership notes before financing or high-trust follow-up so users know what is still being verified.</p>
             </Card>
             </div>
 
@@ -350,7 +463,9 @@
                   </div>
                   <div class="pz-space-y-1">
                     <div class="pz-u-text-display text-sm">{{ asset.title || readableMediaType(asset.media_type) }}</div>
-                    <div class="pz-u-text-mono text-xs pz-u-color-steel">{{ asset.caption || 'Open asset' }}</div>
+                    <div class="pz-u-text-mono text-xs pz-u-color-steel">
+                      {{ asset.document_category || readableMediaType(asset.media_type) }} · {{ asset.caption || 'Open asset' }}
+                    </div>
                   </div>
                 </a>
               </div>
@@ -363,7 +478,7 @@
                   <span class="pz-u-text-mono text-xs pz-u-color-steel">Open project workspace</span>
                 </router-link>
               </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">This property is currently operating as a standalone asset.</p>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">This asset is standalone for now. Create a project when the property should move into execution.</p>
             </Card>
 
             <Card title="Suggested Materials" eyebrow="Recommendations">
@@ -373,7 +488,17 @@
                   <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ configStore.formatPrice(material.base_price, material.currency) }}</span>
                 </router-link>
               </div>
-              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No material suggestions available yet.</p>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Link a project or add development data to unlock suggested materials.</p>
+            </Card>
+
+            <Card title="Similar Properties" eyebrow="Alternatives">
+              <div v-if="similarProperties.length" class="pz-l-grid pz-l-grid--cols-1 pz-l-grid--md-cols-3 pz-l-grid--gap-4">
+                <router-link v-for="item in similarProperties" :key="item.id" :to="`/properties/${item.id}`" class="pz-property-detail__link-card">
+                  <span class="pz-u-text-display text-sm">{{ item.title }}</span>
+                  <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ item.location_display || item.location_text || 'Location pending' }}</span>
+                </router-link>
+              </div>
+              <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No similar properties are available from the current active inventory.</p>
             </Card>
             </div>
           </section>
@@ -416,7 +541,7 @@
                       +{{ property.showings.length - 3 }} more showing{{ property.showings.length - 3 > 1 ? 's' : '' }}
                     </div>
                   </div>
-                  <p v-else class="pz-showing-empty">No upcoming showings scheduled.</p>
+                  <p v-else class="pz-showing-empty">No showings are scheduled yet. Publish availability so visitors can book a visit.</p>
                 </div>
                 <div v-if="property.showings?.length && availableSlots.length" class="pz-showing-divider"></div>
                 <div class="pz-showing-section">
@@ -452,7 +577,14 @@
                     <textarea v-model="appointmentForm.notes" class="pz-input" rows="2" placeholder="Add visit notes or questions" />
                     <Button type="submit" variant="primary" fullWidth size="sm" :loading="submittingAppointment">Confirm Booking</Button>
                   </form>
-                  <p v-else-if="!availableSlots.length" class="pz-showing-empty">No public appointment slots are currently available. Check back soon or send an inquiry.</p>
+                  <div v-else-if="!availableSlots.length" class="pz-space-y-3">
+                    <p class="pz-showing-empty">{{ noSlotsMessage }}</p>
+                    <form v-if="showNotifyMe" class="pz-booking-form" @submit.prevent="submitInterest">
+                      <PzInput v-model="interestForm.full_name" label="Full Name" size="sm" />
+                      <PzInput v-model="interestForm.email" label="Email" type="email" required size="sm" />
+                      <Button type="submit" variant="primary" fullWidth size="sm" :loading="submittingInterest">Notify Me When Available</Button>
+                    </form>
+                  </div>
                 </div>
               </Card>
             </div>
@@ -513,7 +645,7 @@
                   <textarea v-model="financeForm.purpose" class="pz-input" rows="3" placeholder="Describe what the financing will support" />
                   <Button variant="primary" fullWidth :loading="submittingFinance" @click="submitFinance">Apply For Financing</Button>
                 </div>
-                <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Financing products are not available at the moment.</p>
+                <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">Financing products are not available right now. Link the property to a project or check back when finance options are published.</p>
               </Card>
             </div>
 
@@ -538,7 +670,7 @@
                         <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ inquiry.email || inquiry.phone_number || 'No contact provided' }}</span>
                       </div>
                     </div>
-                    <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No inquiries yet.</p>
+                    <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No inquiries yet. Share the listing or improve the headline, media, and availability to start lead flow.</p>
                   </div>
                   <div>
                     <div class="pz-u-text-mono text-xs pz-u-color-earth u-mb-2">Upcoming Appointments</div>
@@ -547,9 +679,14 @@
                         <strong>{{ appointment.full_name }}</strong>
                         <span>{{ formatDateTime(appointment.scheduled_start) }}</span>
                         <span class="pz-u-text-mono text-xs pz-u-color-steel">{{ appointment.email || appointment.phone_number || 'No contact provided' }}</span>
+                        <div class="pz-feed-actions">
+                          <Button v-if="appointment.status === 'REQUESTED'" size="sm" variant="outline" @click="updateAppointmentStatus(appointment, 'confirm')">Confirm</Button>
+                          <Button size="sm" variant="ghost" @click="updateAppointmentStatus(appointment, 'complete')">Complete</Button>
+                          <Button size="sm" variant="ghost" @click="updateAppointmentStatus(appointment, 'cancel')">Cancel</Button>
+                        </div>
                       </div>
                     </div>
-                    <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No appointments scheduled.</p>
+                    <p v-else class="pz-u-text-mono text-xs pz-u-color-concrete">No appointments scheduled. Publish visit slots to turn interest into bookings.</p>
                   </div>
                 </div>
               </Card>
@@ -562,15 +699,18 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref } from 'vue';
+import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../services/api';
 import { useAuthStore } from '../stores/auth';
 import { useConfigStore } from '../stores/config';
-import Card from '../components/ui/Card.vue';
-import Button from '../components/ui/Button.vue';
-import Badge from '../components/ui/Badge.vue';
-import PzInput from '../components/PzInput.vue';
+ import Card from '../components/ui/Card.vue';
+import WorkflowGuide from '../components/ui/WorkflowGuide.vue';
+import ModuleCTA from '../components/ui/ModuleCTA.vue';
+ import Button from '../components/ui/Button.vue';
+ import Badge from '../components/ui/Badge.vue';
+ import PzInput from '../components/PzInput.vue';
+ import PropertyActivityTimeline from '../components/property/PropertyActivityTimeline.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -581,6 +721,8 @@ const property = ref(null);
 const availableSlots = ref([]);
 const financeProducts = ref([]);
 const materials = ref([]);
+const similarProperties = ref([]);
+const persistentEvents = ref([]);
 const operatorInquiries = ref([]);
 const operatorAppointments = ref([]);
 const selectedSlot = ref(null);
@@ -609,6 +751,7 @@ const sidebarTabs = computed(() => {
 const submittingInquiry = ref(false);
 const submittingAppointment = ref(false);
 const submittingFinance = ref(false);
+const submittingInterest = ref(false);
 const inquiryForm = ref({
   full_name: '',
   email: '',
@@ -629,6 +772,12 @@ const financeForm = ref({
   requested_amount: '',
   purpose_category: 'ACQUISITION',
   purpose: '',
+});
+
+const interestForm = ref({
+  full_name: '',
+  email: '',
+  reason: 'availability',
 });
 
 const operatorView = computed(() => {
@@ -665,6 +814,44 @@ const canVerifyProperty = computed(() => {
   return authStore.hasPermission('property:verify_property');
 });
 
+const trustSignals = computed(() => {
+  const verified = property.value?.ownership_profile?.verification_status === 'VERIFIED';
+  const updated = property.value?.updated_at ? daysSince(property.value.updated_at) : null;
+  const responded = operatorInquiries.value.filter((item) => item.status && item.status !== 'NEW').length;
+  const responseRate = operatorInquiries.value.length ? Math.round((responded / operatorInquiries.value.length) * 100) : 0;
+  return {
+    verification: verified ? 'Verified owner' : 'Verification pending',
+    responseTime: 'Typical response under 24h',
+    responseRate: operatorInquiries.value.length ? `${responseRate}% inquiry response rate` : 'New listing response profile',
+    freshness: updated === null ? 'Freshness pending' : `Updated ${updated || 0} day${updated === 1 ? '' : 's'} ago`,
+  };
+});
+
+const showNotifyMe = computed(() => property.value && (property.value.status !== 'ACTIVE' || !availableSlots.value.length));
+const isDevelopmentReady = computed(() => Boolean(property.value?.development_metadata?.build_ready || property.value?.listing_type === 'DEVELOPMENT_OPPORTUNITY'));
+
+const deedOrComplianceDocs = computed(() =>
+  (property.value?.media_assets || []).filter((asset) => ['DEED', 'COMPLIANCE', 'SURVEY'].includes(asset.document_category))
+);
+
+const financeBlocker = computed(() => {
+  if (!property.value?.financing_allowed) return '';
+  if (!deedOrComplianceDocs.value.length) {
+    return 'Finance review is blocked until a deed, survey, or compliance document is uploaded.';
+  }
+  return '';
+});
+
+const noSlotsMessage = computed(() => {
+  if (canModifyProperty.value && property.value?.appointment_enabled) {
+    return 'Buyers cannot book a visit until a slot is published.';
+  }
+  if (property.value?.inquiry_enabled !== false) {
+    return 'No slots are available yet. Send an inquiry or register for an availability alert.';
+  }
+  return 'No slots are available yet. Register for an alert and the property team can follow up.';
+});
+
 const mediaBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '');
 
 function resolveMediaUrl(url) {
@@ -682,6 +869,7 @@ const sliderImages = computed(() =>
 );
 
 const currentSlide = ref(0);
+let availabilityPollTimer = null;
 
 function nextSlide() {
   if (!sliderImages.value.length) return;
@@ -819,6 +1007,216 @@ const availabilityStats = computed(() => {
   ];
 });
 
+const workflowBanner = computed(() => {
+  if (!property.value) {
+    return {
+      stage: 'LOADING',
+      title: 'Preparing property workflow',
+      body: 'Loading the listing and related actions.',
+      actions: [],
+    };
+  }
+
+  if (canModifyProperty.value) {
+    return {
+      stage: 'OPERATOR_MODE',
+      title: 'You are managing this property',
+      body: 'Keep the listing complete, publish availability, and answer leads.',
+      actions: [
+        { label: 'Edit Property', variant: 'primary', handler: () => { window.location.href = `/properties/${property.value.id}/edit`; } },
+        { label: 'Publish Availability', variant: 'outline', handler: () => { activeSidebarTab.value = 'showings'; } },
+        { label: 'Review Leads', variant: 'outline', handler: () => { activeSidebarTab.value = 'inquiry'; } },
+      ],
+    };
+  }
+
+  if (availableSlots.value.length) {
+    return {
+      stage: 'VISIT_READY',
+      title: 'This property is ready for a visit',
+      body: 'Check the slots, then book a visit or send an inquiry.',
+      actions: [
+        { label: 'Book Visit', variant: 'primary', handler: () => { activeSidebarTab.value = 'showings'; } },
+        { label: 'Send Inquiry', variant: 'outline', handler: () => { activeSidebarTab.value = 'inquiry'; } },
+      ],
+    };
+  }
+
+  if (property.value.inquiry_enabled !== false) {
+    return {
+      stage: 'INQUIRY_READY',
+      title: 'The listing is open for questions',
+      body: 'Send an inquiry and watch the timeline for the reply.',
+      actions: [
+        { label: 'Send Inquiry', variant: 'primary', handler: () => { activeSidebarTab.value = 'inquiry'; } },
+        { label: 'Apply For Financing', variant: 'outline', handler: () => { activeSidebarTab.value = 'financing'; } },
+      ],
+    };
+  }
+
+  if (property.value.financing_allowed) {
+    return {
+      stage: 'FINANCE_READY',
+      title: 'This property can support financing',
+      body: 'Review the commercial terms and decide the next path.',
+      actions: [
+        { label: 'Apply For Financing', variant: 'primary', handler: () => { activeSidebarTab.value = 'financing'; } },
+        { label: 'Open Projects', variant: 'outline', handler: () => { activeTab.value = 'links'; } },
+      ],
+    };
+  }
+
+  return {
+    stage: 'STANDALONE_ASSET',
+    title: 'This is a standalone property opportunity',
+    body: 'Review the details and decide whether to move into a project.',
+    actions: [
+      { label: 'Review Details', variant: 'primary', handler: () => { activeTab.value = 'overview'; } },
+      { label: 'Open Projects', variant: 'outline', handler: () => { activeTab.value = 'links'; } },
+    ],
+  };
+});
+
+const workflowSteps = computed(() => [
+  {
+    index: '01',
+    label: 'Understand the asset',
+    help: 'Review the overview, specs, pricing, and ownership context.',
+    done: Boolean(property.value?.title && property.value?.price_estimate),
+    active: true,
+  },
+  {
+    index: '02',
+    label: 'Check action paths',
+    help: 'Use inquiry, visit, financing, or project linkage based on the current state.',
+    done: Boolean(property.value?.inquiry_enabled || property.value?.appointment_enabled || property.value?.financing_allowed),
+    active: availableSlots.value.length > 0 || property.value?.inquiry_enabled !== false,
+  },
+  {
+    index: '03',
+    label: 'Move to follow-up',
+    help: 'Send an inquiry, book a visit, or open the project workspace.',
+    done: Boolean(operatorView.value || availableSlots.value.length || property.value?.linked_projects?.length),
+    active: Boolean(operatorView.value || availableSlots.value.length || property.value?.linked_projects?.length),
+  },
+  {
+    index: '04',
+    label: 'Track the outcome',
+    help: 'Use the timeline and feed panels to keep progress visible.',
+    done: Boolean(operatorInquiries.value.length || operatorAppointments.value.length),
+    active: Boolean(operatorInquiries.value.length || operatorAppointments.value.length),
+  },
+]);
+
+const operationalSignals = computed(() => {
+  if (!property.value) {
+    return {
+      score: 0,
+      blockers: [],
+      nextAction: 'Loading property',
+      unlocks: 'Nothing yet',
+      summary: 'The workspace is preparing the listing, availability, and related operational data.',
+    };
+  }
+
+  const blockers = [];
+  if (!property.value.title) blockers.push('Missing title');
+  if (!property.value.location_text && !property.value.formatted_address) blockers.push('Missing location');
+  if (!property.value.price_estimate && !property.value.pricing_profile?.asking_price) blockers.push('Missing price');
+  if (!property.value.media_assets?.length) blockers.push('No media');
+  if (property.value.inquiry_enabled === false) blockers.push('Inquiries closed');
+  if (property.value.appointment_enabled === false) blockers.push('Visits closed');
+  if (!property.value.ownership_profile?.legal_owner_name) blockers.push('Ownership not published');
+  if (property.value.financing_allowed && !property.value.pricing_profile) blockers.push('Finance details missing');
+
+  const score = Math.max(
+    0,
+    100
+      - (blockers.includes('Missing title') ? 20 : 0)
+      - (blockers.includes('Missing location') ? 15 : 0)
+      - (blockers.includes('Missing price') ? 15 : 0)
+      - (blockers.includes('No media') ? 15 : 0)
+      - (blockers.includes('Ownership not published') ? 10 : 0)
+      - (blockers.includes('Finance details missing') ? 10 : 0)
+      - (blockers.includes('Inquiries closed') ? 5 : 0)
+      - (blockers.includes('Visits closed') ? 5 : 0)
+  );
+
+  const nextAction = blockers.includes('Missing title') || blockers.includes('Missing location') || blockers.includes('Missing price')
+    ? 'Complete the core listing details'
+    : blockers.includes('No media')
+      ? 'Upload property media'
+      : blockers.includes('Visits closed')
+        ? 'Publish visit slots'
+        : blockers.includes('Inquiries closed')
+          ? 'Open inquiries'
+          : blockers.includes('Ownership not published')
+            ? 'Add ownership details'
+            : property.value.linked_projects?.length
+              ? 'Review the linked project'
+              : 'Continue to the next workflow step';
+
+  return {
+    score,
+    blockers,
+    nextAction,
+    unlocks: blockers.length ? 'Visibility, trust, and lead flow' : 'Inquiry, booking, and project linkage',
+    summary: blockers.length
+      ? 'Complete the missing items to reduce friction before buyers, investors, or managers reach the listing.'
+      : 'This property is ready for active workflows. Keep the timeline visible and follow the next recommended action.',
+  };
+});
+
+const propertyTimeline = computed(() => {
+  if (!property.value) return [];
+  if (persistentEvents.value.length) {
+    return persistentEvents.value.map((event) => ({
+      id: `event-${event.id}`,
+      title: event.title,
+      message: event.message,
+      timestamp: event.created_at,
+      variant: event.event_type?.includes('BOOKED') || event.event_type?.includes('PUBLISHED') ? 'success' : event.event_type?.includes('INQUIRY') ? 'warn' : 'info',
+    }));
+  }
+  const events = [
+    {
+      id: `created-${property.value.id}`,
+      title: property.value.status === 'DRAFT' ? 'Draft listing ready' : 'Property published',
+      message: `${property.value.title || 'Listing'} is now ${String(property.value.status || 'unknown').toLowerCase()}.`,
+      timestamp: property.value.created_at || new Date().toISOString(),
+      variant: property.value.status === 'ACTIVE' ? 'success' : 'info',
+    },
+  ];
+  (operatorInquiries.value || []).slice(0, 2).forEach((inquiry) => {
+    events.push({
+      id: `timeline-inquiry-${inquiry.id}`,
+      title: 'Inquiry received',
+      message: `${inquiry.full_name} asked about this property.`,
+      timestamp: inquiry.created_at || new Date().toISOString(),
+      variant: 'warn',
+    });
+  });
+  (operatorAppointments.value || []).slice(0, 2).forEach((appointment) => {
+    events.push({
+      id: `timeline-appt-${appointment.id}`,
+      title: 'Appointment booked',
+      message: `${appointment.full_name} booked a visit for this property.`,
+      timestamp: appointment.created_at || appointment.scheduled_start || new Date().toISOString(),
+      variant: 'success',
+    });
+  });
+  if (property.value.linked_projects?.length) {
+    events.push({
+      id: `timeline-link-${property.value.id}`,
+      title: 'Linked to project',
+      message: `${property.value.linked_projects.length} project link${property.value.linked_projects.length === 1 ? '' : 's'} available.`,
+      timestamp: property.value.updated_at || new Date().toISOString(),
+      variant: 'info',
+    });
+  }
+  return events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5);
+});
+
 const operatorStats = computed(() => [
   { label: 'Open Leads', value: operatorInquiries.value.length },
   { label: 'Scheduled Appointments', value: operatorAppointments.value.length },
@@ -839,6 +1237,11 @@ function formatMoney(value, sourceCurrency = 'KES') {
 function formatDate(value) {
   if (!value) return '';
   return new Date(value).toLocaleDateString();
+}
+
+function daysSince(value) {
+  const delta = Date.now() - new Date(value).getTime();
+  return Math.max(0, Math.floor(delta / 86400000));
 }
 
 function formatDateTime(value) {
@@ -949,6 +1352,20 @@ async function loadProperty() {
       materials.value = [];
     }
 
+    try {
+      const similarRes = await api.get(`/property/${route.params.id}/similar/`);
+      similarProperties.value = similarRes.data.results || similarRes.data || [];
+    } catch {
+      similarProperties.value = [];
+    }
+
+    try {
+      const eventsRes = await api.get(`/property/${route.params.id}/events/`);
+      persistentEvents.value = eventsRes.data.results || eventsRes.data || [];
+    } catch {
+      persistentEvents.value = [];
+    }
+
     if (operatorView.value) {
       const [inquiriesRes, appointmentsRes] = await Promise.all([
         api.get('/property/inquiries/', { params: { property: route.params.id } }),
@@ -961,6 +1378,15 @@ async function loadProperty() {
     showAlert?.(error.response?.data?.detail || 'Failed to load property details.', 'error');
   } finally {
     loading.value = false;
+  }
+}
+
+async function refreshAvailability() {
+  try {
+    const availabilityRes = await api.get(`/property/${route.params.id}/availability/`);
+    availableSlots.value = availabilityRes.data;
+  } catch {
+    // Keep the last known slot state visible; the full page load handles user-facing errors.
   }
 }
 
@@ -1032,7 +1458,37 @@ async function submitFinance() {
   }
 }
 
-onMounted(loadProperty);
+async function submitInterest() {
+  submittingInterest.value = true;
+  try {
+    await api.post(`/property/${route.params.id}/notify-me/`, interestForm.value);
+    showAlert?.('Availability alert saved.', 'success');
+    interestForm.value = { full_name: '', email: '', reason: 'availability' };
+  } catch (error) {
+    showAlert?.(error.response?.data?.detail || 'Failed to save availability alert.', 'error');
+  } finally {
+    submittingInterest.value = false;
+  }
+}
+
+async function updateAppointmentStatus(appointment, action) {
+  try {
+    await api.post(`/property/appointments/${appointment.id}/${action}/`, {});
+    showAlert?.('Appointment updated.', 'success');
+    await loadProperty();
+  } catch (error) {
+    showAlert?.(error.response?.data?.detail || 'Failed to update appointment.', 'error');
+  }
+}
+
+onMounted(async () => {
+  await loadProperty();
+  availabilityPollTimer = window.setInterval(refreshAvailability, 30000);
+});
+
+onUnmounted(() => {
+  if (availabilityPollTimer) window.clearInterval(availabilityPollTimer);
+});
 </script>
 
 <style scoped>
@@ -1239,6 +1695,41 @@ onMounted(loadProperty);
   justify-content: center;
   gap: 1.5rem;
   padding: 2.5rem 2.5rem 2.5rem 0;
+}
+
+.pz-trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pz-trust-strip span,
+.pz-context-blocker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(247, 244, 239, 0.88);
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.66rem;
+  color: var(--pz-color-structural-steel);
+}
+
+.pz-context-blocker {
+  display: flex;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border-color: rgba(212, 101, 42, 0.24);
+  background: rgba(212, 101, 42, 0.08);
+}
+
+.pz-feed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
 }
 
 .pz-u-text-display {
@@ -1519,6 +2010,123 @@ onMounted(loadProperty);
 .pz-operator-summary__actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.pz-property-workflow-banner {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.pz-property-workflow-banner__summary {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.pz-property-workflow-banner__kicker {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pz-color-earth-orange);
+}
+
+.pz-property-workflow-banner__title {
+  margin: 0;
+  font-family: var(--pz-font-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+  line-height: 1.2;
+  color: var(--pz-color-foundation-black);
+}
+
+.pz-property-workflow-banner__body {
+  max-width: 64ch;
+  color: var(--pz-color-structural-steel);
+  line-height: 1.65;
+}
+
+.pz-property-workflow-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.pz-property-workflow-banner__steps {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pz-property-workflow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(10, 10, 15, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.pz-property-workflow-step__index {
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--pz-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(247, 244, 239, 0.95);
+  border: 1px solid rgba(10, 10, 15, 0.12);
+  color: var(--pz-color-foundation-black);
+  flex-shrink: 0;
+}
+
+.pz-property-workflow-step__content {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.pz-property-workflow-step__content strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.pz-property-workflow-step__content span {
+  font-family: var(--pz-font-mono);
+  font-size: 0.68rem;
+  color: var(--pz-color-concrete-grey);
+  line-height: 1.5;
+}
+
+.pz-property-workflow-step--done {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: rgba(250, 255, 252, 0.95);
+}
+
+.pz-property-workflow-step--done .pz-property-workflow-step__index {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #047857;
+}
+
+.pz-property-workflow-step--active {
+  border-color: rgba(212, 101, 42, 0.34);
+  box-shadow: 0 0 0 1px rgba(212, 101, 42, 0.08);
+}
+
+.pz-property-action-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 /* Slots for appointments */
@@ -2031,6 +2639,18 @@ onMounted(loadProperty);
   .pz-editor-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .pz-property-workflow-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .pz-property-workflow-banner__actions {
+    justify-content: flex-start;
+  }
+
+  .pz-property-workflow-banner__steps {
+    grid-template-columns: 1fr;
   }
 
   .pz-property-hero {
